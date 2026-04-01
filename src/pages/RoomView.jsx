@@ -6,7 +6,7 @@ import { Badge } from '../components/ui/Badge'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { supabase } from '../utils/supabase'
 
-const TABS = ['Notes', 'Chat', 'Availability']
+const TABS = ['Availability', 'Chat', 'Notes']
 const OWNER_NAME = localStorage.getItem('ownerName') || 'Christian'
 
 function formatTime(iso) {
@@ -198,7 +198,7 @@ function AvailabilityTab({ isOwner, availabilityRules }) {
 export function RoomView() {
   const { token } = useParams()
   const { getProduction, getGroup, isOwner, availabilityRules, loading, refreshRoom, resolveToken } = useApp()
-  const [activeTab, setActiveTab] = useState('Notes')
+  const [activeTab, setActiveTab] = useState('Availability')
   const [resolved, setResolved] = useState(null) // { productionId, groupId, mode, memberName }
   const [resolving, setResolving] = useState(true)
   const [guestName, setGuestName] = useState(null)

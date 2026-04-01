@@ -190,17 +190,13 @@ export function CalendarSettings() {
           {connectedCalendars.map(cal => {
             const role = ROLE_META[cal.role]
             return (
-              <div key={cal.id} className="bg-surface-900 border border-surface-700 rounded-xl px-5 py-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full flex-shrink-0 mt-0.5" style={{ backgroundColor: cal.color }} />
-                    <div>
-                      <p className="text-sm font-medium text-zinc-200">{cal.name}</p>
-                      <p className="text-xs text-zinc-500">{cal.googleCalendarId}</p>
-                    </div>
+              <div key={cal.id} className="bg-surface-900 border border-surface-700 rounded-xl px-5 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cal.color }} />
+                    <p className="text-sm font-medium text-zinc-200 truncate">{cal.name}</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-                    <Badge variant={role.badge}>{role.label}</Badge>
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <select
                       value={cal.role}
                       onChange={e => updateCalendarRole(cal.googleCalendarId, e.target.value)}
@@ -208,14 +204,7 @@ export function CalendarSettings() {
                     >
                       {ROLES.map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
                     </select>
-                    <button onClick={() => removeConnectedCalendar(cal.googleCalendarId)} className="text-xs text-red-600 hover:text-red-400 transition-colors">Remove</button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between mt-2 ml-6">
-                  <p className="text-xs text-zinc-600">{role.desc}</p>
-                  {cal.role === 'governs' && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-zinc-600">Default tier:</span>
+                    {cal.role === 'governs' && (
                       <select
                         value={cal.defaultState || 'booked'}
                         onChange={e => updateCalendarDefaultState(cal.googleCalendarId, e.target.value)}
@@ -226,8 +215,9 @@ export function CalendarSettings() {
                         <option value="booked">Not Typically Considered</option>
                         <option value="blocked">Not Available</option>
                       </select>
-                    </div>
-                  )}
+                    )}
+                    <button onClick={() => removeConnectedCalendar(cal.googleCalendarId)} className="text-xs text-red-600 hover:text-red-400 transition-colors">Remove</button>
+                  </div>
                 </div>
               </div>
             )

@@ -136,7 +136,7 @@ export async function fetchAllGoverningEvents(accessToken, connectedCalendars, t
   const results = await Promise.allSettled(
     governing.map(cal =>
       fetchCalendarEvents(accessToken, cal.googleCalendarId, timeMin, timeMax)
-        .then(events => events.map(e => ({ ...e, calendarId: cal.id })))
+        .then(events => events.map(e => ({ ...e, calendarId: cal.googleCalendarId })))
     )
   )
   return results

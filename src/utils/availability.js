@@ -12,10 +12,10 @@
  */
 
 export const SLOT_STATES = {
-  available: { label: 'Available', color: '#22c55e', bg: 'bg-emerald-500', text: 'text-emerald-400', dot: 'bg-emerald-400', ring: 'ring-emerald-500' },
-  hold:      { label: 'Hold',      color: '#6366f1', bg: 'bg-indigo-500',  text: 'text-indigo-400',  dot: 'bg-indigo-400',  ring: 'ring-indigo-500' },
-  booked:    { label: 'Booked',    color: '#f59e0b', bg: 'bg-amber-500',   text: 'text-amber-400',   dot: 'bg-amber-400',   ring: 'ring-amber-500' },
-  blocked:   { label: 'Unavailable', color: '#ef4444', bg: 'bg-red-500',   text: 'text-red-400',     dot: 'bg-red-400',     ring: 'ring-red-500' },
+  available: { label: 'Available',               color: '#d1d5db', bg: 'bg-zinc-300',   text: 'text-zinc-400',   dot: 'bg-zinc-400',   ring: 'ring-zinc-300' },
+  hold:      { label: 'Penciled',                color: '#f97316', bg: 'bg-orange-500', text: 'text-orange-400', dot: 'bg-orange-400', ring: 'ring-orange-500' },
+  booked:    { label: 'Not Typically Considered', color: '#9ca3af', bg: 'bg-zinc-500',   text: 'text-zinc-400',   dot: 'bg-zinc-500',   ring: 'ring-zinc-500' },
+  blocked:   { label: 'Not Available',           color: '#ef4444', bg: 'bg-red-500',    text: 'text-red-400',    dot: 'bg-red-400',    ring: 'ring-red-500' },
 }
 
 const PRIORITY = { blocked: 3, booked: 2, hold: 1, available: 0 }
@@ -89,11 +89,11 @@ function eventOverlapsSlot(date, slot, event) {
  * @param {Array} connectedCalendars — [{ id, role }]
  * @returns {{ state: string, drivingEvent: object|null }}
  */
-export function deriveSlotState(date, slot, calendarEvents, connectedCalendars) {
+export function deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules = []) {
   let bestState = slot.defaultState || 'available'
   let drivingEvent = null
 
-  const calendarMap = Object.fromEntries(connectedCalendars.map(c => [c.id, c]))
+  const calendarMap = Object.fromEntries(connectedCalendars.map(c => [c.googleCalendarId, c]))
 
   for (const event of calendarEvents) {
     const calendar = calendarMap[event.calendarId]
@@ -107,12 +107,12 @@ export function deriveSlotState(date, slot, calendarEvents, connectedCalendars) 
     const title = event.title || ''
     let eventState
 
-    if (title.startsWith('*')) {
-      eventState = 'blocked'
-    } else if (title.startsWith('^')) {
-      eventState = 'hold'
+    const matchedRule = prefixRules.find(r => r.prefix && title.startsWith(r.prefix))
+    if (matchedRule) {
+      eventState = matchedRule.state
     } else {
-      eventState = 'booked'
+      // Fall back to this calendar's own default tier
+      eventState = calendar.defaultState || 'booked'
     }
 
     if (PRIORITY[eventState] > PRIORITY[bestState]) {
@@ -131,13 +131,13 @@ export function deriveSlotState(date, slot, calendarEvents, connectedCalendars) 
  * Derive availability for a range of dates across all slots.
  * Returns: { [dateStr]: { [slotId]: { state, drivingEvent } } }
  */
-export function deriveAvailabilityMatrix(dates, slots, calendarEvents, connectedCalendars) {
+export function deriveAvailabilityMatrix(dates, slots, calendarEvents, connectedCalendars, prefixRules = []) {
   const matrix = {}
   for (const date of dates) {
     const key = dateToStr(date)
     matrix[key] = {}
     for (const slot of slots) {
-      matrix[key][slot.id] = deriveSlotState(date, slot, calendarEvents, connectedCalendars)
+      matrix[key][slot.id] = deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules)
     }
   }
   return matrix

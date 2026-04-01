@@ -33,7 +33,8 @@ Production
 
 - **Framework:** React + Vite (v5)
 - **Styling:** Tailwind CSS v3 (pinned — do NOT upgrade to v4, config format changed)
-- **State:** React Context (AppContext) + localStorage — no Zustand, no backend
+- **State:** React Context (AppContext) — Supabase for collaborative data, localStorage for owner-only settings
+- **Database:** Supabase (`xwuekcysigkujhyucugi`) — productions, groups, messages, shared_notes, group_members
 - **Auth:** localStorage `isOwner` flag — no real auth in prototype
 - **Deployment:** Vercel — `vercel.json` rewrite rule already in place
 - **Notes:** Simple `<textarea>` — no rich text editor
@@ -44,36 +45,41 @@ Production
 
 ### Fully working
 - Dashboard — production cards, unread badges, date countdown, create production modal
-- Production View — group tabs, private notes section, message preview, copy room link
-- Room — Notes tab (auto-saves to localStorage), Chat tab (threaded, owner/guest bubbles), Availability tab (full calendar)
+- Production View — group list, group overview panel, private notes, access mode toggle, member management
+- Room — Notes tab (auto-saves to Supabase), Chat tab (threaded, owner/guest bubbles, real sender names), Availability tab (full calendar)
 - Availability Rules page — slot editor (create/edit/delete), full calendar preview, production overrides
 - Calendar Settings page — real Google Calendar OAuth (client-side), role assignment modal, manual sync, disconnect
 - Owner/Guest mode toggle (bottom of sidebar) — switches the full app between views
-- Shareable Room links — `/room/:productionId/:groupId` renders guest view with no owner chrome
+- **Token-based Room links** — `/room/:token` — Christian copies a short token link to paste into his own emails
+- **Open Link mode** — one shared link per group; guests are prompted for their name on first visit (stored in localStorage)
+- **Invite Only mode** — Christian adds people by name+email, each gets a unique `/room/:invite_token` link to copy
 - **Three calendar views** — Monthly (color-coded slot bars per day), Weekly (slot rows × 7 days), Daily (slot cards with driving event detail + private notes for owner)
 - **Slot system** — owner can create/edit/delete named time slots (name, time range, color, default state)
 - **Derivation logic** — `*` veto > `^` soft hold > governing calendar > available. All-day end-date correction applied.
-- **Google Calendar OAuth** — client-side via Google Identity Services. Token stored in localStorage. Fetches calendar list + events from governing calendars on sync.
+- **Google Calendar OAuth** — client-side via Google Identity Services. Token stored in localStorage. Fetches calendar list + events from governing calendars on sync. `VITE_GOOGLE_CLIENT_ID` is configured with real key in `.env`.
+- **Real-time chat/notes** — Supabase channel subscriptions in RoomView, scoped per `group_id`
 
 ### Intentionally stubbed (not broken)
-- Google Calendar OAuth requires `VITE_GOOGLE_CLIENT_ID` in `.env` — configured with real key, works in dev. Vercel needs env var added in dashboard.
-- No email invite flow for group members yet
+- No email sending — Christian writes his own emails and pastes room links manually
 - Availability rule *creation* UI not built (rules exist in seed data, viewable but not editable)
 
 ### Not built yet
 - Real auth (owner login with PIN or password)
-- Multi-user real-time sync
 - Mobile layout
 
 ---
 
 ## Architecture Decisions (don't second-guess without reason)
 
-- **AppContext + localStorage over Zustand:** kept dependencies minimal for prototype. One context, auto-syncs on every state change. Storage key: `cap-collective-app`.
+- **Supabase for collaborative data, localStorage for owner settings:** Productions, groups, messages, shared_notes, and group_members live in Supabase so room links work cross-device for guests. Slots, connectedCalendars, prefixRules, isOwner stay in localStorage — owner-only, no sharing needed.
+- **`seedSupabase()` on first load:** If Supabase tables are empty, seeds all SEED_DATA automatically. Runs once, idempotent.
 - **`isOwner: true` defaults on first load:** makes the demo work immediately without a login screen. Intentional for prototype.
 - **Tailwind v3 not v4:** v4 uses CSS-based config (no `tailwind.config.js`), has rough Vite edges. Pinned to v3 deliberately.
 - **Owner notes not rendered at all for guests** — not just hidden with CSS. Gated on `isOwner` in the component, not a style toggle.
-- **Seed data always loads on first visit** — if localStorage is empty or corrupted, falls back to `SEED_DATA` from `src/data/seed.js`. Two rich productions pre-populated so the app looks alive on first open.
+- **`googleCalendarId` as the stable key for calendar events:** Internal `id` values on `connectedCalendars` can collide (especially after localStorage rehydration). All event matching uses `googleCalendarId` (e.g. `primary`, `holds`) which is stable and unique. This applies in `fetchAllGoverningEvents`, `deriveSlotState`'s `calendarMap`, and seed data's `calendarEvents[].calendarId`. Do not revert to internal `id` matching.
+- **Token-based room routing:** Rooms are accessed via `/room/:token`. Tokens are nanoid(8) strings. Each group has an `open_token` (shared link) and each group_member has an `invite_token` (personal link). `resolveToken(token)` checks both tables in parallel and returns `{ productionId, groupId, mode, memberName }`.
+- **No email infrastructure:** Christian writes his own emails. The app only generates links for him to copy and paste.
+- **Google Calendar OAuth is client-side only** — no backend needed. Uses Google Identity Services token model. Access tokens expire in ~1hr; user re-auths when needed. Fine for prototype.
 
 ---
 
@@ -100,12 +106,13 @@ src/
   main.jsx                   — entry point
   index.css                  — Tailwind directives + base styles + scrollbar
   contexts/
-    AppContext.jsx            — all state, localStorage sync, helper functions
+    AppContext.jsx            — all state, Supabase sync, localStorage sync, helper functions
   data/
-    seed.js                  — SEED_DATA: slots, connectedCalendars, calendarEvents (with * and ^ prefixes), productions
+    seed.js                  — SEED_DATA: slots, connectedCalendars, calendarEvents, productions, groupMembers
   utils/
     availability.js          — derivation logic (veto/hold/governing), getMonthGrid, getWeekDays, dateToStr
     googleCalendar.js        — GIS OAuth, fetchCalendarList, fetchCalendarEvents, fetchAllGoverningEvents
+    supabase.js              — Supabase client (createClient from env vars)
   components/
     layout/
       AppShell.jsx           — wraps owner routes (sidebar + outlet)
@@ -122,33 +129,67 @@ src/
       SlotEditor.jsx         — create/edit/delete named time slots (name, time, color, default state)
   pages/
     Dashboard.jsx            — production grid + create production modal
-    ProductionView.jsx       — group list + group overview panel + private notes
-    RoomView.jsx             — Notes / Chat / Availability tabs
+    ProductionView.jsx       — group list + group overview panel + private notes + access mode/member management
+    RoomView.jsx             — token resolution, NamePrompt (open_link guests), Notes/Chat/Availability tabs, real-time subscription
     AvailabilityRules.jsx    — SlotEditor + calendar preview + production overrides
     CalendarSettings.jsx     — Google OAuth, role assignment modal, sync, disconnect
 ```
+
+---
+
+## Supabase Schema
+
+**Project:** `xwuekcysigkujhyucugi`
+
+```sql
+productions       — id, name, description, start_date, end_date, owner_notes, created_at
+groups            — id, production_id, name, access_mode ('open_link'|'invite_only'), open_token
+shared_notes      — id, group_id, content, updated_at
+messages          — id, group_id, sender_id, sender_name, text, timestamp, read
+group_members     — id, group_id, name, email, invite_token, created_at
+```
+
+- All tables have RLS enabled with anon read/write policies (prototype — tighten before production)
+- `messages` and `shared_notes` are in the Supabase realtime publication
+- `buildProductions(prods, grps, notes, msgs)` assembles the nested state structure from flat rows
+
+---
 
 ## Environment Variables
 
 ```
 VITE_GOOGLE_CLIENT_ID=<google oauth client id>
+VITE_SUPABASE_URL=https://xwuekcysigkujhyucugi.supabase.co
+VITE_SUPABASE_ANON_KEY=<supabase anon key>
 ```
 
-- Set in `.env` for local dev (gitignored)
-- Must also be added to Vercel dashboard → Project Settings → Environment Variables
+- Set in `.env` for local dev (gitignored) — real keys already configured
+- All three must also be added to Vercel dashboard → Project Settings → Environment Variables
 - Google Cloud Console project: `cap-collective-app` (Project ID: `cap-collective-app`)
 - OAuth Client ID type: Web application
-- Authorized JS origins: `http://localhost:5173` + Vercel URL
+- Authorized JS origins: `http://localhost:5173` + Vercel URL (Vercel URL not yet added — needed before OAuth works in production)
+
+---
+
+## Running Locally
+
+```
+npm run dev
+```
+
+Keep the terminal open. Visit `http://localhost:5173`. The dev server does NOT run in the background — it needs an open terminal.
+
+**First-run note:** If Supabase tables are empty, the app auto-seeds on load. If a user has stale localStorage without `openToken` on groups, they need to clear `cap-collective-app` from localStorage to trigger a re-seed.
 
 ---
 
 ## Screens
 
 1. **Dashboard** (Christian only) — all active Productions, health signals, unread count
-2. **Production View** (Christian only) — Groups as tabs, private notes layer
-3. **Room** (Christian + Group members) — shared notes, chat, availability view
-4. **Availability Rules** (Christian only) — slot types, date blocks, private context notes
-5. **Calendar Settings** (Christian only) — connected calendars, roles, sync status (stubbed)
+2. **Production View** (Christian only) — Groups as tabs, private notes layer, access mode toggle, member management
+3. **Room** (Christian + Group members) — shared notes, chat, availability view; accessed via `/room/:token`
+4. **Availability Rules** (Christian only) — slot editor, calendar preview, production overrides
+5. **Calendar Settings** (Christian only) — Google OAuth, calendar roles, sync
 
 ---
 
@@ -166,40 +207,56 @@ VITE_GOOGLE_CLIENT_ID=<google oauth client id>
 
 ```
 User (owner)
-  └── Production[]
+  └── Production[]                          ← Supabase: productions
         ├── name, description, date range
         ├── ownerNotes (private — never shown to guests)
         ├── availability_rules[]
-        └── groups[]
+        └── groups[]                        ← Supabase: groups
               ├── id, productionId, name
-              ├── members[] ← email (not yet functional)
+              ├── accessMode ('open_link' | 'invite_only')
+              ├── openToken (nanoid 8-char — shared link token)
               └── room
-                    ├── sharedNotes (string, edited by both sides)
-                    ├── messages[] ← { id, senderId, senderName, text, timestamp, read }
-                    └── (availability derived from calendarEvents in AppContext)
+                    ├── sharedNotes         ← Supabase: shared_notes
+                    ├── messages[]          ← Supabase: messages
+                    │     { id, senderId, senderName, text, timestamp, read }
+                    └── (availability derived from calendarEvents + slots in AppContext)
+
+GroupMembers[]                              ← Supabase: group_members
+  ├── id, groupId, name, email, inviteToken (nanoid 8-char)
+
+Slots[] — global, owner-defined             ← localStorage
+  ├── id, name, startTime, endTime, color, defaultState
+
+ConnectedCalendars[] — global               ← localStorage
+  ├── id, googleCalendarId, name, color, role (governs | informational | ignored)
+
+CalendarEvents[] — fetched from Google or loaded from seed   ← localStorage
+  ├── id, calendarId (= googleCalendarId), title (may have * or ^ prefix), start, end, isAllDay
 ```
 
 ---
 
 ## Next Iteration Priorities
 
-When the prototype is validated with Christian, here's the natural build order:
-
-1. **Deploy to Vercel** — connect `dansbrandmoves/cap-collective-app`, auto-deploys on push
-2. **Owner login** — simple PIN screen so Christian can safely share the URL. Store token in localStorage.
-3. **Google Calendar OAuth** — replace stubbed `calendarEvents` in seed.js with real data. OAuth flow → assign calendar role immediately after connect.
+1. **Owner PIN login** — simple PIN screen so Christian can safely share the Vercel URL publicly
+2. **Add Vercel URL to Google Cloud Console** — Authorized JS origins so OAuth works in production
+3. **Add Supabase env vars to Vercel** — `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` must be set in Vercel dashboard before deploying
 4. **Availability rule creation UI** — let Christian add/edit rules from the Availability Rules page
 5. **Mobile layout pass** — Room and Dashboard are the priority screens for mobile
-6. **Real-time sync** — consider Supabase for shared notes + chat persistence across devices
 
 ---
 
-## Calendar Notes
+## Calendar Event Derivation Rules
 
-- Google Calendar OAuth is **stubbed** — hardcoded sample events in `src/data/seed.js`
-- "Connect Google Calendar" button exists but is disabled — UX flow is visible, wiring comes next
-- Sync behavior: manual refresh button for prototype; webhooks (Google Calendar push notifications) for production
-- Calendar event tiers: `available` (green), `hold` (indigo), `booked` (amber), `blocked` (red)
+Priority order (highest wins):
+- `*` prefix on title → **blocked** (red) — veto, nothing overrides
+- `^` prefix on title → **hold** (indigo) — soft hold, tentative
+- Regular event on `governs` calendar → **booked** (amber)
+- No governing event → **available** (green)
+- Events on `ignored` or `informational` calendars → no effect on slot state
+- All-day events: Google returns exclusive end date — app subtracts 1 day before evaluating overlap
+
+**Critical:** `calendarEvents[].calendarId` stores the `googleCalendarId` value (e.g. `primary`, `holds`), NOT the internal `id`. The `calendarMap` in `deriveSlotState` keys on `googleCalendarId`. This is intentional — internal IDs can collide.
 
 ---
 

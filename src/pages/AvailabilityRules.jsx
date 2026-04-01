@@ -4,14 +4,14 @@ import { SlotEditor } from '../components/availability/SlotEditor'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 
 const TIER_META = {
-  available: { label: 'Available', badge: 'green' },
-  hold:      { label: 'Hold',      badge: 'purple' },
-  booked:    { label: 'Booked',    badge: 'yellow' },
-  blocked:   { label: 'Blocked',   badge: 'red' },
+  available: { label: 'Available',                badge: 'ghost' },
+  hold:      { label: 'Penciled',                 badge: 'yellow' },
+  booked:    { label: 'Not Typically Considered', badge: 'default' },
+  blocked:   { label: 'Not Available',            badge: 'red' },
 }
 
 export function AvailabilityRules() {
-  const { availabilityRules, productions, slots, calendarEvents, connectedCalendars } = useApp()
+  const { availabilityRules, productions, slots, calendarEvents, connectedCalendars, prefixRules } = useApp()
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
@@ -37,6 +37,7 @@ export function AvailabilityRules() {
             calendarEvents={calendarEvents}
             connectedCalendars={connectedCalendars}
             availabilityRules={availabilityRules}
+            prefixRules={prefixRules}
             isOwner={true}
           />
         </div>

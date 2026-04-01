@@ -65,18 +65,26 @@ function ProductionCard({ production }) {
 }
 
 export function Dashboard() {
-  const { productions, createProduction } = useApp()
+  const { productions, createProduction, loading } = useApp()
   const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ name: '', description: '', startDate: '', endDate: '' })
 
-  function handleCreate(e) {
+  async function handleCreate(e) {
     e.preventDefault()
     if (!form.name || !form.startDate || !form.endDate) return
-    const id = createProduction(form)
+    const id = await createProduction(form)
     setShowModal(false)
     setForm({ name: '', description: '', startDate: '', endDate: '' })
     navigate(`/production/${id}`)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-zinc-500">
+        Loading...
+      </div>
+    )
   }
 
   return (

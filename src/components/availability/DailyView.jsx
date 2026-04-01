@@ -3,9 +3,9 @@ import { SLOT_STATES, deriveSlotState, dateToStr } from '../../utils/availabilit
 import { Badge } from '../ui/Badge'
 
 const STATE_BADGE = {
-  available: 'green',
-  hold: 'purple',
-  booked: 'yellow',
+  available: 'ghost',
+  hold: 'yellow',
+  booked: 'default',
   blocked: 'red',
 }
 
@@ -13,13 +13,13 @@ function formatDate(date) {
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-export function DailyView({ date, slots, calendarEvents, connectedCalendars, availabilityRules, isOwner }) {
+export function DailyView({ date, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules = [], isOwner }) {
   const slotResults = useMemo(() =>
     slots.map(slot => ({
       slot,
-      ...deriveSlotState(date, slot, calendarEvents, connectedCalendars),
+      ...deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules),
     })),
-    [date, slots, calendarEvents, connectedCalendars]
+    [date, slots, calendarEvents, connectedCalendars, prefixRules]
   )
 
   const ds = dateToStr(date)

@@ -8,7 +8,7 @@ import { Modal } from '../components/ui/Modal'
 export function ProductionView() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getProduction, updateProductionNotes, createGroup, getUnreadCount, getRoomLink } = useApp()
+  const { getProduction, updateProductionNotes, createGroup, getUnreadCount } = useApp()
 
   const production = getProduction(id)
   const [activeGroupId, setActiveGroupId] = useState(null)
@@ -49,20 +49,16 @@ export function ProductionView() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Left panel — groups + overview */}
+      {/* Left panel */}
       <div className="w-72 flex-shrink-0 bg-surface-900 border-r border-surface-700 flex flex-col">
-        {/* Header */}
         <div className="px-5 py-4 border-b border-surface-700">
           <button onClick={() => navigate('/')} className="text-xs text-zinc-500 hover:text-zinc-300 mb-3 flex items-center gap-1 transition-colors">
             ← Dashboard
           </button>
           <h2 className="text-sm font-semibold text-zinc-100 leading-snug">{production.name}</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            {production.startDate} → {production.endDate}
-          </p>
+          <p className="text-xs text-zinc-500 mt-0.5">{production.startDate} → {production.endDate}</p>
         </div>
 
-        {/* Groups list */}
         <div className="flex-1 overflow-y-auto px-3 py-3">
           <div className="flex items-center justify-between px-2 mb-2">
             <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Groups</p>
@@ -98,7 +94,7 @@ export function ProductionView() {
           })}
         </div>
 
-        {/* Private notes — owner only, visually distinct */}
+        {/* Private notes */}
         <div className="border-t border-surface-700 bg-surface-950 px-4 py-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs">🔒</span>
@@ -124,10 +120,10 @@ export function ProductionView() {
         </div>
       </div>
 
-      {/* Right panel — active group room preview */}
+      {/* Right panel */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {activeGroup ? (
-          <GroupOverview production={production} group={activeGroup} getRoomLink={getRoomLink} />
+          <GroupOverview productionId={id} group={activeGroup} />
         ) : (
           <div className="flex-1 flex items-center justify-center text-zinc-600 text-sm">
             Select a group to view its room
@@ -135,7 +131,6 @@ export function ProductionView() {
         )}
       </div>
 
-      {/* New Group Modal */}
       <Modal isOpen={showNewGroup} onClose={() => setShowNewGroup(false)} title="Add Group">
         <form onSubmit={handleCreateGroup} className="space-y-4">
           <div>
@@ -160,35 +155,158 @@ export function ProductionView() {
   )
 }
 
-function GroupOverview({ production, group, getRoomLink }) {
+function GroupOverview({ productionId, group }) {
   const navigate = useNavigate()
-  const { getUnreadCount } = useApp()
-  const unread = getUnreadCount(production.id, group.id)
-  const roomLink = getRoomLink(production.id, group.id)
+  const { getUnreadCount, updateGroupAccessMode, addGroupMember, removeGroupMember, getMembersForGroup, getRoomLink } = useApp()
+  const unread = getUnreadCount(productionId, group.id)
+  const members = getMembersForGroup(group.id)
 
-  function copyLink() {
-    navigator.clipboard.writeText(roomLink)
+  const [showAddMember, setShowAddMember] = useState(false)
+  const [memberName, setMemberName] = useState('')
+  const [memberEmail, setMemberEmail] = useState('')
+  const [copied, setCopied] = useState(null) // token that was just copied
+
+  function copyLink(token) {
+    navigator.clipboard.writeText(getRoomLink(token))
+    setCopied(token)
+    setTimeout(() => setCopied(null), 2000)
   }
+
+  function handleAddMember(e) {
+    e.preventDefault()
+    if (!memberName.trim()) return
+    addGroupMember(group.id, { name: memberName.trim(), email: memberEmail.trim() })
+    setMemberName('')
+    setMemberEmail('')
+    setShowAddMember(false)
+  }
+
+  const openToken = group.openToken
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Group header */}
+      {/* Header */}
       <div className="px-8 py-5 border-b border-surface-700 flex items-center justify-between">
         <div>
-          <p className="text-xs text-zinc-500 mb-0.5">{production.name}</p>
           <h2 className="text-lg font-semibold text-zinc-100">{group.name}</h2>
         </div>
         <div className="flex items-center gap-3">
           {unread > 0 && <Badge variant="accent">{unread} unread</Badge>}
-          <Button size="sm" variant="secondary" onClick={copyLink}>Copy Room Link</Button>
-          <Button size="sm" onClick={() => navigate(`/room/${production.id}/${group.id}`)}>
-            Open Room →
-          </Button>
+          <Button size="sm" onClick={() => navigate(`/room/${openToken}`)}>Open Room →</Button>
         </div>
       </div>
 
-      {/* Room preview */}
-      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8">
+
+        {/* Access mode + link sharing */}
+        <div>
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Room Access</p>
+          <div className="bg-surface-900 border border-surface-700 rounded-xl p-5">
+            {/* Mode toggle */}
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                onClick={() => updateGroupAccessMode(group.id, 'open_link')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  group.accessMode === 'open_link'
+                    ? 'bg-accent text-black'
+                    : 'bg-surface-700 text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                Open Link
+              </button>
+              <button
+                onClick={() => updateGroupAccessMode(group.id, 'invite_only')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  group.accessMode === 'invite_only'
+                    ? 'bg-accent text-black'
+                    : 'bg-surface-700 text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                Invite Only
+              </button>
+            </div>
+
+            {group.accessMode === 'open_link' && openToken && (
+              <div>
+                <p className="text-xs text-zinc-500 mb-3">Anyone with this link can enter. They'll be asked for their name on first visit.</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-surface-800 rounded-lg px-3 py-2 text-xs text-zinc-400 truncate">
+                    {getRoomLink(openToken)}
+                  </code>
+                  <Button size="sm" variant="secondary" onClick={() => copyLink(openToken)}>
+                    {copied === openToken ? 'Copied!' : 'Copy'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {group.accessMode === 'invite_only' && (
+              <div>
+                <p className="text-xs text-zinc-500 mb-3">Each person gets their own unique link. Add people below.</p>
+                {members.length === 0 ? (
+                  <p className="text-xs text-zinc-600 mb-3">No members yet.</p>
+                ) : (
+                  <div className="space-y-2 mb-3">
+                    {members.map(m => (
+                      <div key={m.id} className="flex items-center gap-3 bg-surface-800 rounded-lg px-3 py-2.5">
+                        <div className="w-6 h-6 rounded-full bg-surface-700 flex items-center justify-center text-xs font-semibold text-zinc-300 flex-shrink-0">
+                          {m.name[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-zinc-200 truncate">{m.name}</p>
+                          {m.email && <p className="text-xs text-zinc-600 truncate">{m.email}</p>}
+                        </div>
+                        <Button size="sm" variant="secondary" onClick={() => copyLink(m.inviteToken || m.invite_token)}>
+                          {copied === (m.inviteToken || m.invite_token) ? 'Copied!' : 'Copy Link'}
+                        </Button>
+                        <button
+                          onClick={() => removeGroupMember(m.id)}
+                          className="text-xs text-red-600 hover:text-red-400 transition-colors flex-shrink-0"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {showAddMember ? (
+                  <form onSubmit={handleAddMember} className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Name (required)"
+                        value={memberName}
+                        onChange={e => setMemberName(e.target.value)}
+                        autoFocus
+                        className="flex-1 bg-surface-700 border border-surface-600 rounded-lg px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent"
+                      />
+                      <input
+                        type="email"
+                        placeholder="Email (optional)"
+                        value={memberEmail}
+                        onChange={e => setMemberEmail(e.target.value)}
+                        className="flex-1 bg-surface-700 border border-surface-600 rounded-lg px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" type="submit" disabled={!memberName.trim()}>Add & Generate Link</Button>
+                      <Button size="sm" variant="secondary" onClick={() => setShowAddMember(false)}>Cancel</Button>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => setShowAddMember(true)}
+                    className="text-xs text-accent hover:underline"
+                  >
+                    + Add person
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Latest messages */}
         <div>
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Latest Messages</p>
@@ -201,7 +319,7 @@ function GroupOverview({ production, group, getRoomLink }) {
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
                     msg.senderId === 'owner' ? 'bg-accent text-black' : 'bg-surface-700 text-zinc-300'
                   }`}>
-                    {msg.senderName[0]}
+                    {msg.senderName?.[0] ?? '?'}
                   </div>
                   <div className={`max-w-sm ${msg.senderId === 'owner' ? 'items-end' : ''} flex flex-col gap-0.5`}>
                     <span className="text-xs text-zinc-600">{msg.senderName}</span>
@@ -226,7 +344,7 @@ function GroupOverview({ production, group, getRoomLink }) {
             {group.room.sharedNotes}
           </div>
           <button
-            onClick={() => navigate(`/room/${production.id}/${group.id}`)}
+            onClick={() => navigate(`/room/${openToken}`)}
             className="text-xs text-accent hover:underline mt-2"
           >
             Open full room →

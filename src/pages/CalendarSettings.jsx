@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -33,10 +33,11 @@ function formatLastSynced(iso) {
 
 export function CalendarSettings() {
   const {
-    connectedCalendars, addConnectedCalendar, updateCalendarRole, removeConnectedCalendar,
+    connectedCalendars, addConnectedCalendar, updateCalendarRole, updateCalendarDefaultState, removeConnectedCalendar,
     googleAccessToken, setGoogleAccessToken,
     calendarSyncing, setCalendarSyncing,
     lastSynced, replaceCalendarEvents,
+    prefixRules, createPrefixRule, updatePrefixRule, deletePrefixRule,
   } = useApp()
 
   const [gisReady, setGisReady] = useState(false)
@@ -44,6 +45,10 @@ export function CalendarSettings() {
   const [showRoleModal, setShowRoleModal] = useState(false)
   const [pendingCals, setPendingCals] = useState([]) // from Google, before roles assigned
   const [assigningRoles, setAssigningRoles] = useState({})
+  const pendingSyncRef = useRef(false) // trigger auto-sync after calendars save to state
+  const [showAddRule, setShowAddRule] = useState(false)
+  const [newPrefix, setNewPrefix] = useState('')
+  const [newState, setNewState] = useState('blocked')
 
   const configured = isConfigured()
 
@@ -96,7 +101,16 @@ export function CalendarSettings() {
     })
     setShowRoleModal(false)
     setPendingCals([])
+    // Auto-sync once connectedCalendars state has updated (next render)
+    pendingSyncRef.current = true
   }
+
+  // Trigger auto-sync after calendar roles are saved
+  useEffect(() => {
+    if (!pendingSyncRef.current) return
+    pendingSyncRef.current = false
+    handleSync()
+  }, [connectedCalendars]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSync() {
     if (!googleAccessToken) { setAuthError('Not authenticated. Connect Google Calendar first.'); return }
@@ -189,19 +203,100 @@ export function CalendarSettings() {
                     <Badge variant={role.badge}>{role.label}</Badge>
                     <select
                       value={cal.role}
-                      onChange={e => updateCalendarRole(cal.id, e.target.value)}
+                      onChange={e => updateCalendarRole(cal.googleCalendarId, e.target.value)}
                       className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent"
                     >
                       {ROLES.map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
                     </select>
-                    <button onClick={() => removeConnectedCalendar(cal.id)} className="text-xs text-red-600 hover:text-red-400 transition-colors">Remove</button>
+                    <button onClick={() => removeConnectedCalendar(cal.googleCalendarId)} className="text-xs text-red-600 hover:text-red-400 transition-colors">Remove</button>
                   </div>
                 </div>
-                <p className="text-xs text-zinc-600 mt-2 ml-6">{role.desc}</p>
+                <div className="flex items-center justify-between mt-2 ml-6">
+                  <p className="text-xs text-zinc-600">{role.desc}</p>
+                  {cal.role === 'governs' && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-600">Default tier:</span>
+                      <select
+                        value={cal.defaultState || 'booked'}
+                        onChange={e => updateCalendarDefaultState(cal.googleCalendarId, e.target.value)}
+                        className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent"
+                      >
+                        <option value="available">Available</option>
+                        <option value="hold">Penciled</option>
+                        <option value="booked">Not Typically Considered</option>
+                        <option value="blocked">Not Available</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
               </div>
             )
           })}
         </div>
+      )}
+
+      {/* Prefix Rules */}
+      <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Prefix Rules</p>
+      <p className="text-xs text-zinc-600 mb-3">Events in governing calendars with these title prefixes override the default state.</p>
+      {prefixRules.length === 0 ? (
+        <p className="text-sm text-zinc-600 mb-4">No prefix rules defined.</p>
+      ) : (
+        <div className="space-y-2 mb-4">
+          {prefixRules.map(rule => (
+            <div key={rule.id} className="bg-surface-900 border border-surface-700 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <code className="text-sm font-bold text-accent bg-surface-800 px-2 py-0.5 rounded">{rule.prefix}</code>
+                <span className="text-zinc-500 text-xs">→</span>
+                <Badge variant={rule.state === 'blocked' ? 'red' : rule.state === 'hold' ? 'yellow' : rule.state === 'available' ? 'ghost' : 'default'}>
+                  {rule.state === 'blocked' ? 'Not Available' : rule.state === 'hold' ? 'Penciled' : rule.state === 'booked' ? 'Not Typically Considered' : rule.state}
+                </Badge>
+                {rule.description && <span className="text-xs text-zinc-600 hidden sm:inline">{rule.description}</span>}
+              </div>
+              <button onClick={() => deletePrefixRule(rule.id)} className="text-xs text-red-600 hover:text-red-400 transition-colors flex-shrink-0">Remove</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {showAddRule ? (
+        <div className="bg-surface-900 border border-surface-700 rounded-xl px-4 py-4 mb-6">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div>
+              <label className="text-xs text-zinc-500 block mb-1">Prefix character</label>
+              <input
+                value={newPrefix}
+                onChange={e => setNewPrefix(e.target.value.slice(0, 3))}
+                maxLength={3}
+                placeholder="*"
+                className="w-16 bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-accent font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-500 block mb-1">Maps to state</label>
+              <select
+                value={newState}
+                onChange={e => setNewState(e.target.value)}
+                className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent"
+              >
+                <option value="blocked">Not Available</option>
+                <option value="hold">Penciled</option>
+                <option value="booked">Not Typically Considered</option>
+                <option value="available">Available</option>
+              </select>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button size="sm" onClick={() => {
+                if (!newPrefix.trim()) return
+                createPrefixRule({ prefix: newPrefix.trim(), state: newState })
+                setNewPrefix('')
+                setNewState('blocked')
+                setShowAddRule(false)
+              }}>Add Rule</Button>
+              <Button variant="secondary" size="sm" onClick={() => setShowAddRule(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <Button variant="secondary" size="sm" onClick={() => setShowAddRule(true)} className="mb-6">+ Add Prefix Rule</Button>
       )}
 
       {/* Sync */}

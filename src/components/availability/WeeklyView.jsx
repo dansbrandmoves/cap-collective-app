@@ -3,12 +3,12 @@ import { SLOT_STATES, deriveAvailabilityMatrix, getWeekDays, dateToStr } from '.
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
-export function WeeklyView({ weekStart, slots, calendarEvents, connectedCalendars, onDayClick, isOwner }) {
+export function WeeklyView({ weekStart, slots, calendarEvents, connectedCalendars, prefixRules = [], onDayClick, isOwner }) {
   const days = useMemo(() => getWeekDays(weekStart), [weekStart])
 
   const matrix = useMemo(
-    () => deriveAvailabilityMatrix(days, slots, calendarEvents, connectedCalendars),
-    [days, slots, calendarEvents, connectedCalendars]
+    () => deriveAvailabilityMatrix(days, slots, calendarEvents, connectedCalendars, prefixRules),
+    [days, slots, calendarEvents, connectedCalendars, prefixRules]
   )
 
   const todayStr = dateToStr(new Date())

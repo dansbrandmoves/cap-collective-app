@@ -13,7 +13,7 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Room is accessible without owner shell (shareable link) */}
-      <Route path="/room/:productionId/:groupId" element={<RoomView />} />
+      <Route path="/room/:token" element={<RoomView />} />
 
       {/* Owner shell wraps all other routes */}
       <Route element={<AppShell />}>

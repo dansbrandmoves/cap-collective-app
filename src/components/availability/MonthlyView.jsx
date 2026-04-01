@@ -3,13 +3,13 @@ import { SLOT_STATES, deriveAvailabilityMatrix, getMonthGrid, dateToStr } from '
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-export function MonthlyView({ year, month, slots, calendarEvents, connectedCalendars, onDayClick, isOwner }) {
+export function MonthlyView({ year, month, slots, calendarEvents, connectedCalendars, prefixRules = [], onDayClick, isOwner }) {
   const grid = useMemo(() => getMonthGrid(year, month), [year, month])
 
   const dates = useMemo(() => grid.map(d => d.date), [grid])
   const matrix = useMemo(
-    () => deriveAvailabilityMatrix(dates, slots, calendarEvents, connectedCalendars),
-    [dates, slots, calendarEvents, connectedCalendars]
+    () => deriveAvailabilityMatrix(dates, slots, calendarEvents, connectedCalendars, prefixRules),
+    [dates, slots, calendarEvents, connectedCalendars, prefixRules]
   )
 
   const todayStr = dateToStr(new Date())

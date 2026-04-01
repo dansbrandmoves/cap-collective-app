@@ -10,7 +10,7 @@ const VIEWS = ['Monthly', 'Weekly', 'Daily']
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
 
-export function AvailabilityCalendar({ slots, calendarEvents, connectedCalendars, availabilityRules = [], isOwner = false }) {
+export function AvailabilityCalendar({ slots, calendarEvents, connectedCalendars, availabilityRules = [], prefixRules = [], isOwner = false }) {
   const today = new Date()
   const [view, setView] = useState('Monthly')
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
@@ -129,6 +129,7 @@ export function AvailabilityCalendar({ slots, calendarEvents, connectedCalendars
           slots={slots}
           calendarEvents={calendarEvents}
           connectedCalendars={connectedCalendars}
+          prefixRules={prefixRules}
           onDayClick={handleDayClick}
           isOwner={isOwner}
         />
@@ -140,6 +141,7 @@ export function AvailabilityCalendar({ slots, calendarEvents, connectedCalendars
           slots={slots}
           calendarEvents={calendarEvents}
           connectedCalendars={connectedCalendars}
+          prefixRules={prefixRules}
           onDayClick={handleDayClick}
           isOwner={isOwner}
         />
@@ -152,6 +154,7 @@ export function AvailabilityCalendar({ slots, calendarEvents, connectedCalendars
           calendarEvents={calendarEvents}
           connectedCalendars={connectedCalendars}
           availabilityRules={availabilityRules}
+          prefixRules={prefixRules}
           isOwner={isOwner}
         />
       )}

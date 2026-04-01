@@ -14,7 +14,7 @@
 export const SLOT_STATES = {
   available: { label: 'Available',               color: '#d1d5db', bg: 'bg-zinc-300',   text: 'text-zinc-400',   dot: 'bg-zinc-400',   ring: 'ring-zinc-300' },
   hold:      { label: 'Penciled',                color: '#f97316', bg: 'bg-orange-500', text: 'text-orange-400', dot: 'bg-orange-400', ring: 'ring-orange-500' },
-  booked:    { label: 'Not Typically Considered', color: '#9ca3af', bg: 'bg-zinc-500',   text: 'text-zinc-400',   dot: 'bg-zinc-500',   ring: 'ring-zinc-500' },
+  booked:    { label: 'Not Typically Considered', color: '#3f3f46', bg: 'bg-zinc-700',   text: 'text-zinc-500',   dot: 'bg-zinc-600',   ring: 'ring-zinc-700' },
   blocked:   { label: 'Not Available',           color: '#ef4444', bg: 'bg-red-500',    text: 'text-red-400',    dot: 'bg-red-400',    ring: 'ring-red-500' },
 }
 

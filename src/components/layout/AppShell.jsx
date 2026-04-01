@@ -1,14 +1,34 @@
+import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { useApp } from '../../contexts/AppContext'
 
 export function AppShell() {
   const { isOwner } = useApp()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
     <div className="flex min-h-screen bg-surface-950">
-      {isOwner && <Sidebar />}
-      <main className="flex-1 min-w-0">
+      {isOwner && (
+        <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
+      )}
+      <main className="flex-1 min-w-0 flex flex-col">
+        {isOwner && (
+          <div className="md:hidden flex items-center justify-between px-4 py-3 bg-surface-900 border-b border-surface-700 sticky top-0 z-30">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-accent flex items-center justify-center">
+                <span className="text-black text-xs font-bold">CC</span>
+              </div>
+              <span className="text-sm font-semibold text-zinc-100">Cap Collective</span>
+            </div>
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 transition-colors text-lg"
+            >
+              ☰
+            </button>
+          </div>
+        )}
         <Outlet />
       </main>
     </div>

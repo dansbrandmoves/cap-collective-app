@@ -6,14 +6,21 @@ const NAV = [
   { to: '/calendars', label: 'Calendars', icon: '◷' },
 ]
 
-export function Sidebar() {
+export function Sidebar({ mobileOpen = false, onMobileClose }) {
   const { productions, getTotalUnread, isOwner, setIsOwner } = useApp()
   const navigate = useNavigate()
 
   const totalUnread = productions.reduce((sum, p) => sum + getTotalUnread(p.id), 0)
 
   return (
-    <aside className="w-56 flex-shrink-0 bg-surface-900 border-r border-surface-700 flex flex-col h-screen sticky top-0">
+    <>
+      {mobileOpen && (
+        <div className="fixed inset-0 bg-black/60 z-40 md:hidden" onClick={onMobileClose} />
+      )}
+    <aside className={`w-56 flex-shrink-0 bg-surface-900 border-r border-surface-700 flex flex-col h-screen
+      fixed inset-y-0 left-0 z-50 transition-transform duration-200
+      md:sticky md:translate-x-0 md:z-auto
+      ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
       {/* Logo */}
       <div className="px-5 py-5 border-b border-surface-700">
         <div className="flex items-center gap-2.5">
@@ -92,5 +99,6 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   )
 }

@@ -76,13 +76,13 @@ function NotesTab({ productionId, group, guestName }) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-8 py-3 border-b border-surface-700">
-        <p className="text-xs text-zinc-500">Shared between you and {OWNER_NAME} — both can edit</p>
+      <div className="flex items-center justify-between px-4 sm:px-8 py-3 border-b border-surface-700">
+        <p className="text-xs text-zinc-500">Shared with {OWNER_NAME} — both can edit</p>
         <span className={`text-xs transition-opacity ${saved ? 'text-zinc-600' : 'text-accent'}`}>
           {saved ? 'Saved' : 'Saving...'}
         </span>
       </div>
-      <div className="flex-1 overflow-hidden px-8 py-6">
+      <div className="flex-1 overflow-hidden px-4 sm:px-8 py-4 sm:py-6">
         <textarea
           value={value}
           onChange={handleChange}
@@ -119,7 +119,7 @@ function ChatTab({ productionId, group, isOwner, guestName }) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 space-y-4">
         {group.room.messages.length === 0 && (
           <div className="text-center py-12 text-zinc-600 text-sm">No messages yet. Start the conversation.</div>
         )}
@@ -132,7 +132,7 @@ function ChatTab({ productionId, group, isOwner, guestName }) {
               }`}>
                 {msg.senderName?.[0] ?? '?'}
               </div>
-              <div className={`max-w-md flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
+              <div className={`max-w-[75%] sm:max-w-md flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
                 <div className="flex items-baseline gap-2">
                   <span className="text-xs font-medium text-zinc-400">{msg.senderName}</span>
                   <span className="text-xs text-zinc-600">{formatTime(msg.timestamp)}</span>
@@ -148,7 +148,7 @@ function ChatTab({ productionId, group, isOwner, guestName }) {
         })}
         <div ref={bottomRef} />
       </div>
-      <form onSubmit={handleSend} className="px-6 py-4 border-t border-surface-700">
+      <form onSubmit={handleSend} className="px-3 sm:px-6 py-3 sm:py-4 border-t border-surface-700">
         <div className="flex gap-3 items-end bg-surface-800 rounded-xl px-4 py-3 border border-surface-600 focus-within:border-surface-500">
           <textarea
             value={input}
@@ -175,7 +175,7 @@ function ChatTab({ productionId, group, isOwner, guestName }) {
 function AvailabilityTab({ isOwner, availabilityRules }) {
   const { slots, calendarEvents, connectedCalendars, prefixRules } = useApp()
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-6">
+    <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
         <div className="mb-5">
           <p className="text-sm text-zinc-400 mb-1">{OWNER_NAME}'s availability for this production window.</p>
@@ -268,33 +268,33 @@ export function RoomView() {
   return (
     <div className="flex flex-col h-screen bg-surface-950">
       {/* Room header */}
-      <div className="flex items-center justify-between px-8 py-4 border-b border-surface-700 bg-surface-900">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4 border-b border-surface-700 bg-surface-900">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           {isOwner && (
-            <Link to={`/production/${productionId}`} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-              ← {production.name}
+            <Link to={`/production/${productionId}`} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex-shrink-0">
+              ← <span className="hidden sm:inline">{production.name}</span><span className="sm:hidden">Back</span>
             </Link>
           )}
           {!isOwner && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <div className="w-6 h-6 rounded bg-accent flex items-center justify-center">
                 <span className="text-black text-xs font-bold">CC</span>
               </div>
-              <span className="text-xs text-zinc-500">Cap Collective</span>
+              <span className="text-xs text-zinc-500 hidden sm:inline">Cap Collective</span>
             </div>
           )}
-          <div className="h-4 w-px bg-surface-700" />
-          <div>
-            <span className="text-sm font-semibold text-zinc-100">{group.name}</span>
-            <span className="text-zinc-600 mx-2 text-sm">·</span>
-            <span className="text-sm text-zinc-500">{production.name}</span>
+          <div className="h-4 w-px bg-surface-700 flex-shrink-0" />
+          <div className="min-w-0">
+            <span className="text-sm font-semibold text-zinc-100 truncate">{group.name}</span>
+            <span className="text-zinc-600 mx-1.5 text-sm hidden sm:inline">·</span>
+            <span className="text-sm text-zinc-500 hidden sm:inline truncate">{production.name}</span>
           </div>
         </div>
-        {isOwner && <Badge variant="ghost">Owner view</Badge>}
+        {isOwner && <Badge variant="ghost" className="flex-shrink-0">Owner</Badge>}
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-0 px-8 border-b border-surface-700 bg-surface-900">
+      <div className="flex items-center gap-0 px-4 sm:px-8 border-b border-surface-700 bg-surface-900">
         {TABS.map(tab => (
           <button
             key={tab}

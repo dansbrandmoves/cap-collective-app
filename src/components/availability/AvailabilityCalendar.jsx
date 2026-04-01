@@ -88,9 +88,9 @@ export function AvailabilityCalendar({ slots, calendarEvents, connectedCalendars
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         {/* View switcher */}
-        <div className="flex items-center gap-0.5 bg-surface-800 rounded-lg p-0.5">
+        <div className="flex items-center gap-0.5 bg-surface-800 rounded-lg p-0.5 self-start">
           {VIEWS.map(v => (
             <button
               key={v}
@@ -109,11 +109,11 @@ export function AvailabilityCalendar({ slots, calendarEvents, connectedCalendars
           <button onClick={goToToday} className="text-xs text-zinc-500 hover:text-zinc-300 px-2 py-1.5 rounded-md hover:bg-surface-700 transition-colors">
             Today
           </button>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-1 sm:flex-none">
             <button onClick={handlePrev} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-surface-700 text-zinc-400 hover:text-zinc-200 transition-colors text-sm">
               ‹
             </button>
-            <span className="text-sm font-medium text-zinc-300 min-w-[160px] text-center">{getNavLabel()}</span>
+            <span className="text-sm font-medium text-zinc-300 flex-1 sm:min-w-[160px] text-center">{getNavLabel()}</span>
             <button onClick={handleNext} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-surface-700 text-zinc-400 hover:text-zinc-200 transition-colors text-sm">
               ›
             </button>

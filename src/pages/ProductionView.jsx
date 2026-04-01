@@ -12,6 +12,7 @@ export function ProductionView() {
 
   const production = getProduction(id)
   const [activeGroupId, setActiveGroupId] = useState(null)
+  const [mobileShowDetail, setMobileShowDetail] = useState(false)
   const [showNewGroup, setShowNewGroup] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
   const [editingNotes, setEditingNotes] = useState(false)
@@ -49,8 +50,11 @@ export function ProductionView() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Left panel */}
-      <div className="w-72 flex-shrink-0 bg-surface-900 border-r border-surface-700 flex flex-col">
+      {/* Left panel — full width on mobile when not showing detail */}
+      <div className={`flex-shrink-0 bg-surface-900 border-r border-surface-700 flex-col
+        w-full md:w-72
+        ${mobileShowDetail ? 'hidden md:flex' : 'flex'}
+      `}>
         <div className="px-5 py-4 border-b border-surface-700">
           <button onClick={() => navigate('/')} className="text-xs text-zinc-500 hover:text-zinc-300 mb-3 flex items-center gap-1 transition-colors">
             ← Dashboard
@@ -78,7 +82,7 @@ export function ProductionView() {
             return (
               <button
                 key={group.id}
-                onClick={() => setActiveGroupId(group.id)}
+                onClick={() => { setActiveGroupId(group.id); setMobileShowDetail(true) }}
                 className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm text-left transition-colors mb-0.5 ${
                   isActive ? 'bg-surface-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
                 }`}
@@ -120,10 +124,12 @@ export function ProductionView() {
         </div>
       </div>
 
-      {/* Right panel */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Right panel — full width on mobile when showing detail */}
+      <div className={`flex-1 flex-col overflow-hidden
+        ${mobileShowDetail ? 'flex' : 'hidden md:flex'}
+      `}>
         {activeGroup ? (
-          <GroupOverview productionId={id} group={activeGroup} />
+          <GroupOverview productionId={id} group={activeGroup} onMobileBack={() => setMobileShowDetail(false)} />
         ) : (
           <div className="flex-1 flex items-center justify-center text-zinc-600 text-sm">
             Select a group to view its room
@@ -155,7 +161,7 @@ export function ProductionView() {
   )
 }
 
-function GroupOverview({ productionId, group }) {
+function GroupOverview({ productionId, group, onMobileBack }) {
   const navigate = useNavigate()
   const { getUnreadCount, updateGroupAccessMode, addGroupMember, removeGroupMember, getMembersForGroup, getRoomLink } = useApp()
   const unread = getUnreadCount(productionId, group.id)
@@ -186,17 +192,20 @@ function GroupOverview({ productionId, group }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="px-8 py-5 border-b border-surface-700 flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-zinc-100">{group.name}</h2>
+      <div className="px-4 sm:px-8 py-4 sm:py-5 border-b border-surface-700 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={onMobileBack} className="md:hidden text-xs text-zinc-500 hover:text-zinc-300 flex-shrink-0 transition-colors">
+            ← Back
+          </button>
+          <h2 className="text-lg font-semibold text-zinc-100 truncate">{group.name}</h2>
         </div>
-        <div className="flex items-center gap-3">
-          {unread > 0 && <Badge variant="accent">{unread} unread</Badge>}
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          {unread > 0 && <Badge variant="accent" className="hidden sm:inline-flex">{unread} unread</Badge>}
           <Button size="sm" onClick={() => navigate(`/room/${openToken}`)}>Open Room →</Button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 space-y-6 sm:space-y-8">
 
         {/* Access mode + link sharing */}
         <div>
@@ -272,7 +281,7 @@ function GroupOverview({ productionId, group }) {
 
                 {showAddMember ? (
                   <form onSubmit={handleAddMember} className="space-y-2">
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input
                         type="text"
                         placeholder="Name (required)"

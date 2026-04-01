@@ -19,20 +19,23 @@ export function WeeklyView({ weekStart, slots, calendarEvents, connectedCalendar
         <thead>
           <tr>
             {/* Slot label column */}
-            <th className="w-28 text-left pb-3 pr-3">
-              <span className="text-xs text-zinc-600 font-medium">Slot</span>
+            <th className="w-16 sm:w-28 text-left pb-3 pr-1 sm:pr-3">
+              <span className="text-xs text-zinc-600 font-medium hidden sm:inline">Slot</span>
             </th>
             {days.map((day, i) => {
               const ds = dateToStr(day)
               const isToday = ds === todayStr
               return (
-                <th key={i} className="pb-3 px-1 text-center min-w-[80px]">
+                <th key={i} className="pb-3 px-0.5 sm:px-1 text-center min-w-[40px] sm:min-w-[80px]">
                   <button
                     onClick={() => onDayClick(day)}
-                    className={`text-center w-full rounded-lg py-1.5 px-2 transition-colors hover:bg-surface-700 ${isToday ? 'text-accent' : 'text-zinc-400'}`}
+                    className={`text-center w-full rounded-lg py-1 sm:py-1.5 px-1 sm:px-2 transition-colors hover:bg-surface-700 ${isToday ? 'text-accent' : 'text-zinc-400'}`}
                   >
-                    <div className="text-xs font-medium">{DAY_LABELS[i]}</div>
-                    <div className={`text-lg font-semibold leading-none mt-0.5 ${isToday ? 'text-accent' : 'text-zinc-200'}`}>
+                    <div className="text-xs font-medium">
+                      <span className="hidden sm:inline">{DAY_LABELS[i]}</span>
+                      <span className="sm:hidden">{DAY_LABELS[i][0]}</span>
+                    </div>
+                    <div className={`text-base sm:text-lg font-semibold leading-none mt-0.5 ${isToday ? 'text-accent' : 'text-zinc-200'}`}>
                       {day.getDate()}
                     </div>
                   </button>
@@ -44,9 +47,9 @@ export function WeeklyView({ weekStart, slots, calendarEvents, connectedCalendar
         <tbody>
           {slots.map(slot => (
             <tr key={slot.id} className="border-t border-surface-700">
-              <td className="py-3 pr-3">
-                <div className="text-xs font-medium text-zinc-400">{slot.name}</div>
-                <div className="text-xs text-zinc-600">{slot.startTime}–{slot.endTime}</div>
+              <td className="py-2 sm:py-3 pr-1 sm:pr-3">
+                <div className="text-xs font-medium text-zinc-400 leading-tight">{slot.name}</div>
+                <div className="text-xs text-zinc-600 hidden sm:block">{slot.startTime}–{slot.endTime}</div>
               </td>
               {days.map((day, i) => {
                 const ds = dateToStr(day)
@@ -55,17 +58,17 @@ export function WeeklyView({ weekStart, slots, calendarEvents, connectedCalendar
                 const isToday = ds === todayStr
 
                 return (
-                  <td key={i} className="py-1.5 px-1">
+                  <td key={i} className="py-1 sm:py-1.5 px-0.5 sm:px-1">
                     <button
                       onClick={() => onDayClick(day)}
                       title={drivingEvent ? `${meta.label} — ${drivingEvent.title}` : meta.label}
-                      className={`w-full rounded-lg py-3 flex flex-col items-center justify-center gap-1 transition-all
+                      className={`w-full rounded-lg py-2 sm:py-3 flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all
                         hover:opacity-90 ${isToday ? 'ring-1 ring-accent' : ''}
                       `}
                       style={{ backgroundColor: meta.color + '22', border: `1px solid ${meta.color}44` }}
                     >
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: meta.color }} />
-                      <span className="text-xs font-medium" style={{ color: meta.color }}>{meta.label}</span>
+                      <span className="text-xs font-medium hidden sm:inline" style={{ color: meta.color }}>{meta.label}</span>
                     </button>
                   </td>
                 )

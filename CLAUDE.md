@@ -31,33 +31,91 @@ Production
 
 ## Stack
 
-- **Framework:** React + Vite
-- **Styling:** Tailwind CSS
-- **State:** React state + localStorage (no backend yet)
-- **Auth:** Hardcoded owner vs. guest role (no real auth in prototype)
-- **Deployment:** Vercel
-- **Notes:** Simple textarea/contenteditable — no rich text editor
+- **Framework:** React + Vite (v5)
+- **Styling:** Tailwind CSS v3 (pinned — do NOT upgrade to v4, config format changed)
+- **State:** React Context (AppContext) + localStorage — no Zustand, no backend
+- **Auth:** localStorage `isOwner` flag — no real auth in prototype
+- **Deployment:** Vercel — `vercel.json` rewrite rule already in place
+- **Notes:** Simple `<textarea>` — no rich text editor
 
 ---
 
-## Prototype Scope (what's in vs. out)
+## Current Build State (as of April 1, 2026)
 
-**In scope:**
-- Create a Production with name and date range
-- Create Groups with custom names
-- Shareable link to a Room (no real auth)
-- Shared notes inside a Room
-- Chat thread inside a Room
-- Simple availability calendar (stubbed — no OAuth)
-- Owner private notes layer
-- Dashboard with all Groups and basic unread indicator
+### Fully working
+- Dashboard — production cards, unread badges, date countdown, create production modal
+- Production View — group tabs, private notes section, message preview, copy room link
+- Room — Notes tab (auto-saves to localStorage), Chat tab (threaded, owner/guest bubbles), Availability tab (21-day calendar grid)
+- Availability Rules page — displays stubbed calendar events and per-production overrides
+- Calendar Settings page — stubbed UI with role display and "Connect Google Calendar" placeholder
+- Owner/Guest mode toggle (bottom of sidebar) — switches the full app between views
+- Shareable Room links — `/room/:productionId/:groupId` renders guest view with no owner chrome
 
-**Out of scope:**
-- Google Calendar OAuth (stub availability data)
-- Real-time collaborative editing
-- Full auth system
-- Mobile optimization
-- Multi-Production support
+### Intentionally stubbed (not broken)
+- Google Calendar OAuth — hardcoded events in `src/data/seed.js`
+- "Connect Google Calendar" button is disabled on purpose
+- Calendar sync / refresh button is non-functional on purpose
+- No email invite flow for group members yet
+
+### Not built yet
+- Real auth (owner login with PIN or password)
+- Multi-user real-time sync
+- Mobile layout
+- Availability rule creation UI (rules exist in seed data but can't be created in the app yet)
+
+---
+
+## Architecture Decisions (don't second-guess without reason)
+
+- **AppContext + localStorage over Zustand:** kept dependencies minimal for prototype. One context, auto-syncs on every state change. Storage key: `cap-collective-app`.
+- **`isOwner: true` defaults on first load:** makes the demo work immediately without a login screen. Intentional for prototype.
+- **Tailwind v3 not v4:** v4 uses CSS-based config (no `tailwind.config.js`), has rough Vite edges. Pinned to v3 deliberately.
+- **Owner notes not rendered at all for guests** — not just hidden with CSS. Gated on `isOwner` in the component, not a style toggle.
+- **Seed data always loads on first visit** — if localStorage is empty or corrupted, falls back to `SEED_DATA` from `src/data/seed.js`. Two rich productions pre-populated so the app looks alive on first open.
+
+---
+
+## Design System (don't drift from this)
+
+**Palette:**
+- Background: `zinc-950` / custom `surface-950` (`#0c0c0e`)
+- Card surfaces: `surface-900` (`#141416`), `surface-800` (`#1c1c20`)
+- Accent: amber — `#f59e0b` (Tailwind `amber-400`) — used for unread badges, active tabs, owner chat bubbles, CTA buttons
+- Text: `zinc-100` primary, `zinc-400` secondary, `zinc-600` tertiary/labels
+- Private notes area: `surface-950` background + `accent/30` border to visually separate from everything else
+
+**Feel:** production house, not SaaS. Dark, intentional, premium. The Room should feel like Christian built it for you specifically.
+
+**Font:** Inter via Google Fonts (loaded in `index.html`)
+
+---
+
+## File Structure
+
+```
+src/
+  App.jsx                    — router + AppProvider wrapper
+  main.jsx                   — entry point
+  index.css                  — Tailwind directives + base styles + scrollbar
+  contexts/
+    AppContext.jsx            — all state, localStorage sync, helper functions
+  data/
+    seed.js                  — SEED_DATA: two productions, calendar events, availability rules
+  components/
+    layout/
+      AppShell.jsx           — wraps owner routes (sidebar + outlet)
+      Sidebar.jsx            — nav, production list, unread badges, owner/guest toggle
+    ui/
+      Badge.jsx              — variants: default, accent, green, yellow, red, purple, ghost
+      Button.jsx             — variants: primary, secondary, ghost, danger
+      Modal.jsx              — escape-to-close, backdrop click-to-close
+  pages/
+    Dashboard.jsx            — production grid + create production modal
+    ProductionView.jsx       — group list + group overview panel + private notes
+    RoomView.jsx             — Notes / Chat / Availability tabs
+    AvailabilityRules.jsx    — calendar events + production overrides display
+    CalendarSettings.jsx     — stubbed calendar role management
+```
 
 ---
 
@@ -67,7 +125,7 @@ Production
 2. **Production View** (Christian only) — Groups as tabs, private notes layer
 3. **Room** (Christian + Group members) — shared notes, chat, availability view
 4. **Availability Rules** (Christian only) — slot types, date blocks, private context notes
-5. **Calendar Settings** (Christian only) — connected calendars, roles, sync status (stubbed for now)
+5. **Calendar Settings** (Christian only) — connected calendars, roles, sync status (stubbed)
 
 ---
 
@@ -87,25 +145,38 @@ Production
 User (owner)
   └── Production[]
         ├── name, description, date range
-        ├── owner_notes (private)
+        ├── ownerNotes (private — never shown to guests)
         ├── availability_rules[]
-        └── Group[]
-              ├── name (owner-defined)
-              ├── members[] ← email invite
-              └── Room
-                    ├── shared_notes
-                    ├── messages[]
-                    └── availability_view ← derived from owner rules
+        └── groups[]
+              ├── id, productionId, name
+              ├── members[] ← email (not yet functional)
+              └── room
+                    ├── sharedNotes (string, edited by both sides)
+                    ├── messages[] ← { id, senderId, senderName, text, timestamp, read }
+                    └── (availability derived from calendarEvents in AppContext)
 ```
+
+---
+
+## Next Iteration Priorities
+
+When the prototype is validated with Christian, here's the natural build order:
+
+1. **Deploy to Vercel** — connect `dansbrandmoves/cap-collective-app`, auto-deploys on push
+2. **Owner login** — simple PIN screen so Christian can safely share the URL. Store token in localStorage.
+3. **Google Calendar OAuth** — replace stubbed `calendarEvents` in seed.js with real data. OAuth flow → assign calendar role immediately after connect.
+4. **Availability rule creation UI** — let Christian add/edit rules from the Availability Rules page
+5. **Mobile layout pass** — Room and Dashboard are the priority screens for mobile
+6. **Real-time sync** — consider Supabase for shared notes + chat persistence across devices
 
 ---
 
 ## Calendar Notes
 
-- Google Calendar OAuth is **stubbed** in the prototype — hardcode sample events
-- Show a placeholder "Connect Google Calendar" button for UX flow visibility
-- Wire real OAuth in the next iteration after prototype is validated
-- Sync behavior: manual refresh button for prototype; webhooks for production
+- Google Calendar OAuth is **stubbed** — hardcoded sample events in `src/data/seed.js`
+- "Connect Google Calendar" button exists but is disabled — UX flow is visible, wiring comes next
+- Sync behavior: manual refresh button for prototype; webhooks (Google Calendar push notifications) for production
+- Calendar event tiers: `available` (green), `hold` (indigo), `booked` (amber), `blocked` (red)
 
 ---
 

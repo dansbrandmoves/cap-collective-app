@@ -104,7 +104,7 @@ export function AppProvider({ children }) {
   const [calendarEvents, setCalendarEvents] = useState(() => stored?.calendarEvents ?? SEED_DATA.calendarEvents)
   const [availabilityRules, setAvailabilityRules] = useState(() => stored?.availabilityRules ?? SEED_DATA.availabilityRules)
   const [prefixRules, setPrefixRules] = useState(() => stored?.prefixRules ?? SEED_DATA.prefixRules)
-  const [isOwner, setIsOwner] = useState(() => stored?.isOwner ?? true)
+  const [isOwner, setIsOwner] = useState(() => stored?.isOwner ?? false)
   const [googleAccessToken, setGoogleAccessToken] = useState(() => stored?.googleAccessToken ?? null)
   const [calendarSyncing, setCalendarSyncing] = useState(false)
   const [lastSynced, setLastSynced] = useState(() => stored?.lastSynced ?? null)

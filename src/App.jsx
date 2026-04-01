@@ -42,12 +42,12 @@ function GuestHome() {
         <span className="text-black font-bold text-sm">CC</span>
       </div>
       <h1 className="text-xl font-semibold text-zinc-100">Cap Collective</h1>
-      <p className="text-sm text-zinc-500">You're in guest preview mode.</p>
+      <p className="text-sm text-zinc-500 mb-2">Room links are shared directly by Christian.</p>
       <button
         onClick={() => setIsOwner(true)}
-        className="text-xs text-accent hover:underline mt-2"
+        className="px-4 py-2 bg-accent text-black text-sm font-semibold rounded-lg hover:bg-amber-300 transition-colors"
       >
-        Switch to owner view
+        Owner login →
       </button>
     </div>
   )

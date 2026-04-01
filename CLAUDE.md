@@ -260,6 +260,44 @@ Priority order (highest wins):
 
 ---
 
+## Git & Deployment Lessons (hard-won)
+
+### The index.lock problem
+This repo is in a Dropbox folder and Claude Code runs background `git status` checks continuously. Both hold `index.lock`, making normal `git add / commit` fail with "Unable to create index.lock: File exists."
+
+**Workaround that works:** use a temporary index file to bypass the lock entirely:
+```bash
+GIT_INDEX_FILE=.git/index_tmp git read-tree HEAD   # initialize from current HEAD — CRITICAL first step
+GIT_INDEX_FILE=.git/index_tmp git add <files>      # stage changes on top of full tree
+GIT_INDEX_FILE=.git/index_tmp git commit -m "..."  # commit from temp index
+rm -f .git/index_tmp
+git push
+```
+
+**The critical step is `git read-tree HEAD` first.** Without it, the temp index starts empty and the commit only contains the explicitly staged files — deleting everything else from the repo. This happened twice and required force-push recovery.
+
+**If you forget `git read-tree` and push a broken commit:** recover with:
+```bash
+GIT_INDEX_FILE=.git/index_fix git read-tree <last-good-sha>
+GIT_INDEX_FILE=.git/index_fix git add <changed files>
+GIT_INDEX_FILE=.git/index_fix git commit -m "fix: restore full tree + changes"
+rm -f .git/index_fix
+git push --force
+```
+
+### Vercel env vars
+- The Supabase Vercel integration injects `SUPABASE_URL` / `SUPABASE_ANON_KEY` — **not** `VITE_` prefixed
+- Vite only exposes `VITE_*` vars to the browser bundle — non-prefixed vars are invisible to client code
+- Must manually add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel → Project Settings → Environment Variables → Production
+- `VITE_GOOGLE_CLIENT_ID` also needs to be set for Production (not just Development)
+- After adding env vars, redeploy — env changes don't auto-trigger a new build
+
+### isOwner default
+- `isOwner` must default to `false` for fresh browsers — defaulting to `true` caused guests to be treated as the owner, sending messages under Christian's name
+- Christian's device retains `isOwner: true` via localStorage persistence after first toggle
+
+---
+
 ## Open Questions (not yet answered by Christian)
 
 - What does he call the unit of work — "Production," "Project," or "Shoot"?

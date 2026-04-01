@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
+import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 
 const TABS = ['Notes', 'Chat', 'Availability']
 
@@ -134,91 +135,23 @@ function ChatTab({ productionId, group, isOwner }) {
 }
 
 // --- Availability Tab ---
-const SLOT_TIERS = {
-  available: { label: 'Available', color: 'bg-emerald-500', text: 'text-emerald-400', dot: 'bg-emerald-400' },
-  hold: { label: 'Hold', color: 'bg-indigo-500', text: 'text-indigo-400', dot: 'bg-indigo-400' },
-  booked: { label: 'Booked', color: 'bg-amber-500', text: 'text-amber-400', dot: 'bg-amber-400' },
-  blocked: { label: 'Unavailable', color: 'bg-red-500', text: 'text-red-400', dot: 'bg-red-400' },
-}
-
-function getDaysAhead(n) {
-  const days = []
-  for (let i = 0; i < n; i++) {
-    const d = new Date()
-    d.setDate(d.getDate() + i)
-    days.push(d)
-  }
-  return days
-}
-
-function dateStr(d) {
-  return d.toISOString().split('T')[0]
-}
-
-function AvailabilityTab({ calendarEvents }) {
-  const days = getDaysAhead(21)
-
-  function getEventForDay(d) {
-    const ds = dateStr(d)
-    return calendarEvents.find(e => ds >= e.start && ds < e.end)
-  }
-
-  const monthGroups = days.reduce((acc, d) => {
-    const month = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    if (!acc[month]) acc[month] = []
-    acc[month].push(d)
-    return acc
-  }, {})
-
+function AvailabilityTab({ isOwner, availabilityRules }) {
+  const { slots, calendarEvents, connectedCalendars } = useApp()
   return (
     <div className="flex-1 overflow-y-auto px-8 py-6">
-      <div className="mb-6">
-        <p className="text-sm text-zinc-400 mb-1">Christian's availability for this production window.</p>
-        <p className="text-xs text-zinc-600">Contact him directly to request a specific date.</p>
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-4 mb-6">
-        {Object.entries(SLOT_TIERS).map(([key, val]) => (
-          <div key={key} className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${val.dot}`} />
-            <span className="text-xs text-zinc-400">{val.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Calendar grid */}
-      {Object.entries(monthGroups).map(([month, monthDays]) => (
-        <div key={month} className="mb-6">
-          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">{month}</p>
-          <div className="grid grid-cols-7 gap-1.5">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-              <div key={d} className="text-center text-xs text-zinc-600 pb-1">{d}</div>
-            ))}
-            {/* Offset first day */}
-            {monthDays[0] && Array.from({ length: monthDays[0].getDay() }).map((_, i) => (
-              <div key={`empty-${i}`} />
-            ))}
-            {monthDays.map(d => {
-              const event = getEventForDay(d)
-              const tier = event ? SLOT_TIERS[event.tier] : null
-              const isToday = dateStr(d) === dateStr(new Date())
-              return (
-                <div
-                  key={dateStr(d)}
-                  title={event?.title}
-                  className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs transition-all ${
-                    tier ? `${tier.color} bg-opacity-20 border border-current ${tier.text}` : 'bg-surface-800 text-zinc-600'
-                  } ${isToday ? 'ring-1 ring-accent' : ''}`}
-                >
-                  <span className={`font-medium ${isToday ? 'text-accent' : ''}`}>{d.getDate()}</span>
-                  {tier && <div className={`w-1 h-1 rounded-full ${tier.dot} mt-0.5`} />}
-                </div>
-              )
-            })}
-          </div>
+      {!isOwner && (
+        <div className="mb-5">
+          <p className="text-sm text-zinc-400 mb-1">Christian's availability for this production window.</p>
+          <p className="text-xs text-zinc-600">Contact him directly to request a specific date.</p>
         </div>
-      ))}
+      )}
+      <AvailabilityCalendar
+        slots={slots}
+        calendarEvents={calendarEvents}
+        connectedCalendars={connectedCalendars}
+        availabilityRules={availabilityRules}
+        isOwner={isOwner}
+      />
     </div>
   )
 }
@@ -226,7 +159,7 @@ function AvailabilityTab({ calendarEvents }) {
 // --- Main Room View ---
 export function RoomView() {
   const { productionId, groupId } = useParams()
-  const { getProduction, getGroup, isOwner, calendarEvents } = useApp()
+  const { getProduction, getGroup, isOwner, availabilityRules } = useApp()
   const [activeTab, setActiveTab] = useState('Notes')
 
   const production = getProduction(productionId)
@@ -296,7 +229,7 @@ export function RoomView() {
         <ChatTab productionId={productionId} group={group} isOwner={isOwner} />
       )}
       {activeTab === 'Availability' && (
-        <AvailabilityTab calendarEvents={calendarEvents} />
+        <AvailabilityTab isOwner={isOwner} availabilityRules={availabilityRules} />
       )}
     </div>
   )

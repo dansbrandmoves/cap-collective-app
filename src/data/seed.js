@@ -1,6 +1,138 @@
 // Seed data — mimics a real live production so the app looks alive on first load
 
 export const SEED_DATA = {
+  // Default slot configuration — Christian can customize per production
+  slots: [
+    {
+      id: 'slot-am',
+      name: 'Morning',
+      startTime: '08:00',
+      endTime: '12:00',
+      color: '#22c55e',
+      defaultState: 'available',
+    },
+    {
+      id: 'slot-pm',
+      name: 'Afternoon',
+      startTime: '13:00',
+      endTime: '17:00',
+      color: '#22c55e',
+      defaultState: 'available',
+    },
+  ],
+
+  // Connected calendars — stubbed until OAuth is wired
+  connectedCalendars: [
+    { id: 'gcal-001', googleCalendarId: 'primary', name: 'CAP A — Production', color: '#f59e0b', role: 'governs' },
+    { id: 'gcal-002', googleCalendarId: 'holds', name: 'CAP B — Holds', color: '#6366f1', role: 'governs' },
+    { id: 'gcal-003', googleCalendarId: 'personal', name: 'Personal', color: '#ef4444', role: 'informational' },
+    { id: 'gcal-004', googleCalendarId: 'xschedule', name: 'X Schedule', color: '#6b7280', role: 'ignored' },
+  ],
+
+  // Calendar events — structured to exercise all derivation rules:
+  // * prefix = veto (highest priority, always blocks)
+  // ^ prefix = soft hold (tentative/orange)
+  // no prefix on governing calendar = regular block
+  // events on ignored/informational calendars = no effect on slot state
+  calendarEvents: [
+    // Regular booked days — governing calendar, no prefix
+    {
+      id: 'cal-001',
+      calendarId: 'gcal-001',
+      title: 'Solé Campaign — Day 1',
+      start: '2026-04-14T08:00:00',
+      end: '2026-04-14T17:00:00',
+      isAllDay: false,
+    },
+    {
+      id: 'cal-002',
+      calendarId: 'gcal-001',
+      title: 'Solé Campaign — Day 2',
+      start: '2026-04-15T08:00:00',
+      end: '2026-04-15T17:00:00',
+      isAllDay: false,
+    },
+    {
+      id: 'cal-003',
+      calendarId: 'gcal-001',
+      title: 'Solé Campaign — Day 3',
+      start: '2026-04-16T08:00:00',
+      end: '2026-04-16T17:00:00',
+      isAllDay: false,
+    },
+    // Soft hold — ^ prefix on governing calendar
+    {
+      id: 'cal-004',
+      calendarId: 'gcal-002',
+      title: '^ Possible Nike inquiry',
+      start: '2026-04-21',
+      end: '2026-04-23', // all-day exclusive end (Google convention: subtract 1 day)
+      isAllDay: true,
+    },
+    // Veto — * prefix, cannot be overridden
+    {
+      id: 'cal-005',
+      calendarId: 'gcal-001',
+      title: '* Hard block — personal commitment',
+      start: '2026-04-10',
+      end: '2026-04-12', // all-day exclusive end
+      isAllDay: true,
+    },
+    // Available window
+    {
+      id: 'cal-006',
+      calendarId: 'gcal-001',
+      title: 'Available — open for bookings',
+      start: '2026-04-07T08:00:00',
+      end: '2026-04-09T17:00:00',
+      isAllDay: false,
+    },
+    // Meridian Hotel shoot
+    {
+      id: 'cal-007',
+      calendarId: 'gcal-001',
+      title: 'Meridian Hotel — Day 1',
+      start: '2026-04-28T08:00:00',
+      end: '2026-04-28T17:00:00',
+      isAllDay: false,
+    },
+    {
+      id: 'cal-008',
+      calendarId: 'gcal-001',
+      title: 'Meridian Hotel — Day 2',
+      start: '2026-04-29T08:00:00',
+      end: '2026-04-29T17:00:00',
+      isAllDay: false,
+    },
+    // Personal event — informational only, no effect on slot state
+    {
+      id: 'cal-009',
+      calendarId: 'gcal-003',
+      title: 'Doctor appointment',
+      start: '2026-04-17T10:00:00',
+      end: '2026-04-17T11:00:00',
+      isAllDay: false,
+    },
+    // Morning-only block — partial day
+    {
+      id: 'cal-010',
+      calendarId: 'gcal-001',
+      title: 'Morning prep call',
+      start: '2026-04-22T08:00:00',
+      end: '2026-04-22T11:00:00',
+      isAllDay: false,
+    },
+    // Soft hold on a specific afternoon
+    {
+      id: 'cal-011',
+      calendarId: 'gcal-002',
+      title: '^ Weather hold — PCH shoot',
+      start: '2026-04-24T13:00:00',
+      end: '2026-04-24T17:00:00',
+      isAllDay: false,
+    },
+  ],
+
   productions: [
     {
       id: 'prod-001',
@@ -17,56 +149,12 @@ export const SEED_DATA = {
           name: 'Brand Team',
           members: ['sarah@solecollective.com', 'marcus@solecollective.com'],
           room: {
-            sharedNotes: `# Brand Team — Shared Notes
-
-## Shot List (Draft)
-- Lifestyle walk on Venice Boardwalk (magic hour)
-- Product flat lays at the Airbnb
-- Water / beach movement shots — PCH overlook
-- Interview-style testimonial with founder (optional)
-
-## Location Confirmations
-- Venice Boardwalk: ✓ confirmed, no permit needed
-- PCH overlook: ✓ confirmed
-- Studio backup (rain day): TBD — Christian to confirm
-
-## Open Items
-- [ ] Final mood board approval from Marcus
-- [ ] Call sheet distribution by April 10
-- [ ] Confirm catering for Day 2`,
+            sharedNotes: `# Brand Team — Shared Notes\n\n## Shot List (Draft)\n- Lifestyle walk on Venice Boardwalk (magic hour)\n- Product flat lays at the Airbnb\n- Water / beach movement shots — PCH overlook\n- Interview-style testimonial with founder (optional)\n\n## Location Confirmations\n- Venice Boardwalk: ✓ confirmed, no permit needed\n- PCH overlook: ✓ confirmed\n- Studio backup (rain day): TBD — Christian to confirm\n\n## Open Items\n- [ ] Final mood board approval from Marcus\n- [ ] Call sheet distribution by April 10\n- [ ] Confirm catering for Day 2`,
             messages: [
-              {
-                id: 'msg-001',
-                senderId: 'owner',
-                senderName: 'Christian',
-                text: 'Hey team — shot list draft is in the notes above. Take a look and let me know if anything needs adjusting before I lock the call sheet.',
-                timestamp: '2026-04-01T09:15:00Z',
-                read: true,
-              },
-              {
-                id: 'msg-002',
-                senderId: 'sarah@solecollective.com',
-                senderName: 'Sarah',
-                text: "Looks great. Marcus wants to add a founder testimonial — can we fit that in Day 2 afternoon? Maybe 30 min.",
-                timestamp: '2026-04-01T10:32:00Z',
-                read: true,
-              },
-              {
-                id: 'msg-003',
-                senderId: 'owner',
-                senderName: 'Christian',
-                text: "Absolutely — I'll block 3–3:30pm on Day 2. I'll note it in the call sheet as optional/weather-dependent.",
-                timestamp: '2026-04-01T11:05:00Z',
-                read: true,
-              },
-              {
-                id: 'msg-004',
-                senderId: 'marcus@solecollective.com',
-                senderName: 'Marcus',
-                text: 'Perfect. Mood board approval coming today.',
-                timestamp: '2026-04-01T14:20:00Z',
-                read: false,
-              },
+              { id: 'msg-001', senderId: 'owner', senderName: 'Christian', text: 'Hey team — shot list draft is in the notes above. Take a look and let me know if anything needs adjusting before I lock the call sheet.', timestamp: '2026-04-01T09:15:00Z', read: true },
+              { id: 'msg-002', senderId: 'sarah@solecollective.com', senderName: 'Sarah', text: "Looks great. Marcus wants to add a founder testimonial — can we fit that in Day 2 afternoon? Maybe 30 min.", timestamp: '2026-04-01T10:32:00Z', read: true },
+              { id: 'msg-003', senderId: 'owner', senderName: 'Christian', text: "Absolutely — I'll block 3–3:30pm on Day 2. I'll note it in the call sheet as optional/weather-dependent.", timestamp: '2026-04-01T11:05:00Z', read: true },
+              { id: 'msg-004', senderId: 'marcus@solecollective.com', senderName: 'Marcus', text: 'Perfect. Mood board approval coming today.', timestamp: '2026-04-01T14:20:00Z', read: false },
             ],
           },
         },
@@ -76,47 +164,11 @@ export const SEED_DATA = {
           name: 'Vendor Partners',
           members: ['lens@studiobly.com', 'lighting@goldenhourinc.com'],
           room: {
-            sharedNotes: `# Vendor Partners — Shared Notes
-
-## Crew & Equipment
-- **Photography:** Studio Bly (primary), 1 assistant
-- **Lighting:** Golden Hour Inc — 2-person crew, HMI kit
-- **Grip/Transport:** Christian coordinating
-
-## Rates & Invoicing
-- Studio Bly: $3,200/day × 3 days
-- Golden Hour Inc: $1,800/day × 2 days (not needed Day 3)
-- Invoices due Net 15 after wrap
-
-## Load-In Schedule
-- Day 1: 6:00am call at Venice parking lot B
-- Day 2: 7:00am call at PCH overlook
-- Day 3: 8:00am call at studio`,
+            sharedNotes: `# Vendor Partners — Shared Notes\n\n## Crew & Equipment\n- **Photography:** Studio Bly (primary), 1 assistant\n- **Lighting:** Golden Hour Inc — 2-person crew, HMI kit\n\n## Rates & Invoicing\n- Studio Bly: $3,200/day × 3 days\n- Golden Hour Inc: $1,800/day × 2 days\n- Invoices due Net 15 after wrap`,
             messages: [
-              {
-                id: 'msg-005',
-                senderId: 'owner',
-                senderName: 'Christian',
-                text: "Hey both — rates confirmed, I'll have contracts out by April 5. Load-in schedule is in the notes above.",
-                timestamp: '2026-03-28T16:00:00Z',
-                read: true,
-              },
-              {
-                id: 'msg-006',
-                senderId: 'lens@studiobly.com',
-                senderName: 'Studio Bly',
-                text: 'Confirmed on our end. Will you need a 2nd shooter for Day 1 or just primary?',
-                timestamp: '2026-03-29T09:45:00Z',
-                read: true,
-              },
-              {
-                id: 'msg-007',
-                senderId: 'owner',
-                senderName: 'Christian',
-                text: 'Primary only for Day 1. Might bring in 2nd for Day 2 — will confirm by April 7.',
-                timestamp: '2026-03-29T11:10:00Z',
-                read: true,
-              },
+              { id: 'msg-005', senderId: 'owner', senderName: 'Christian', text: "Hey both — rates confirmed, I'll have contracts out by April 5.", timestamp: '2026-03-28T16:00:00Z', read: true },
+              { id: 'msg-006', senderId: 'lens@studiobly.com', senderName: 'Studio Bly', text: 'Confirmed on our end. Will you need a 2nd shooter for Day 1 or just primary?', timestamp: '2026-03-29T09:45:00Z', read: true },
+              { id: 'msg-007', senderId: 'owner', senderName: 'Christian', text: 'Primary only for Day 1. Might bring in 2nd for Day 2 — will confirm by April 7.', timestamp: '2026-03-29T11:10:00Z', read: true },
             ],
           },
         },
@@ -126,36 +178,10 @@ export const SEED_DATA = {
           name: 'Crew',
           members: ['alex@freelance.io', 'priya@gmx.com'],
           room: {
-            sharedNotes: `# Crew — Shared Notes
-
-## Assignments
-- **Alex:** BTS content, stills, behind-camera social capture
-- **Priya:** PA / talent liaison, logistics on ground
-
-## Day-of Contacts
-- Christian mobile: shared in group text
-- Location parking: Venice Lot B ($25/day, Christian covers)
-
-## Reminders
-- Dress code: neutral/dark clothing, no logos
-- Bring your own water — craft services on set from 8am`,
+            sharedNotes: `# Crew — Shared Notes\n\n## Assignments\n- **Alex:** BTS content, stills, behind-camera social capture\n- **Priya:** PA / talent liaison, logistics on ground\n\n## Reminders\n- Dress code: neutral/dark clothing, no logos\n- Bring your own water — craft services on set from 8am`,
             messages: [
-              {
-                id: 'msg-008',
-                senderId: 'owner',
-                senderName: 'Christian',
-                text: "Alex, Priya — you're confirmed for all 3 days. Notes above have the rundown. Lmk if any conflicts come up before the 14th.",
-                timestamp: '2026-03-30T13:00:00Z',
-                read: true,
-              },
-              {
-                id: 'msg-009',
-                senderId: 'priya@gmx.com',
-                senderName: 'Priya',
-                text: "All good on my end! Do you need me earlier than 6am on Day 1 for location setup?",
-                timestamp: '2026-03-31T08:20:00Z',
-                read: false,
-              },
+              { id: 'msg-008', senderId: 'owner', senderName: 'Christian', text: "Alex, Priya — you're confirmed for all 3 days. Notes above have the rundown.", timestamp: '2026-03-30T13:00:00Z', read: true },
+              { id: 'msg-009', senderId: 'priya@gmx.com', senderName: 'Priya', text: "All good on my end! Do you need me earlier than 6am on Day 1 for location setup?", timestamp: '2026-03-31T08:20:00Z', read: false },
             ],
           },
         },
@@ -164,7 +190,7 @@ export const SEED_DATA = {
     {
       id: 'prod-002',
       name: 'Meridian Hotel — Brand Identity Shoot',
-      description: 'Property photography and lifestyle campaign for Meridian\'s LA rebrand.',
+      description: "Property photography and lifestyle campaign for Meridian's LA rebrand.",
       startDate: '2026-04-28',
       endDate: '2026-04-29',
       ownerNotes: 'Hotel GM is very hands-on — loop him on everything. Budget is flexible but document all expenses. No drone permit yet — checking with the city.',
@@ -176,41 +202,14 @@ export const SEED_DATA = {
           name: 'Hotel Team',
           members: ['gm@meridianla.com'],
           room: {
-            sharedNotes: `# Hotel Team — Shared Notes
-
-## Shoot Areas Confirmed
-- Lobby + bar area (Day 1 morning)
-- Rooftop pool (Day 1 afternoon, post-checkout)
-- Suite 812 — hero room (Day 2)
-
-## Access Notes
-- Loading dock access: 6am–8pm only
-- Guest areas: coordinate with front desk 24hrs ahead
-- No flash photography in occupied dining room`,
+            sharedNotes: `# Hotel Team — Shared Notes\n\n## Shoot Areas Confirmed\n- Lobby + bar area (Day 1 morning)\n- Rooftop pool (Day 1 afternoon, post-checkout)\n- Suite 812 — hero room (Day 2)\n\n## Access Notes\n- Loading dock access: 6am–8pm only\n- No flash photography in occupied dining room`,
             messages: [
-              {
-                id: 'msg-010',
-                senderId: 'owner',
-                senderName: 'Christian',
-                text: "Hi James — areas are confirmed and in the notes above. I'll send the full crew manifest by April 20 for your security team.",
-                timestamp: '2026-03-26T10:00:00Z',
-                read: true,
-              },
+              { id: 'msg-010', senderId: 'owner', senderName: 'Christian', text: "Hi James — areas are confirmed and in the notes above. I'll send the full crew manifest by April 20 for your security team.", timestamp: '2026-03-26T10:00:00Z', read: true },
             ],
           },
         },
       ],
     },
-  ],
-
-  // Stubbed calendar data — mimics what Google Calendar returns
-  calendarEvents: [
-    { id: 'cal-001', title: 'CAP A — Solé Campaign', start: '2026-04-14', end: '2026-04-17', tier: 'booked', color: '#f59e0b' },
-    { id: 'cal-002', title: 'CAP A — Meridian Hotel', start: '2026-04-28', end: '2026-04-30', tier: 'booked', color: '#f59e0b' },
-    { id: 'cal-003', title: 'CAP B — Hold: possible Nike inquiry', start: '2026-04-21', end: '2026-04-23', tier: 'hold', color: '#6366f1' },
-    { id: 'cal-004', title: 'Personal — unavailable', start: '2026-04-10', end: '2026-04-12', tier: 'blocked', color: '#ef4444' },
-    { id: 'cal-005', title: 'CAP A — Available', start: '2026-04-07', end: '2026-04-10', tier: 'available', color: '#22c55e' },
-    { id: 'cal-006', title: 'CAP A — Available', start: '2026-04-17', end: '2026-04-21', tier: 'available', color: '#22c55e' },
   ],
 
   availabilityRules: [

@@ -45,23 +45,25 @@ Production
 ### Fully working
 - Dashboard — production cards, unread badges, date countdown, create production modal
 - Production View — group tabs, private notes section, message preview, copy room link
-- Room — Notes tab (auto-saves to localStorage), Chat tab (threaded, owner/guest bubbles), Availability tab (21-day calendar grid)
-- Availability Rules page — displays stubbed calendar events and per-production overrides
-- Calendar Settings page — stubbed UI with role display and "Connect Google Calendar" placeholder
+- Room — Notes tab (auto-saves to localStorage), Chat tab (threaded, owner/guest bubbles), Availability tab (full calendar)
+- Availability Rules page — slot editor (create/edit/delete), full calendar preview, production overrides
+- Calendar Settings page — real Google Calendar OAuth (client-side), role assignment modal, manual sync, disconnect
 - Owner/Guest mode toggle (bottom of sidebar) — switches the full app between views
 - Shareable Room links — `/room/:productionId/:groupId` renders guest view with no owner chrome
+- **Three calendar views** — Monthly (color-coded slot bars per day), Weekly (slot rows × 7 days), Daily (slot cards with driving event detail + private notes for owner)
+- **Slot system** — owner can create/edit/delete named time slots (name, time range, color, default state)
+- **Derivation logic** — `*` veto > `^` soft hold > governing calendar > available. All-day end-date correction applied.
+- **Google Calendar OAuth** — client-side via Google Identity Services. Token stored in localStorage. Fetches calendar list + events from governing calendars on sync.
 
 ### Intentionally stubbed (not broken)
-- Google Calendar OAuth — hardcoded events in `src/data/seed.js`
-- "Connect Google Calendar" button is disabled on purpose
-- Calendar sync / refresh button is non-functional on purpose
+- Google Calendar OAuth requires `VITE_GOOGLE_CLIENT_ID` in `.env` — configured with real key, works in dev. Vercel needs env var added in dashboard.
 - No email invite flow for group members yet
+- Availability rule *creation* UI not built (rules exist in seed data, viewable but not editable)
 
 ### Not built yet
 - Real auth (owner login with PIN or password)
 - Multi-user real-time sync
 - Mobile layout
-- Availability rule creation UI (rules exist in seed data but can't be created in the app yet)
 
 ---
 
@@ -100,7 +102,10 @@ src/
   contexts/
     AppContext.jsx            — all state, localStorage sync, helper functions
   data/
-    seed.js                  — SEED_DATA: two productions, calendar events, availability rules
+    seed.js                  — SEED_DATA: slots, connectedCalendars, calendarEvents (with * and ^ prefixes), productions
+  utils/
+    availability.js          — derivation logic (veto/hold/governing), getMonthGrid, getWeekDays, dateToStr
+    googleCalendar.js        — GIS OAuth, fetchCalendarList, fetchCalendarEvents, fetchAllGoverningEvents
   components/
     layout/
       AppShell.jsx           — wraps owner routes (sidebar + outlet)
@@ -109,13 +114,31 @@ src/
       Badge.jsx              — variants: default, accent, green, yellow, red, purple, ghost
       Button.jsx             — variants: primary, secondary, ghost, danger
       Modal.jsx              — escape-to-close, backdrop click-to-close
+    availability/
+      AvailabilityCalendar.jsx — wrapper: legend + view switcher + navigation + renders one of three views
+      MonthlyView.jsx        — full month grid, slot color bars per day, click → Daily
+      WeeklyView.jsx         — 7-day × slot rows table, click → Daily
+      DailyView.jsx          — slot cards with state, driving event, prefix explanation, owner private note
+      SlotEditor.jsx         — create/edit/delete named time slots (name, time, color, default state)
   pages/
     Dashboard.jsx            — production grid + create production modal
     ProductionView.jsx       — group list + group overview panel + private notes
     RoomView.jsx             — Notes / Chat / Availability tabs
-    AvailabilityRules.jsx    — calendar events + production overrides display
-    CalendarSettings.jsx     — stubbed calendar role management
+    AvailabilityRules.jsx    — SlotEditor + calendar preview + production overrides
+    CalendarSettings.jsx     — Google OAuth, role assignment modal, sync, disconnect
 ```
+
+## Environment Variables
+
+```
+VITE_GOOGLE_CLIENT_ID=<google oauth client id>
+```
+
+- Set in `.env` for local dev (gitignored)
+- Must also be added to Vercel dashboard → Project Settings → Environment Variables
+- Google Cloud Console project: `cap-collective-app` (Project ID: `cap-collective-app`)
+- OAuth Client ID type: Web application
+- Authorized JS origins: `http://localhost:5173` + Vercel URL
 
 ---
 

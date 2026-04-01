@@ -58,6 +58,7 @@ Production
 - **Derivation logic** — `*` veto > `^` soft hold > governing calendar > available. All-day end-date correction applied.
 - **Google Calendar OAuth** — client-side via Google Identity Services. Token stored in localStorage. Fetches calendar list + events from governing calendars on sync. `VITE_GOOGLE_CLIENT_ID` is configured with real key in `.env`.
 - **Real-time chat/notes** — Supabase channel subscriptions in RoomView, scoped per `group_id`
+- **Mobile responsive** — fully done across all screens (see Mobile Layout section below)
 
 ### Intentionally stubbed (not broken)
 - No email sending — Christian writes his own emails and pastes room links manually
@@ -65,7 +66,6 @@ Production
 
 ### Not built yet
 - Real auth (owner login with PIN or password)
-- Mobile layout
 
 ---
 
@@ -73,7 +73,7 @@ Production
 
 - **Supabase for collaborative data, localStorage for owner settings:** Productions, groups, messages, shared_notes, and group_members live in Supabase so room links work cross-device for guests. Slots, connectedCalendars, prefixRules, isOwner stay in localStorage — owner-only, no sharing needed.
 - **`seedSupabase()` on first load:** If Supabase tables are empty, seeds all SEED_DATA automatically. Runs once, idempotent.
-- **`isOwner: true` defaults on first load:** makes the demo work immediately without a login screen. Intentional for prototype.
+- **`isOwner: false` defaults on first load:** guests visiting room links get the correct guest view. Christian toggles himself to owner via the sidebar button on his device, which persists in localStorage. Do NOT change this default back to `true` — it caused guests to send messages under Christian's name.
 - **Tailwind v3 not v4:** v4 uses CSS-based config (no `tailwind.config.js`), has rough Vite edges. Pinned to v3 deliberately.
 - **Owner notes not rendered at all for guests** — not just hidden with CSS. Gated on `isOwner` in the component, not a style toggle.
 - **`googleCalendarId` as the stable key for calendar events:** Internal `id` values on `connectedCalendars` can collide (especially after localStorage rehydration). All event matching uses `googleCalendarId` (e.g. `primary`, `holds`) which is stable and unique. This applies in `fetchAllGoverningEvents`, `deriveSlotState`'s `calendarMap`, and seed data's `calendarEvents[].calendarId`. Do not revert to internal `id` matching.
@@ -236,13 +236,29 @@ CalendarEvents[] — fetched from Google or loaded from seed   ← localStorage
 
 ---
 
+## Mobile Layout
+
+Mobile responsiveness is fully implemented. Approach used throughout:
+
+- **Sidebar** (`AppShell.jsx` + `Sidebar.jsx`) — slide-over drawer on mobile (`fixed`, `translate-x-full` → `translate-x-0`). Hamburger button in a sticky top bar (`md:hidden`). Backdrop overlay closes it. On desktop: `md:sticky`, normal flow.
+- **Dashboard** — `px-4 sm:px-8 py-6 sm:py-10`
+- **ProductionView** — two-panel layout (group list + detail) collapses to single-panel on mobile. `mobileShowDetail` state drives which panel is visible. Tapping a group shows detail + "← Back" button. `hidden md:flex` / `flex` swap on the two panels.
+- **RoomView** — padding reduced with `sm:` breakpoints, chat bubbles `max-w-[75%]`, back link shows "Back" on mobile
+- **AvailabilityCalendar** — controls stack `flex-col` on mobile, row on `sm:flex-row`
+- **MonthlyView** — single-letter day headers on mobile (`sm:hidden` / `hidden sm:inline`), cell min-height `48px` → `72px`
+- **WeeklyView** — columns compress (`min-w-[40px] sm:min-w-[80px]`), slot label column narrows, state text labels hidden on mobile (dots only), day headers single-letter on mobile
+- **DailyView** — already stacked cards, no changes needed
+
+**Pattern used everywhere:** `sm:` breakpoints (not `md:`) for padding/text. `md:` for layout changes (sidebar, two-column → single-column). Mobile-first: base = mobile, `sm:`/`md:` = larger.
+
+---
+
 ## Next Iteration Priorities
 
 1. **Owner PIN login** — simple PIN screen so Christian can safely share the Vercel URL publicly
 2. **Add Vercel URL to Google Cloud Console** — Authorized JS origins so OAuth works in production
-3. **Add Supabase env vars to Vercel** — `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` must be set in Vercel dashboard before deploying
+3. **Verify Supabase env vars in Vercel** — `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` must be set in Vercel dashboard → Production (the Supabase integration adds non-VITE-prefixed versions which Vite can't read)
 4. **Availability rule creation UI** — let Christian add/edit rules from the Availability Rules page
-5. **Mobile layout pass** — Room and Dashboard are the priority screens for mobile
 
 ---
 
@@ -303,4 +319,3 @@ git push --force
 - What does he call the unit of work — "Production," "Project," or "Shoot"?
 - Does he want clients to request specific dates, or just see availability?
 - How many active productions does he typically run at once?
-- Desktop-first okay, or does he need mobile now?

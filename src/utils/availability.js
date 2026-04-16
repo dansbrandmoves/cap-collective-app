@@ -11,11 +11,26 @@
  * All-day events use Google's exclusive-end convention — subtract 1 day before comparing.
  */
 
-export const SLOT_STATES = {
+export const DEFAULT_SLOT_STATES = {
   available: { label: 'Available',               color: '#d1d5db', bg: 'bg-zinc-300',   text: 'text-zinc-400',   dot: 'bg-zinc-400',   ring: 'ring-zinc-300' },
   hold:      { label: 'Penciled',                color: '#f97316', bg: 'bg-orange-500', text: 'text-orange-400', dot: 'bg-orange-400', ring: 'ring-orange-500' },
   booked:    { label: 'Not Typically Considered', color: '#3f3f46', bg: 'bg-zinc-700',   text: 'text-zinc-500',   dot: 'bg-zinc-600',   ring: 'ring-zinc-700' },
   blocked:   { label: 'Not Available',           color: '#ef4444', bg: 'bg-red-500',    text: 'text-red-400',    dot: 'bg-red-400',    ring: 'ring-red-500' },
+}
+
+// Keep a backwards-compatible reference
+export const SLOT_STATES = DEFAULT_SLOT_STATES
+
+/**
+ * Build customized slot states by merging overrides onto defaults.
+ * @param {object} customizations — e.g. { booked: { label: 'Busy', color: '#666' } }
+ */
+export function buildSlotStates(customizations = {}) {
+  const result = {}
+  for (const [key, defaults] of Object.entries(DEFAULT_SLOT_STATES)) {
+    result[key] = { ...defaults, ...(customizations[key] || {}) }
+  }
+  return result
 }
 
 const PRIORITY = { blocked: 3, booked: 2, hold: 1, available: 0 }

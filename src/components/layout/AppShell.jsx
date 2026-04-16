@@ -4,7 +4,7 @@ import { Sidebar } from './Sidebar'
 import { useApp } from '../../contexts/AppContext'
 
 export function AppShell() {
-  const { isOwner } = useApp()
+  const { isOwner, theme } = useApp()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
@@ -16,10 +16,7 @@ export function AppShell() {
         {isOwner && (
           <div className="md:hidden flex items-center justify-between px-4 py-3 bg-surface-900 border-b border-surface-700 sticky top-0 z-30">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-accent flex items-center justify-center">
-                <span className="text-black text-xs font-bold">CC</span>
-              </div>
-              <span className="text-sm font-semibold text-zinc-100">Cap Collective</span>
+              <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
             </div>
             <button
               onClick={() => setMobileMenuOpen(true)}

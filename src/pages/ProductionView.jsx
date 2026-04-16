@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
@@ -8,7 +8,7 @@ import { Modal } from '../components/ui/Modal'
 export function ProductionView() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getProduction, updateProductionNotes, createGroup, getUnreadCount } = useApp()
+  const { getProduction, updateProductionNotes, createGroup } = useApp()
 
   const production = getProduction(id)
   const [activeGroupId, setActiveGroupId] = useState(null)
@@ -21,7 +21,7 @@ export function ProductionView() {
   if (!production) {
     return (
       <div className="flex items-center justify-center h-64 text-zinc-500">
-        Production not found.{' '}
+        Project not found.{' '}
         <Link to="/" className="ml-2 text-accent underline">Back to dashboard</Link>
       </div>
     )
@@ -50,7 +50,7 @@ export function ProductionView() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Left panel — full width on mobile when not showing detail */}
+      {/* Left panel */}
       <div className={`flex-shrink-0 bg-surface-900 border-r border-surface-700 flex-col
         w-full md:w-72
         ${mobileShowDetail ? 'hidden md:flex' : 'flex'}
@@ -77,7 +77,6 @@ export function ProductionView() {
           )}
 
           {production.groups.map(group => {
-            const unread = getUnreadCount(id, group.id)
             const isActive = activeGroup?.id === group.id
             return (
               <button
@@ -88,11 +87,6 @@ export function ProductionView() {
                 }`}
               >
                 <span className="truncate">{group.name}</span>
-                {unread > 0 && (
-                  <span className="bg-accent text-black text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center flex-shrink-0">
-                    {unread}
-                  </span>
-                )}
               </button>
             )
           })}
@@ -124,7 +118,7 @@ export function ProductionView() {
         </div>
       </div>
 
-      {/* Right panel — full width on mobile when showing detail */}
+      {/* Right panel */}
       <div className={`flex-1 flex-col overflow-hidden
         ${mobileShowDetail ? 'flex' : 'hidden md:flex'}
       `}>
@@ -163,14 +157,23 @@ export function ProductionView() {
 
 function GroupOverview({ productionId, group, onMobileBack }) {
   const navigate = useNavigate()
-  const { getUnreadCount, updateGroupAccessMode, addGroupMember, removeGroupMember, getMembersForGroup, getRoomLink } = useApp()
-  const unread = getUnreadCount(productionId, group.id)
+  const { updateGroupAccessMode, addGroupMember, removeGroupMember, getMembersForGroup, getRoomLink, fetchDateRequests, updateDateRequestStatus } = useApp()
   const members = getMembersForGroup(group.id)
 
   const [showAddMember, setShowAddMember] = useState(false)
   const [memberName, setMemberName] = useState('')
   const [memberEmail, setMemberEmail] = useState('')
-  const [copied, setCopied] = useState(null) // token that was just copied
+  const [copied, setCopied] = useState(null)
+  const [dateRequests, setDateRequests] = useState([])
+  const [loadingRequests, setLoadingRequests] = useState(true)
+
+  useEffect(() => {
+    setLoadingRequests(true)
+    fetchDateRequests(group.id).then(reqs => {
+      setDateRequests(reqs)
+      setLoadingRequests(false)
+    })
+  }, [group.id, fetchDateRequests])
 
   function copyLink(token) {
     navigator.clipboard.writeText(getRoomLink(token))
@@ -187,11 +190,25 @@ function GroupOverview({ productionId, group, onMobileBack }) {
     setShowAddMember(false)
   }
 
+  async function handleRequestAction(requestId, status) {
+    const success = await updateDateRequestStatus(requestId, status)
+    if (success) {
+      setDateRequests(prev => prev.map(r => r.id === requestId ? { ...r, status } : r))
+    }
+  }
+
   const openToken = group.openToken
+  const pendingCount = dateRequests.filter(r => r.status === 'pending').length
+
+  function formatRequestDates(dates) {
+    return dates.map(ds => {
+      const d = new Date(ds + 'T00:00:00')
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }).join(', ')
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Header */}
       <div className="px-4 sm:px-8 py-4 sm:py-5 border-b border-surface-700 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={onMobileBack} className="md:hidden text-xs text-zinc-500 hover:text-zinc-300 flex-shrink-0 transition-colors">
@@ -200,7 +217,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
           <h2 className="text-lg font-semibold text-zinc-100 truncate">{group.name}</h2>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          {unread > 0 && <Badge variant="accent" className="hidden sm:inline-flex">{unread} unread</Badge>}
+          {pendingCount > 0 && <Badge variant="accent">{pendingCount} pending</Badge>}
           <Button size="sm" onClick={() => navigate(`/room/${openToken}`)}>Open Room →</Button>
         </div>
       </div>
@@ -211,28 +228,19 @@ function GroupOverview({ productionId, group, onMobileBack }) {
         <div>
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Room Access</p>
           <div className="bg-surface-900 border border-surface-700 rounded-xl p-5">
-            {/* Mode toggle */}
             <div className="flex items-center gap-2 mb-4">
               <button
                 onClick={() => updateGroupAccessMode(group.id, 'open_link')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  group.accessMode === 'open_link'
-                    ? 'bg-accent text-black'
-                    : 'bg-surface-700 text-zinc-400 hover:text-zinc-200'
+                  group.accessMode === 'open_link' ? 'bg-accent text-white' : 'bg-surface-700 text-zinc-400 hover:text-zinc-200'
                 }`}
-              >
-                Open Link
-              </button>
+              >Open Link</button>
               <button
                 onClick={() => updateGroupAccessMode(group.id, 'invite_only')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  group.accessMode === 'invite_only'
-                    ? 'bg-accent text-black'
-                    : 'bg-surface-700 text-zinc-400 hover:text-zinc-200'
+                  group.accessMode === 'invite_only' ? 'bg-accent text-white' : 'bg-surface-700 text-zinc-400 hover:text-zinc-200'
                 }`}
-              >
-                Invite Only
-              </button>
+              >Invite Only</button>
             </div>
 
             {group.accessMode === 'open_link' && openToken && (
@@ -252,9 +260,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
             {group.accessMode === 'invite_only' && (
               <div>
                 <p className="text-xs text-zinc-500 mb-3">Each person gets their own unique link. Add people below.</p>
-                {members.length === 0 ? (
-                  <p className="text-xs text-zinc-600 mb-3">No members yet.</p>
-                ) : (
+                {members.length > 0 && (
                   <div className="space-y-2 mb-3">
                     {members.map(m => (
                       <div key={m.id} className="flex items-center gap-3 bg-surface-800 rounded-lg px-3 py-2.5">
@@ -271,9 +277,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
                         <button
                           onClick={() => removeGroupMember(m.id)}
                           className="text-xs text-red-600 hover:text-red-400 transition-colors flex-shrink-0"
-                        >
-                          Remove
-                        </button>
+                        >Remove</button>
                       </div>
                     ))}
                   </div>
@@ -282,21 +286,10 @@ function GroupOverview({ productionId, group, onMobileBack }) {
                 {showAddMember ? (
                   <form onSubmit={handleAddMember} className="space-y-2">
                     <div className="flex flex-col sm:flex-row gap-2">
-                      <input
-                        type="text"
-                        placeholder="Name (required)"
-                        value={memberName}
-                        onChange={e => setMemberName(e.target.value)}
-                        autoFocus
-                        className="flex-1 bg-surface-700 border border-surface-600 rounded-lg px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent"
-                      />
-                      <input
-                        type="email"
-                        placeholder="Email (optional)"
-                        value={memberEmail}
-                        onChange={e => setMemberEmail(e.target.value)}
-                        className="flex-1 bg-surface-700 border border-surface-600 rounded-lg px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent"
-                      />
+                      <input type="text" placeholder="Name (required)" value={memberName} onChange={e => setMemberName(e.target.value)} autoFocus
+                        className="flex-1 bg-surface-700 border border-surface-600 rounded-lg px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent" />
+                      <input type="email" placeholder="Email (optional)" value={memberEmail} onChange={e => setMemberEmail(e.target.value)}
+                        className="flex-1 bg-surface-700 border border-surface-600 rounded-lg px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent" />
                     </div>
                     <div className="flex gap-2">
                       <Button size="sm" type="submit" disabled={!memberName.trim()}>Add & Generate Link</Button>
@@ -304,42 +297,45 @@ function GroupOverview({ productionId, group, onMobileBack }) {
                     </div>
                   </form>
                 ) : (
-                  <button
-                    onClick={() => setShowAddMember(true)}
-                    className="text-xs text-accent hover:underline"
-                  >
-                    + Add person
-                  </button>
+                  <button onClick={() => setShowAddMember(true)} className="text-xs text-accent hover:underline">+ Add person</button>
                 )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Latest messages */}
+        {/* Date Requests */}
         <div>
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Latest Messages</p>
-          {group.room.messages.length === 0 ? (
-            <p className="text-sm text-zinc-600">No messages yet.</p>
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Date Requests</p>
+          {loadingRequests ? (
+            <p className="text-sm text-zinc-600">Loading...</p>
+          ) : dateRequests.length === 0 ? (
+            <p className="text-sm text-zinc-600">No date requests yet.</p>
           ) : (
             <div className="space-y-3">
-              {group.room.messages.slice(-3).map(msg => (
-                <div key={msg.id} className={`flex gap-3 ${msg.senderId === 'owner' ? 'flex-row-reverse' : ''}`}>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
-                    msg.senderId === 'owner' ? 'bg-accent text-black' : 'bg-surface-700 text-zinc-300'
-                  }`}>
-                    {msg.senderName?.[0] ?? '?'}
-                  </div>
-                  <div className={`max-w-sm ${msg.senderId === 'owner' ? 'items-end' : ''} flex flex-col gap-0.5`}>
-                    <span className="text-xs text-zinc-600">{msg.senderName}</span>
-                    <div className={`px-3 py-2 rounded-xl text-sm ${
-                      msg.senderId === 'owner'
-                        ? 'bg-accent/20 text-zinc-200'
-                        : !msg.read ? 'bg-surface-700 text-zinc-100 ring-1 ring-accent/30' : 'bg-surface-800 text-zinc-300'
-                    }`}>
-                      {msg.text}
+              {dateRequests.map(req => (
+                <div key={req.id} className="bg-surface-900 border border-surface-700 rounded-xl px-5 py-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-200">{req.requester_name}</p>
+                      {req.requester_email && <p className="text-xs text-zinc-500">{req.requester_email}</p>}
                     </div>
+                    <Badge variant={req.status === 'pending' ? 'yellow' : req.status === 'approved' ? 'green' : 'red'}>
+                      {req.status}
+                    </Badge>
                   </div>
+                  <p className="text-xs text-zinc-400 mb-1">
+                    <span className="text-zinc-500">Dates:</span> {formatRequestDates(req.dates)}
+                  </p>
+                  {req.message && (
+                    <p className="text-xs text-zinc-500 italic mt-1">"{req.message}"</p>
+                  )}
+                  {req.status === 'pending' && (
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" onClick={() => handleRequestAction(req.id, 'approved')}>Approve</Button>
+                      <Button size="sm" variant="secondary" onClick={() => handleRequestAction(req.id, 'declined')}>Decline</Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -352,10 +348,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
           <div className="bg-surface-800 rounded-xl px-5 py-4 text-xs text-zinc-400 font-mono whitespace-pre-wrap line-clamp-6 leading-relaxed">
             {group.room.sharedNotes}
           </div>
-          <button
-            onClick={() => navigate(`/room/${openToken}`)}
-            className="text-xs text-accent hover:underline mt-2"
-          >
+          <button onClick={() => navigate(`/room/${openToken}`)} className="text-xs text-accent hover:underline mt-2">
             Open full room →
           </button>
         </div>

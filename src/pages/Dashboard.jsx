@@ -26,12 +26,9 @@ function daysUntil(dateStr) {
   return `In ${diff} days`
 }
 
-function ProductionCard({ production }) {
-  const { getTotalUnread } = useApp()
+function ProjectCard({ production }) {
   const navigate = useNavigate()
-  const unread = getTotalUnread(production.id)
   const countdown = daysUntil(production.startDate)
-  const isUrgent = unread > 0
 
   return (
     <div
@@ -42,11 +39,6 @@ function ProductionCard({ production }) {
         <h3 className="text-base font-semibold text-zinc-100 leading-snug group-hover:text-white">
           {production.name}
         </h3>
-        {isUrgent && (
-          <span className="flex-shrink-0 bg-accent text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-            {unread}
-          </span>
-        )}
       </div>
 
       <p className="text-sm text-zinc-500 mb-4 line-clamp-2">{production.description}</p>
@@ -89,34 +81,30 @@ export function Dashboard() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
-      {/* Header */}
       <div className="flex items-end justify-between mb-8">
         <div>
-          <p className="text-xs font-semibold text-accent uppercase tracking-widest mb-1">Command Center</p>
           <h1 className="text-2xl font-semibold text-zinc-100">Dashboard</h1>
         </div>
-        <Button onClick={() => setShowModal(true)}>+ New Production</Button>
+        <Button onClick={() => setShowModal(true)}>+ New Project</Button>
       </div>
 
-      {/* Productions grid */}
       {productions.length === 0 ? (
         <div className="border border-dashed border-surface-600 rounded-xl p-12 text-center">
-          <p className="text-zinc-500 mb-4">No productions yet.</p>
-          <Button onClick={() => setShowModal(true)}>Create your first production</Button>
+          <p className="text-zinc-500 mb-4">No projects yet.</p>
+          <Button onClick={() => setShowModal(true)}>Create your first project</Button>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {productions.map(p => (
-            <ProductionCard key={p.id} production={p} />
+            <ProjectCard key={p.id} production={p} />
           ))}
         </div>
       )}
 
-      {/* Create Production Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="New Production">
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="New Project">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Production Name</label>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Project Name</label>
             <input
               type="text"
               placeholder="e.g. Pacific Coast Lifestyle Campaign"

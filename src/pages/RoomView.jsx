@@ -6,17 +6,11 @@ import { Badge } from '../components/ui/Badge'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { supabase } from '../utils/supabase'
 
-const TABS = ['Availability', 'Chat', 'Notes']
-const OWNER_NAME = localStorage.getItem('ownerName') || 'Christian'
+const TABS = ['Availability', 'Notes']
 
-function formatTime(iso) {
-  const d = new Date(iso)
-  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-}
-
-// --- Name Prompt (open_link guests on first visit) ---
 function NamePrompt({ token, onConfirm }) {
   const [name, setName] = useState('')
+  const { theme } = useApp()
   function handleSubmit(e) {
     e.preventDefault()
     if (!name.trim()) return
@@ -27,10 +21,7 @@ function NamePrompt({ token, onConfirm }) {
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
       <div className="bg-surface-900 border border-surface-700 rounded-2xl px-8 py-8 w-full max-w-sm">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-            <span className="text-black font-bold text-sm">CC</span>
-          </div>
-          <span className="text-sm font-medium text-zinc-300">Cap Collective</span>
+          <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
         </div>
         <h2 className="text-lg font-semibold text-zinc-100 mb-1">What's your name?</h2>
         <p className="text-sm text-zinc-500 mb-6">So the team knows who they're talking to.</p>
@@ -50,9 +41,9 @@ function NamePrompt({ token, onConfirm }) {
   )
 }
 
-// --- Notes Tab ---
 function NotesTab({ productionId, group, guestName }) {
-  const { updateSharedNotes } = useApp()
+  const { updateSharedNotes, user } = useApp()
+  const ownerName = user?.user_metadata?.full_name || 'the project owner'
   const [value, setValue] = useState(group.room.sharedNotes)
   const [saved, setSaved] = useState(true)
   const timerRef = useRef(null)
@@ -77,7 +68,7 @@ function NotesTab({ productionId, group, guestName }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-4 sm:px-8 py-3 border-b border-surface-700">
-        <p className="text-xs text-zinc-500">Shared with {OWNER_NAME} — both can edit</p>
+        <p className="text-xs text-zinc-500">Shared notes — both sides can edit</p>
         <span className={`text-xs transition-opacity ${saved ? 'text-zinc-600' : 'text-accent'}`}>
           {saved ? 'Saved' : 'Saving...'}
         </span>
@@ -95,91 +86,13 @@ function NotesTab({ productionId, group, guestName }) {
   )
 }
 
-// --- Chat Tab ---
-function ChatTab({ productionId, group, isOwner, guestName }) {
-  const { sendMessage, markRoomRead } = useApp()
-  const [input, setInput] = useState('')
-  const bottomRef = useRef(null)
-  const senderName = isOwner ? OWNER_NAME : guestName
-
-  useEffect(() => {
-    markRoomRead(productionId, group.id)
-  }, [productionId, group.id])
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [group.room.messages.length])
-
-  function handleSend(e) {
-    e.preventDefault()
-    if (!input.trim()) return
-    sendMessage(productionId, group.id, input.trim(), senderName)
-    setInput('')
-  }
-
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 space-y-4">
-        {group.room.messages.length === 0 && (
-          <div className="text-center py-12 text-zinc-600 text-sm">No messages yet. Start the conversation.</div>
-        )}
-        {group.room.messages.map(msg => {
-          const isMe = (isOwner && msg.senderId === 'owner') || (!isOwner && msg.senderId !== 'owner')
-          return (
-            <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                msg.senderId === 'owner' ? 'bg-accent text-black' : 'bg-surface-700 text-zinc-300'
-              }`}>
-                {msg.senderName?.[0] ?? '?'}
-              </div>
-              <div className={`max-w-[75%] sm:max-w-md flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xs font-medium text-zinc-400">{msg.senderName}</span>
-                  <span className="text-xs text-zinc-600">{formatTime(msg.timestamp)}</span>
-                </div>
-                <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                  isMe ? 'bg-accent text-black rounded-tr-sm' : 'bg-surface-800 text-zinc-200 rounded-tl-sm'
-                }`}>
-                  {msg.text}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-        <div ref={bottomRef} />
-      </div>
-      <form onSubmit={handleSend} className="px-3 sm:px-6 py-3 sm:py-4 border-t border-surface-700">
-        <div className="flex gap-3 items-end bg-surface-800 rounded-xl px-4 py-3 border border-surface-600 focus-within:border-surface-500">
-          <textarea
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e) } }}
-            placeholder="Send a message..."
-            rows={1}
-            className="flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-600 resize-none focus:outline-none leading-relaxed"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim()}
-            className="bg-accent hover:bg-accent-hover disabled:opacity-30 text-black rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors flex-shrink-0"
-          >
-            Send
-          </button>
-        </div>
-      </form>
-    </div>
-  )
-}
-
-// --- Availability Tab ---
-function AvailabilityTab({ isOwner, availabilityRules }) {
-  const { slots, calendarEvents, connectedCalendars, prefixRules } = useApp()
+function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName }) {
+  const { slots, calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates } = useApp()
   return (
     <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
         <div className="mb-5">
-          <p className="text-sm text-zinc-400 mb-1">{OWNER_NAME}'s availability for this production window.</p>
-          <p className="text-xs text-zinc-600">Contact him directly to request a specific date.</p>
+          <p className="text-sm text-zinc-400 mb-1">Tap dates to select them, then send a request.</p>
         </div>
       )}
       <AvailabilityCalendar
@@ -189,21 +102,23 @@ function AvailabilityTab({ isOwner, availabilityRules }) {
         availabilityRules={availabilityRules}
         prefixRules={prefixRules}
         isOwner={isOwner}
+        slotStates={slotStates}
+        groupId={groupId}
+        guestName={guestName}
+        onRequestSubmit={createDateRequest}
       />
     </div>
   )
 }
 
-// --- Main Room View ---
 export function RoomView() {
   const { token } = useParams()
-  const { getProduction, getGroup, isOwner, availabilityRules, loading, refreshRoom, resolveToken } = useApp()
+  const { getProduction, getGroup, user, availabilityRules, loading, refreshRoom, resolveToken, theme } = useApp()
   const [activeTab, setActiveTab] = useState('Availability')
-  const [resolved, setResolved] = useState(null) // { productionId, groupId, mode, memberName }
+  const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)
   const [guestName, setGuestName] = useState(null)
 
-  // Resolve token → productionId + groupId
   useEffect(() => {
     if (loading) return
     resolveToken(token).then(result => {
@@ -212,7 +127,9 @@ export function RoomView() {
     })
   }, [token, loading, resolveToken])
 
-  // Determine guest name once resolved
+  const production = resolved ? getProduction(resolved.productionId) : null
+  const isOwner = !!user && production?.ownerId === user.id
+
   useEffect(() => {
     if (!resolved) return
     if (isOwner) { setGuestName(null); return }
@@ -221,18 +138,14 @@ export function RoomView() {
     } else {
       const stored = localStorage.getItem(`room-identity-${token}`)
       if (stored) setGuestName(stored)
-      // else: null → name prompt will show
     }
   }, [resolved, isOwner, token])
 
-  // Real-time subscription
   useEffect(() => {
     if (!resolved) return
     const { productionId, groupId } = resolved
     const channel = supabase
       .channel(`room-${groupId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `group_id=eq.${groupId}` },
-        () => refreshRoom(productionId, groupId))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_notes', filter: `group_id=eq.${groupId}` },
         () => refreshRoom(productionId, groupId))
       .subscribe()
@@ -253,14 +166,12 @@ export function RoomView() {
   }
 
   const { productionId, groupId, mode } = resolved
-  const production = getProduction(productionId)
   const group = getGroup(productionId, groupId)
 
   if (!production || !group) {
     return <div className="flex items-center justify-center h-screen text-zinc-500">Room not found.</div>
   }
 
-  // Open link guest — show name prompt if name not yet captured
   if (!isOwner && mode === 'open_link' && !guestName) {
     return <NamePrompt token={token} onConfirm={setGuestName} />
   }
@@ -277,10 +188,7 @@ export function RoomView() {
           )}
           {!isOwner && (
             <div className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-6 h-6 rounded bg-accent flex items-center justify-center">
-                <span className="text-black text-xs font-bold">CC</span>
-              </div>
-              <span className="text-xs text-zinc-500 hidden sm:inline">Cap Collective</span>
+              <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
             </div>
           )}
           <div className="h-4 w-px bg-surface-700 flex-shrink-0" />
@@ -311,11 +219,8 @@ export function RoomView() {
       {activeTab === 'Notes' && (
         <NotesTab productionId={productionId} group={group} guestName={guestName} />
       )}
-      {activeTab === 'Chat' && (
-        <ChatTab productionId={productionId} group={group} isOwner={isOwner} guestName={guestName} />
-      )}
       {activeTab === 'Availability' && (
-        <AvailabilityTab isOwner={isOwner} availabilityRules={availabilityRules} />
+        <AvailabilityTab isOwner={isOwner} availabilityRules={availabilityRules} groupId={groupId} guestName={guestName} />
       )}
     </div>
   )

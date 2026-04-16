@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { SLOT_STATES, deriveSlotState, dateToStr } from '../../utils/availability'
+import { deriveSlotState, dateToStr, DEFAULT_SLOT_STATES } from '../../utils/availability'
 import { Badge } from '../ui/Badge'
 
 const STATE_BADGE = {
@@ -13,7 +13,7 @@ function formatDate(date) {
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-export function DailyView({ date, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules = [], isOwner }) {
+export function DailyView({ date, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules = [], isOwner, slotStates = DEFAULT_SLOT_STATES }) {
   const slotResults = useMemo(() =>
     slots.map(slot => ({
       slot,
@@ -25,14 +25,12 @@ export function DailyView({ date, slots, calendarEvents, connectedCalendars, ava
   const ds = dateToStr(date)
   const isToday = ds === dateToStr(new Date())
 
-  // Owner: find any private notes for this date
   const privateRule = isOwner
     ? availabilityRules.find(r => r.date === ds)
     : null
 
   return (
     <div>
-      {/* Date header */}
       <div className="flex items-center gap-3 mb-6">
         <h3 className={`text-lg font-semibold ${isToday ? 'text-accent' : 'text-zinc-100'}`}>
           {formatDate(date)}
@@ -40,10 +38,9 @@ export function DailyView({ date, slots, calendarEvents, connectedCalendars, ava
         {isToday && <Badge variant="accent">Today</Badge>}
       </div>
 
-      {/* Slot cards */}
       <div className="space-y-3">
         {slotResults.map(({ slot, state, drivingEvent }) => {
-          const meta = SLOT_STATES[state]
+          const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
           return (
             <div
               key={slot.id}
@@ -58,23 +55,23 @@ export function DailyView({ date, slots, calendarEvents, connectedCalendars, ava
                 <Badge variant={STATE_BADGE[state]}>{meta.label}</Badge>
               </div>
 
-              {/* Driving event — what's causing this state */}
-              {drivingEvent && (
+              {/* Driving event — OWNER ONLY (Phase 4 fix) */}
+              {isOwner && drivingEvent && (
                 <div className="mt-3 flex items-start gap-2 bg-surface-700 rounded-lg px-3 py-2">
                   <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: meta.color }} />
                   <div>
                     <p className="text-xs text-zinc-300">{drivingEvent.title.replace(/^[\*\^]\s*/, '')}</p>
-                    {isOwner && <p className="text-xs text-zinc-600 mt-0.5">{drivingEvent.calendarName}</p>}
+                    <p className="text-xs text-zinc-600 mt-0.5">{drivingEvent.calendarName}</p>
                   </div>
                 </div>
               )}
 
-              {/* Owner: show prefix explanation */}
+              {/* Owner: prefix explanation */}
               {isOwner && drivingEvent && (
                 <p className="text-xs text-zinc-600 mt-2">
-                  {drivingEvent.title.startsWith('*') && '⛔ Veto — highest priority block'}
-                  {drivingEvent.title.startsWith('^') && '⚠️ Soft hold — tentative, can override'}
-                  {!drivingEvent.title.startsWith('*') && !drivingEvent.title.startsWith('^') && '📅 Governing calendar event'}
+                  {drivingEvent.title.startsWith('*') && 'Veto — highest priority block'}
+                  {drivingEvent.title.startsWith('^') && 'Soft hold — tentative, can override'}
+                  {!drivingEvent.title.startsWith('*') && !drivingEvent.title.startsWith('^') && 'Governing calendar event'}
                 </p>
               )}
             </div>
@@ -82,7 +79,6 @@ export function DailyView({ date, slots, calendarEvents, connectedCalendars, ava
         })}
       </div>
 
-      {/* Owner private note for this date */}
       {isOwner && privateRule && (
         <div className="mt-4 bg-surface-950 border border-accent/20 rounded-xl px-5 py-4">
           <div className="flex items-center gap-2 mb-2">
@@ -93,7 +89,6 @@ export function DailyView({ date, slots, calendarEvents, connectedCalendars, ava
         </div>
       )}
 
-      {/* No events message */}
       {slotResults.every(r => !r.drivingEvent) && (
         <p className="text-xs text-zinc-600 mt-4">No calendar events found for this day.</p>
       )}

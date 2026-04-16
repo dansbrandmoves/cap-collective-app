@@ -1,7 +1,7 @@
 export function Badge({ children, variant = 'default', size = 'sm' }) {
   const variants = {
     default: 'bg-surface-700 text-zinc-300',
-    accent: 'bg-accent text-black',
+    accent: 'bg-accent text-white',
     green: 'bg-emerald-900 text-emerald-400',
     yellow: 'bg-amber-900 text-amber-400',
     red: 'bg-red-900 text-red-400',

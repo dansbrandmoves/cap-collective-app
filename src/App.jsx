@@ -9,6 +9,7 @@ import { CalendarSettings } from './pages/CalendarSettings'
 import { AuthPage } from './pages/AuthPage'
 import { HomePage } from './pages/HomePage'
 import { PrivacyPage } from './pages/PrivacyPage'
+import { TermsPage } from './pages/TermsPage'
 
 function AppRoutes() {
   const { isOwner, authLoading } = useApp()
@@ -31,7 +32,7 @@ function AppRoutes() {
       {/* Public pages */}
       <Route path="/home" element={<HomePage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
-      <Route path="/terms" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
 
       {/* Room is accessible without auth (shareable link) */}
       <Route path="/room/:token" element={<RoomView />} />

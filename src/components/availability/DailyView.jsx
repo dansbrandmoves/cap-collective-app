@@ -55,25 +55,7 @@ export function DailyView({ date, slots, calendarEvents, connectedCalendars, ava
                 <Badge variant={STATE_BADGE[state]}>{meta.label}</Badge>
               </div>
 
-              {/* Driving event — OWNER ONLY (Phase 4 fix) */}
-              {isOwner && drivingEvent && (
-                <div className="mt-3 flex items-start gap-2 bg-surface-700 rounded-lg px-3 py-2">
-                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: meta.color }} />
-                  <div>
-                    <p className="text-xs text-zinc-300">{drivingEvent.title.replace(/^[\*\^]\s*/, '')}</p>
-                    <p className="text-xs text-zinc-600 mt-0.5">{drivingEvent.calendarName}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Owner: prefix explanation */}
-              {isOwner && drivingEvent && (
-                <p className="text-xs text-zinc-600 mt-2">
-                  {drivingEvent.title.startsWith('*') && 'Veto — highest priority block'}
-                  {drivingEvent.title.startsWith('^') && 'Soft hold — tentative, can override'}
-                  {!drivingEvent.title.startsWith('*') && !drivingEvent.title.startsWith('^') && 'Governing calendar event'}
-                </p>
-              )}
+              {/* Event details removed — daily view only shows slot status */}
             </div>
           )
         })}

@@ -3,7 +3,7 @@ import { useApp } from '../../contexts/AppContext'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: '⬡' },
-  { to: '/calendars', label: 'Calendars', icon: '◷' },
+  { to: '/calendars', label: 'Settings', icon: '⚙' },
 ]
 
 export function Sidebar({ mobileOpen = false, onMobileClose }) {

@@ -6,6 +6,7 @@ import { ProductionView } from './pages/ProductionView'
 import { RoomView } from './pages/RoomView'
 import { AvailabilityRules } from './pages/AvailabilityRules'
 import { CalendarSettings } from './pages/CalendarSettings'
+import { Inbox } from './pages/Inbox'
 import { AuthPage } from './pages/AuthPage'
 import { HomePage } from './pages/HomePage'
 import { PrivacyPage } from './pages/PrivacyPage'
@@ -41,6 +42,7 @@ function AppRoutes() {
         <Route element={<AppShell />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/production/:id" element={<ProductionView />} />
+          <Route path="/inbox" element={<Inbox />} />
           <Route path="/availability" element={<AvailabilityRules />} />
           <Route path="/calendars" element={<CalendarSettings />} />
           <Route path="*" element={<Navigate to="/" replace />} />

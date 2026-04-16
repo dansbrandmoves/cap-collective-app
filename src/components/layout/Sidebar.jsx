@@ -3,6 +3,7 @@ import { useApp } from '../../contexts/AppContext'
 
 const NAV = [
   { to: '/', label: 'Projects', icon: '⬡' },
+  { to: '/inbox', label: 'Inbox', icon: '◈', showBadge: true },
   { to: '/availability', label: 'Availability', icon: '◷' },
   { to: '/calendars', label: 'Settings', icon: '⚙' },
 ]
@@ -31,7 +32,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {NAV.map(({ to, label, icon }) => (
+        {NAV.map(({ to, label, icon, showBadge }) => (
           <NavLink
             key={to}
             to={to}
@@ -46,7 +47,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
           >
             <span className="text-base opacity-70">{icon}</span>
             <span className="flex-1">{label}</span>
-            {label === 'Projects' && totalPending > 0 && (
+            {showBadge && totalPending > 0 && (
               <span className="bg-accent text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
                 {totalPending > 9 ? '9+' : totalPending}
               </span>

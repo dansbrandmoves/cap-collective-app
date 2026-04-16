@@ -143,7 +143,7 @@ export function ProductionView() {
               className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent"
               autoFocus
             />
-            <p className="text-xs text-zinc-600 mt-1.5">You choose the name. This creates a Room for this group.</p>
+            <p className="text-sm text-zinc-500 mt-1.5">You choose the name. This creates a Room for this group.</p>
           </div>
           <div className="flex justify-end gap-3 pt-1">
             <Button variant="secondary" onClick={() => setShowNewGroup(false)}>Cancel</Button>
@@ -245,7 +245,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
 
             {group.accessMode === 'open_link' && openToken && (
               <div>
-                <p className="text-xs text-zinc-500 mb-3">Anyone with this link can enter. They'll be asked for their name on first visit.</p>
+                <p className="text-sm text-zinc-500 mb-3">Anyone with this link can enter. They'll be asked for their name on first visit.</p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 bg-surface-800 rounded-lg px-3 py-2 text-xs text-zinc-400 truncate">
                     {getRoomLink(openToken)}
@@ -259,7 +259,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
 
             {group.accessMode === 'invite_only' && (
               <div>
-                <p className="text-xs text-zinc-500 mb-3">Each person gets their own unique link. Add people below.</p>
+                <p className="text-sm text-zinc-500 mb-3">Each person gets their own unique link. Add people below.</p>
                 {members.length > 0 && (
                   <div className="space-y-2 mb-3">
                     {members.map(m => (

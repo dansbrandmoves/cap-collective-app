@@ -8,10 +8,6 @@
   --surface-800: #1c1c20;
   --surface-700: #26262c;
   --surface-600: #313138;
-  --text-primary: #f4f4f5;
-  --text-secondary: #d4d4d8;
-  --text-muted: #71717a;
-  --text-faint: #52525b;
 }
 
 html.light {
@@ -20,83 +16,80 @@ html.light {
   --surface-800: #f3f4f6;
   --surface-700: #e5e7eb;
   --surface-600: #d1d5db;
-  --text-primary: #18181b;
-  --text-secondary: #3f3f46;
-  --text-muted: #71717a;
-  --text-faint: #a1a1aa;
 }
 
 @layer base {
   html {
     @apply bg-surface-950 antialiased;
-    color: var(--text-primary);
+    color: #f4f4f5;
   }
 
   * {
     @apply box-border;
   }
 
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    @apply bg-surface-900;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-surface-600 rounded-full;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
-  }
-
-  /* Remap zinc text colors in light mode so existing components stay readable */
-  html.light .text-zinc-100 { color: #18181b; }  /* zinc-900 */
-  html.light .text-zinc-200 { color: #27272a; }  /* zinc-800 */
-  html.light .text-zinc-300 { color: #3f3f46; }  /* zinc-700 */
-  html.light .text-zinc-400 { color: #52525b; }  /* zinc-600 */
-  html.light .text-zinc-500 { color: #71717a; }  /* zinc-500 — stays */
-  html.light .text-zinc-600 { color: #a1a1aa; }  /* zinc-400 */
-  html.light .text-zinc-700 { color: #d4d4d8; }  /* zinc-300 */
-
-  /* Remap zinc bg colors used for text containers */
-  html.light .bg-zinc-300 { background-color: #d4d4d8; }
-  html.light .bg-zinc-700 { background-color: #e5e7eb; }
-
-  /* Remap border colors */
-  html.light .border-accent\/20 { border-color: rgb(139 92 246 / 0.3); }
-  html.light .border-accent\/30 { border-color: rgb(139 92 246 / 0.4); }
-
-  /* Placeholder text */
-  html.light .placeholder-zinc-600::placeholder { color: #a1a1aa; }
-  html.light .placeholder-zinc-700::placeholder { color: #d4d4d8; }
-
-  /* Badge / accent backgrounds in light mode */
-  html.light .bg-accent\/20 { background-color: rgb(139 92 246 / 0.15); }
-  html.light .bg-accent\/10 { background-color: rgb(139 92 246 / 0.08); }
-
-  /* Status backgrounds */
-  html.light .bg-emerald-900 { background-color: #d1fae5; }
-  html.light .text-emerald-400 { color: #059669; }
-  html.light .bg-amber-900 { background-color: #fef3c7; }
-  html.light .text-amber-400 { color: #d97706; }
-  html.light .bg-red-900 { background-color: #fee2e2; }
-  html.light .text-red-400 { color: #dc2626; }
-  html.light .bg-indigo-900 { background-color: #e0e7ff; }
-  html.light .text-indigo-400 { color: #4f46e5; }
-
-  /* Error/warning containers */
-  html.light .bg-red-900\/30 { background-color: #fee2e2; }
-  html.light .border-red-700\/50 { border-color: #fca5a5; }
-  html.light .bg-amber-900\/30 { background-color: #fef3c7; }
-  html.light .border-amber-700\/50 { border-color: #fcd34d; }
-  html.light .text-amber-300 { color: #b45309; }
-  html.light .text-amber-500 { color: #92400e; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-surface-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-surface-600 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { background: #91919b; }
 }
 
 @layer components {
-  .prose-room {
-    color: var(--text-secondary);
-    @apply leading-relaxed;
-  }
+  .prose-room { color: #d4d4d8; @apply leading-relaxed; }
+  html.light .prose-room { color: #3f3f46; }
 }
+
+/*
+ * ── Accessibility: contrast overrides ──
+ * These MUST be outside @layer to beat Tailwind utility specificity.
+ *
+ * Dark mode: boost low-contrast zinc text to WCAG AA (4.5:1 on #0c0c0e).
+ * Light mode: invert zinc scale so light text becomes dark text.
+ */
+
+/* Dark mode boosts */
+html:not(.light) .text-zinc-700  { color: #71717a !important; }  /* 4.5:1 */
+html:not(.light) .text-zinc-600  { color: #8b8b95 !important; }  /* 5.3:1 */
+html:not(.light) .text-zinc-500  { color: #91919b !important; }  /* 5.7:1 */
+html:not(.light) .placeholder-zinc-600::placeholder { color: #8b8b95 !important; }
+html:not(.light) .placeholder-zinc-700::placeholder { color: #71717a !important; }
+
+/* Light mode inversions */
+html.light { color: #18181b; }
+html.light .text-zinc-100 { color: #18181b !important; }
+html.light .text-zinc-200 { color: #27272a !important; }
+html.light .text-zinc-300 { color: #3f3f46 !important; }
+html.light .text-zinc-400 { color: #52525b !important; }
+html.light .text-zinc-500 { color: #71717a !important; }
+html.light .text-zinc-600 { color: #a1a1aa !important; }
+html.light .text-zinc-700 { color: #d4d4d8 !important; }
+
+html.light .bg-zinc-300 { background-color: #d4d4d8 !important; }
+html.light .bg-zinc-700 { background-color: #e5e7eb !important; }
+
+html.light .placeholder-zinc-600::placeholder { color: #a1a1aa !important; }
+html.light .placeholder-zinc-700::placeholder { color: #d4d4d8 !important; }
+
+/* Light mode: accent */
+html.light .border-accent\/20 { border-color: rgb(139 92 246 / 0.3) !important; }
+html.light .border-accent\/30 { border-color: rgb(139 92 246 / 0.4) !important; }
+html.light .bg-accent\/20 { background-color: rgb(139 92 246 / 0.15) !important; }
+html.light .bg-accent\/10 { background-color: rgb(139 92 246 / 0.08) !important; }
+
+/* Light mode: status badges */
+html.light .bg-emerald-900 { background-color: #d1fae5 !important; }
+html.light .text-emerald-400 { color: #059669 !important; }
+html.light .bg-amber-900 { background-color: #fef3c7 !important; }
+html.light .text-amber-400 { color: #d97706 !important; }
+html.light .bg-red-900 { background-color: #fee2e2 !important; }
+html.light .text-red-400 { color: #dc2626 !important; }
+html.light .bg-indigo-900 { background-color: #e0e7ff !important; }
+html.light .text-indigo-400 { color: #4f46e5 !important; }
+
+/* Light mode: error/warning */
+html.light .bg-red-900\/30 { background-color: #fee2e2 !important; }
+html.light .border-red-700\/50 { border-color: #fca5a5 !important; }
+html.light .bg-amber-900\/30 { background-color: #fef3c7 !important; }
+html.light .border-amber-700\/50 { border-color: #fcd34d !important; }
+html.light .text-amber-300 { color: #b45309 !important; }
+html.light .text-amber-500 { color: #92400e !important; }

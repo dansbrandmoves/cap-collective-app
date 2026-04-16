@@ -53,7 +53,7 @@ export function AuthPage() {
           {loading ? 'Signing in...' : 'Sign in with Google'}
         </button>
 
-        <p className="text-xs text-zinc-600 mt-6">
+        <p className="text-sm text-zinc-500 mt-6">
           Sign in to create and manage your projects.
           <br />Room links work without an account.
         </p>

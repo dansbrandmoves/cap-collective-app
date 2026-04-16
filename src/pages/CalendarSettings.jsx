@@ -174,7 +174,7 @@ export function CalendarSettings() {
           <p className="text-sm font-medium text-zinc-300">
             {googleAccessToken ? 'Google Calendar connected' : 'Connect Google Calendar'}
           </p>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-sm text-zinc-500 mt-0.5">
             {googleAccessToken
               ? 'Auto-refreshes every 30 minutes.'
               : 'Grant read access to derive availability from your calendars.'}
@@ -226,7 +226,7 @@ export function CalendarSettings() {
 
       {/* Prefix Rules */}
       <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Prefix Rules</p>
-      <p className="text-xs text-zinc-600 mb-3">Events in governing calendars with these title prefixes override the default state.</p>
+      <p className="text-sm text-zinc-500 mb-3">Events in governing calendars with these title prefixes override the default state.</p>
       {prefixRules.length > 0 && (
         <div className="space-y-2 mb-4">
           {prefixRules.map(rule => (
@@ -277,7 +277,7 @@ export function CalendarSettings() {
 
       {/* Customize Status Labels */}
       <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3 mt-8">Customize Status Labels</p>
-      <p className="text-xs text-zinc-600 mb-3">Rename or recolor the availability states shown to your groups.</p>
+      <p className="text-sm text-zinc-500 mb-3">Rename or recolor the availability states shown to your groups.</p>
       <div className="space-y-2 mb-4">
         {Object.entries(slotStates).map(([key, val]) => (
           <div key={key} className="bg-surface-900 border border-surface-700 rounded-xl px-4 py-3 flex items-center gap-3">

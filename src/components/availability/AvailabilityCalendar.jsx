@@ -103,7 +103,7 @@ export function AvailabilityCalendar({
         {Object.entries(slotStates).map(([key, val]) => (
           <div key={key} className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: val.color }} />
-            <span className="text-xs text-zinc-400">{val.label}</span>
+            <span className="text-sm text-zinc-400">{val.label}</span>
           </div>
         ))}
       </div>

@@ -68,7 +68,7 @@ function NotesTab({ productionId, group, guestName }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-4 sm:px-8 py-3 border-b border-surface-700">
-        <p className="text-xs text-zinc-500">Shared notes — both sides can edit</p>
+        <p className="text-sm text-zinc-500">Shared notes — both sides can edit</p>
         <span className={`text-xs transition-opacity ${saved ? 'text-zinc-600' : 'text-accent'}`}>
           {saved ? 'Saved' : 'Saving...'}
         </span>
@@ -160,7 +160,7 @@ export function RoomView() {
     return (
       <div className="flex items-center justify-center h-screen text-zinc-500 flex-col gap-3">
         <p>Room not found.</p>
-        <p className="text-xs text-zinc-600">This link may be invalid or expired.</p>
+        <p className="text-sm text-zinc-500">This link may be invalid or expired.</p>
       </div>
     )
   }

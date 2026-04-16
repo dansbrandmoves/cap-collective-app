@@ -150,6 +150,55 @@ export function AppProvider({ children }) {
   // Derived: customized slot states
   const slotStates = useMemo(() => buildSlotStates(slotStateCustomizations), [slotStateCustomizations])
 
+  // Pending request counts per group (for notifications)
+  const [pendingRequestCounts, setPendingRequestCounts] = useState({}) // { groupId: count }
+
+  // Fetch pending counts once productions are loaded
+  useEffect(() => {
+    if (!productions.length) return
+    const allGroupIds = productions.flatMap(p => p.groups.map(g => g.id))
+    if (!allGroupIds.length) return
+    supabase
+      .from('date_requests')
+      .select('group_id')
+      .eq('status', 'pending')
+      .in('group_id', allGroupIds)
+      .then(({ data }) => {
+        const counts = {}
+        ;(data || []).forEach(r => { counts[r.group_id] = (counts[r.group_id] || 0) + 1 })
+        setPendingRequestCounts(counts)
+      })
+  }, [productions])
+
+  // Real-time subscription for new date requests
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase
+      .channel('date-requests-notify')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'date_requests' }, (payload) => {
+        const groupId = payload.new.group_id
+        setPendingRequestCounts(prev => ({ ...prev, [groupId]: (prev[groupId] || 0) + 1 }))
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'date_requests' }, (payload) => {
+        if (payload.old.status === 'pending' && payload.new.status !== 'pending') {
+          const groupId = payload.new.group_id
+          setPendingRequestCounts(prev => ({ ...prev, [groupId]: Math.max(0, (prev[groupId] || 0) - 1) }))
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [user])
+
+  const getPendingRequestCount = useCallback((productionId) => {
+    const prod = productions.find(p => p.id === productionId)
+    if (!prod) return 0
+    return prod.groups.reduce((sum, g) => sum + (pendingRequestCounts[g.id] || 0), 0)
+  }, [productions, pendingRequestCounts])
+
+  const getTotalPendingRequests = useCallback(() => {
+    return Object.values(pendingRequestCounts).reduce((sum, c) => sum + c, 0)
+  }, [pendingRequestCounts])
+
   // Apply theme class
   useEffect(() => {
     document.documentElement.classList.toggle('light', theme === 'light')
@@ -534,6 +583,8 @@ export function AppProvider({ children }) {
       updateSharedNotes, refreshRoom,
       // Date Requests
       createDateRequest, fetchDateRequests, updateDateRequestStatus,
+      // Notifications
+      pendingRequestCounts, getPendingRequestCount, getTotalPendingRequests,
       // Helpers
       getProduction, getGroup, getGroupByToken, getRoomLink, getMembersForGroup, resolveToken,
     }}>

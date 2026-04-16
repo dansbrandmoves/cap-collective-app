@@ -64,14 +64,17 @@ export function CalendarSettings() {
       .catch(() => setAuthError('Failed to load Google Identity Services.'))
   }, [])
 
-  // Auto-sync every 30 minutes
+  // Auto-sync on mount (if token + calendars exist) and every 30 minutes
   useEffect(() => {
-    if (!googleAccessToken) return
+    if (!googleAccessToken || connectedCalendars.length === 0) return
+    // Sync immediately on load
+    handleSync()
+    // Then every 30 minutes
     const interval = setInterval(() => {
       handleSync()
     }, 30 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [googleAccessToken, connectedCalendars]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [googleAccessToken, connectedCalendars.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleTokenResponse(tokenResponse) {
     if (tokenResponse.error) {

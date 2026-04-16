@@ -57,7 +57,7 @@ function ProjectCard({ production }) {
 }
 
 export function Dashboard() {
-  const { productions, createProduction, loading } = useApp()
+  const { productions, createProduction, loading, connectedCalendars, slots } = useApp()
   const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ name: '', description: '', startDate: '', endDate: '' })
@@ -87,6 +87,17 @@ export function Dashboard() {
         </div>
         <Button onClick={() => setShowModal(true)}>+ New Project</Button>
       </div>
+
+      {/* Setup prompt for new users */}
+      {connectedCalendars.length === 0 && (
+        <div className="bg-accent/10 border border-accent/20 rounded-xl px-6 py-5 mb-6 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-zinc-100 mb-1">Welcome to Coordie!</p>
+            <p className="text-sm text-zinc-400">Connect your Google Calendar and set up your time slots to get started.</p>
+          </div>
+          <Button size="sm" onClick={() => navigate('/calendars')}>Set Up →</Button>
+        </div>
+      )}
 
       {productions.length === 0 ? (
         <div className="border border-dashed border-surface-600 rounded-xl p-12 text-center">

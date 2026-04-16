@@ -455,10 +455,12 @@ export function AppProvider({ children }) {
 
   // Resolve a token to { productionId, groupId, mode, memberName }
   const resolveToken = useCallback(async (token) => {
-    const [{ data: groupRow }, { data: memberRow }] = await Promise.all([
-      supabase.from('groups').select('id, production_id, access_mode').eq('open_token', token).single(),
-      supabase.from('group_members').select('id, group_id, name').eq('invite_token', token).single(),
+    const [{ data: groupRows }, { data: memberRows }] = await Promise.all([
+      supabase.from('groups').select('id, production_id, access_mode').eq('open_token', token).limit(1),
+      supabase.from('group_members').select('id, group_id, name').eq('invite_token', token).limit(1),
     ])
+    const groupRow = groupRows?.[0] ?? null
+    const memberRow = memberRows?.[0] ?? null
     if (groupRow) {
       return { productionId: groupRow.production_id, groupId: groupRow.id, mode: 'open_link', memberName: null }
     }
@@ -509,7 +511,7 @@ export function AppProvider({ children }) {
       group_id: groupId,
       requester_name: requesterName,
       requester_email: requesterEmail || '',
-      dates: JSON.stringify(dates),
+      dates: dates,
       message: message || '',
       status: 'pending',
     }
@@ -525,10 +527,7 @@ export function AppProvider({ children }) {
       .eq('group_id', groupId)
       .order('created_at', { ascending: false })
     if (error) { console.error('fetchDateRequests:', error); return [] }
-    return (data || []).map(r => ({
-      ...r,
-      dates: typeof r.dates === 'string' ? JSON.parse(r.dates) : r.dates,
-    }))
+    return data || []
   }, [])
 
   const updateDateRequestStatus = useCallback(async (requestId, status) => {

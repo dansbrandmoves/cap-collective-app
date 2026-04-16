@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 
 const NAV = [
-  { to: '/', label: 'Dashboard', icon: '⬡' },
+  { to: '/', label: 'Projects', icon: '⬡' },
   { to: '/availability', label: 'Availability', icon: '◷' },
   { to: '/calendars', label: 'Settings', icon: '⚙' },
 ]

@@ -9,7 +9,7 @@ import { AvailabilityCalendar } from '../components/availability/AvailabilityCal
 export function ProductionView() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getProduction, updateProductionNotes, createGroup, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates } = useApp()
+  const { getProduction, updateProduction, updateProductionNotes, deleteProduction, createGroup, updateGroupName, deleteGroup, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates } = useApp()
 
   const production = getProduction(id)
   const [activeGroupId, setActiveGroupId] = useState(null)
@@ -19,6 +19,12 @@ export function ProductionView() {
   const [editingNotes, setEditingNotes] = useState(false)
   const [notesValue, setNotesValue] = useState('')
   const [rightPanel, setRightPanel] = useState('calendar') // 'calendar' | 'group'
+  const [showEditProject, setShowEditProject] = useState(false)
+  const [editForm, setEditForm] = useState({ name: '', description: '', startDate: '', endDate: '' })
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [editingGroupId, setEditingGroupId] = useState(null)
+  const [editGroupName, setEditGroupName] = useState('')
+  const [deletingGroupId, setDeletingGroupId] = useState(null)
 
   if (!production) {
     return (
@@ -62,6 +68,38 @@ export function ProductionView() {
     setEditingNotes(true)
   }
 
+  function openEditProject() {
+    setEditForm({ name: production.name, description: production.description || '', startDate: production.startDate || '', endDate: production.endDate || '' })
+    setShowEditProject(true)
+  }
+
+  async function handleEditProject(e) {
+    e.preventDefault()
+    if (!editForm.name) return
+    await updateProduction(id, editForm)
+    setShowEditProject(false)
+  }
+
+  async function handleDeleteProject() {
+    await deleteProduction(id)
+    navigate('/')
+  }
+
+  async function handleEditGroupName(groupId) {
+    if (!editGroupName.trim()) return
+    await updateGroupName(id, groupId, editGroupName.trim())
+    setEditingGroupId(null)
+  }
+
+  async function handleDeleteGroup(groupId) {
+    await deleteGroup(id, groupId)
+    setDeletingGroupId(null)
+    if (activeGroupId === groupId) {
+      setActiveGroupId(null)
+      setRightPanel('calendar')
+    }
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Left panel */}
@@ -71,16 +109,24 @@ export function ProductionView() {
       `}>
         <div className="px-5 py-4 border-b border-surface-700">
           <button onClick={() => navigate('/')} className="text-xs text-zinc-500 hover:text-zinc-300 mb-3 flex items-center gap-1 transition-colors">
-            ← Dashboard
+            ← Projects
           </button>
-          <h2 className="text-sm font-semibold text-zinc-100 leading-snug">{production.name}</h2>
-          {(production.startDate || production.endDate) && (
-            <p className="text-xs text-zinc-500 mt-0.5">
-              {production.startDate && production.endDate
-                ? `${production.startDate} → ${production.endDate}`
-                : production.startDate || production.endDate}
-            </p>
-          )}
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-100 leading-snug">{production.name}</h2>
+              {(production.startDate || production.endDate) && (
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  {production.startDate && production.endDate
+                    ? `${production.startDate} → ${production.endDate}`
+                    : production.startDate || production.endDate}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button onClick={openEditProject} className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors px-1.5 py-1">Edit</button>
+              <button onClick={() => setShowDeleteConfirm(true)} className="text-xs text-red-600 hover:text-red-400 transition-colors px-1.5 py-1">Delete</button>
+            </div>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-3">
@@ -109,16 +155,48 @@ export function ProductionView() {
 
           {production.groups.map(group => {
             const isActive = rightPanel === 'group' && activeGroup?.id === group.id
+            const isEditing = editingGroupId === group.id
+            const isDeleting = deletingGroupId === group.id
+
+            if (isEditing) {
+              return (
+                <div key={group.id} className="flex items-center gap-1 px-2 py-1 mb-0.5">
+                  <input
+                    type="text"
+                    value={editGroupName}
+                    onChange={e => setEditGroupName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleEditGroupName(group.id); if (e.key === 'Escape') setEditingGroupId(null) }}
+                    autoFocus
+                    className="flex-1 bg-surface-700 border border-surface-600 rounded px-2 py-1 text-sm text-zinc-100 focus:outline-none focus:border-accent"
+                  />
+                  <button onClick={() => handleEditGroupName(group.id)} className="text-xs text-accent px-1">Save</button>
+                  <button onClick={() => setEditingGroupId(null)} className="text-xs text-zinc-600 px-1">Cancel</button>
+                </div>
+              )
+            }
+
+            /* delete handled by modal below */
+
             return (
-              <button
+              <div
                 key={group.id}
-                onClick={() => handleSelectGroup(group.id)}
-                className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm text-left transition-colors mb-0.5 ${
-                  isActive ? 'bg-surface-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
+                className={`flex items-center gap-1 rounded-lg mb-0.5 group/item ${
+                  isActive ? 'bg-surface-700' : 'hover:bg-surface-800'
                 }`}
               >
-                <span className="truncate">{group.name}</span>
-              </button>
+                <button
+                  onClick={() => handleSelectGroup(group.id)}
+                  className={`flex-1 text-left px-3 py-2.5 text-sm transition-colors truncate ${
+                    isActive ? 'text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  {group.name}
+                </button>
+                <div className="hidden group-hover/item:flex items-center gap-0.5 pr-2">
+                  <button onClick={() => { setEditingGroupId(group.id); setEditGroupName(group.name) }} className="text-xs text-zinc-600 hover:text-zinc-300 px-1 py-1 transition-colors">Edit</button>
+                  <button onClick={() => setDeletingGroupId(group.id)} className="text-xs text-red-700 hover:text-red-400 px-1 py-1 transition-colors">Del</button>
+                </div>
+              </div>
             )
           })}
         </div>
@@ -162,6 +240,7 @@ export function ProductionView() {
         )}
       </div>
 
+      {/* Add Group Modal */}
       <Modal isOpen={showNewGroup} onClose={() => setShowNewGroup(false)} title="Add Group">
         <form onSubmit={handleCreateGroup} className="space-y-4">
           <div>
@@ -181,6 +260,66 @@ export function ProductionView() {
             <Button type="submit" disabled={!newGroupName.trim()}>Create Group</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Edit Project Modal */}
+      <Modal isOpen={showEditProject} onClose={() => setShowEditProject(false)} title="Edit Project">
+        <form onSubmit={handleEditProject} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Project Name</label>
+            <input type="text" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} autoFocus
+              className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Description (optional)</label>
+            <textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} rows={2}
+              className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent resize-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Start Date</label>
+              <input type="date" value={editForm.startDate} onChange={e => setEditForm(f => ({ ...f, startDate: e.target.value }))}
+                className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-accent" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">End Date</label>
+              <input type="date" value={editForm.endDate} onChange={e => setEditForm(f => ({ ...f, endDate: e.target.value }))}
+                className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-accent" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setShowEditProject(false)}>Cancel</Button>
+            <Button type="submit" disabled={!editForm.name}>Save</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Group Confirmation */}
+      <Modal isOpen={!!deletingGroupId} onClose={() => setDeletingGroupId(null)} title="Delete Group">
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-300">
+            Are you sure you want to delete this group? This will also delete its room, notes, and date requests.
+          </p>
+          <p className="text-sm text-red-400">This action cannot be undone.</p>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setDeletingGroupId(null)}>Cancel</Button>
+            <Button variant="danger" onClick={() => handleDeleteGroup(deletingGroupId)}>Delete Group</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Project Confirmation */}
+      <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Delete Project">
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-300">
+            Are you sure you want to delete <strong>{production.name}</strong>? This will also delete all groups, rooms, notes, and date requests inside it.
+          </p>
+          <p className="text-sm text-red-400">This action cannot be undone.</p>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+            <Button variant="danger" onClick={handleDeleteProject}>Delete Project</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

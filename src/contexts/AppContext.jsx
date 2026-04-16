@@ -299,11 +299,42 @@ export function AppProvider({ children }) {
     return production.id
   }, [user?.id])
 
+  const updateProduction = useCallback(async (productionId, updates) => {
+    setProductions(prev => prev.map(p => p.id === productionId ? { ...p, ...updates } : p))
+    const dbUpdates = {}
+    if (updates.name !== undefined) dbUpdates.name = updates.name
+    if (updates.description !== undefined) dbUpdates.description = updates.description
+    if (updates.startDate !== undefined) dbUpdates.start_date = updates.startDate
+    if (updates.endDate !== undefined) dbUpdates.end_date = updates.endDate
+    if (updates.ownerNotes !== undefined) dbUpdates.owner_notes = updates.ownerNotes
+    if (Object.keys(dbUpdates).length > 0) {
+      const { error } = await supabase.from('productions').update(dbUpdates).eq('id', productionId)
+      if (error) console.error('updateProduction:', error)
+    }
+  }, [])
+
   const updateProductionNotes = useCallback((productionId, notes) => {
     setProductions(prev => prev.map(p => p.id === productionId ? { ...p, ownerNotes: notes } : p))
     supabase.from('productions').update({ owner_notes: notes }).eq('id', productionId)
       .then(({ error }) => { if (error) console.error('updateProductionNotes:', error) })
   }, [])
+
+  const deleteProduction = useCallback(async (productionId) => {
+    const prod = productions.find(p => p.id === productionId)
+    if (!prod) return
+    // Delete child data first
+    for (const g of prod.groups) {
+      await supabase.from('date_requests').delete().eq('group_id', g.id)
+      await supabase.from('messages').delete().eq('group_id', g.id)
+      await supabase.from('shared_notes').delete().eq('group_id', g.id)
+      await supabase.from('group_members').delete().eq('group_id', g.id)
+    }
+    const groupIds = prod.groups.map(g => g.id)
+    if (groupIds.length) await supabase.from('groups').delete().in('id', groupIds)
+    const { error } = await supabase.from('productions').delete().eq('id', productionId)
+    if (error) { console.error('deleteProduction:', error); return }
+    setProductions(prev => prev.filter(p => p.id !== productionId))
+  }, [productions])
 
   // --- Groups ---
   const createGroup = useCallback(async (productionId, name) => {
@@ -326,6 +357,26 @@ export function AppProvider({ children }) {
     const { error: noteErr } = await supabase.from('shared_notes').insert({ group_id: group.id, content: group.room.sharedNotes })
     if (noteErr) console.error('createGroup notes failed:', noteErr)
     return group.id
+  }, [])
+
+  const updateGroupName = useCallback(async (productionId, groupId, name) => {
+    setProductions(prev => prev.map(p => p.id === productionId
+      ? { ...p, groups: p.groups.map(g => g.id === groupId ? { ...g, name } : g) }
+      : p))
+    const { error } = await supabase.from('groups').update({ name }).eq('id', groupId)
+    if (error) console.error('updateGroupName:', error)
+  }, [])
+
+  const deleteGroup = useCallback(async (productionId, groupId) => {
+    await supabase.from('date_requests').delete().eq('group_id', groupId)
+    await supabase.from('messages').delete().eq('group_id', groupId)
+    await supabase.from('shared_notes').delete().eq('group_id', groupId)
+    await supabase.from('group_members').delete().eq('group_id', groupId)
+    const { error } = await supabase.from('groups').delete().eq('id', groupId)
+    if (error) { console.error('deleteGroup:', error); return }
+    setProductions(prev => prev.map(p => p.id === productionId
+      ? { ...p, groups: p.groups.filter(g => g.id !== groupId) }
+      : p))
   }, [])
 
   const updateGroupAccessMode = useCallback((groupId, mode) => {
@@ -474,9 +525,9 @@ export function AppProvider({ children }) {
       // Calendars
       addConnectedCalendar, updateCalendarRole, updateCalendarDefaultState, removeConnectedCalendar, replaceCalendarEvents,
       // Productions
-      createProduction, updateProductionNotes,
+      createProduction, updateProduction, updateProductionNotes, deleteProduction,
       // Groups
-      createGroup, updateGroupAccessMode,
+      createGroup, updateGroupName, deleteGroup, updateGroupAccessMode,
       // Group Members
       addGroupMember, removeGroupMember,
       // Room

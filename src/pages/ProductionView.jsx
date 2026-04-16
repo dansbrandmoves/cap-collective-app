@@ -74,7 +74,13 @@ export function ProductionView() {
             ← Dashboard
           </button>
           <h2 className="text-sm font-semibold text-zinc-100 leading-snug">{production.name}</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">{production.startDate} → {production.endDate}</p>
+          {(production.startDate || production.endDate) && (
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {production.startDate && production.endDate
+                ? `${production.startDate} → ${production.endDate}`
+                : production.startDate || production.endDate}
+            </p>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-3">

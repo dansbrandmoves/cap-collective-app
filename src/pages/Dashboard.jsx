@@ -28,7 +28,7 @@ function daysUntil(dateStr) {
 
 function ProjectCard({ production }) {
   const navigate = useNavigate()
-  const countdown = daysUntil(production.startDate)
+  const countdown = production.startDate ? daysUntil(production.startDate) : null
 
   return (
     <div
@@ -41,14 +41,18 @@ function ProjectCard({ production }) {
         </h3>
       </div>
 
-      <p className="text-sm text-zinc-500 mb-4 line-clamp-2">{production.description}</p>
+      {production.description && <p className="text-sm text-zinc-500 mb-4 line-clamp-2">{production.description}</p>}
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Badge variant="ghost">{formatDateRange(production.startDate, production.endDate)}</Badge>
-          <Badge variant={countdown === 'Today' || countdown === 'Tomorrow' ? 'yellow' : countdown === 'In progress' ? 'green' : 'ghost'}>
-            {countdown}
-          </Badge>
+          {production.startDate && production.endDate && (
+            <Badge variant="ghost">{formatDateRange(production.startDate, production.endDate)}</Badge>
+          )}
+          {countdown && (
+            <Badge variant={countdown === 'Today' || countdown === 'Tomorrow' ? 'yellow' : countdown === 'In progress' ? 'green' : 'ghost'}>
+              {countdown}
+            </Badge>
+          )}
         </div>
         <span className="text-xs text-zinc-600">{production.groups.length} group{production.groups.length !== 1 ? 's' : ''}</span>
       </div>
@@ -64,7 +68,7 @@ export function Dashboard() {
 
   async function handleCreate(e) {
     e.preventDefault()
-    if (!form.name || !form.startDate || !form.endDate) return
+    if (!form.name) return
     const id = await createProduction(form)
     setShowModal(false)
     setForm({ name: '', description: '', startDate: '', endDate: '' })
@@ -157,7 +161,7 @@ export function Dashboard() {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" disabled={!form.name || !form.startDate || !form.endDate}>Create</Button>
+            <Button type="submit" disabled={!form.name}>Create</Button>
           </div>
         </form>
       </Modal>

@@ -3,6 +3,7 @@ import { useApp } from '../../contexts/AppContext'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: '⬡' },
+  { to: '/availability', label: 'Availability', icon: '◷' },
   { to: '/calendars', label: 'Settings', icon: '⚙' },
 ]
 

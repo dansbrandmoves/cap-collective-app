@@ -90,6 +90,7 @@ async function seedSupabase(ownerId) {
 }
 
 async function fetchAll(ownerId) {
+  console.log('[Coordie] fetchAll for owner:', ownerId)
   const prodQuery = ownerId
     ? supabase.from('productions').select('*').eq('owner_id', ownerId).order('created_at')
     : supabase.from('productions').select('*').order('created_at')
@@ -271,24 +272,30 @@ export function AppProvider({ children }) {
 
   // --- Productions ---
   const createProduction = useCallback(async (data) => {
+    const ownerId = user?.id ?? null
     const production = {
       id: `prod-${Date.now()}`,
       name: data.name,
       description: data.description ?? '',
-      startDate: data.startDate,
-      endDate: data.endDate,
+      startDate: data.startDate || '',
+      endDate: data.endDate || '',
       ownerNotes: '',
-      ownerId: user?.id ?? null,
+      ownerId,
       createdAt: new Date().toISOString(),
       groups: [],
     }
     setProductions(prev => [...prev, production])
-    supabase.from('productions').insert({
+    const { error } = await supabase.from('productions').insert({
       id: production.id, name: production.name, description: production.description,
       start_date: production.startDate, end_date: production.endDate,
       owner_notes: production.ownerNotes, created_at: production.createdAt,
-      owner_id: production.ownerId,
-    }).then(({ error }) => { if (error) console.error('createProduction:', error) })
+      owner_id: ownerId,
+    })
+    if (error) {
+      console.error('createProduction failed:', error)
+      // Remove from local state if DB insert failed
+      setProductions(prev => prev.filter(p => p.id !== production.id))
+    }
     return production.id
   }, [user?.id])
 
@@ -299,7 +306,7 @@ export function AppProvider({ children }) {
   }, [])
 
   // --- Groups ---
-  const createGroup = useCallback((productionId, name) => {
+  const createGroup = useCallback(async (productionId, name) => {
     const token = nanoid(8)
     const group = {
       id: `grp-${Date.now()}`,
@@ -314,10 +321,10 @@ export function AppProvider({ children }) {
       },
     }
     setProductions(prev => prev.map(p => p.id === productionId ? { ...p, groups: [...p.groups, group] } : p))
-    supabase.from('groups').insert({ id: group.id, production_id: productionId, name, access_mode: 'open_link', open_token: token })
-      .then(({ error }) => { if (error) console.error('createGroup:', error) })
-    supabase.from('shared_notes').insert({ group_id: group.id, content: group.room.sharedNotes })
-      .then(({ error }) => { if (error) console.error('createGroup notes:', error) })
+    const { error: grpErr } = await supabase.from('groups').insert({ id: group.id, production_id: productionId, name, access_mode: 'open_link', open_token: token })
+    if (grpErr) console.error('createGroup failed:', grpErr)
+    const { error: noteErr } = await supabase.from('shared_notes').insert({ group_id: group.id, content: group.room.sharedNotes })
+    if (noteErr) console.error('createGroup notes failed:', noteErr)
     return group.id
   }, [])
 

@@ -117,8 +117,17 @@ export function AppProvider({ children }) {
       setUser(session?.user ?? null)
       setAuthLoading(false)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null)
+      // Send welcome email on sign-in
+      if (event === 'SIGNED_IN' && session?.user) {
+        const u = session.user
+        try {
+          await supabase.functions.invoke('send-welcome-email', {
+            body: { email: u.email, name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'there' },
+          })
+        } catch (err) { console.error('Welcome email failed:', err) }
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -149,6 +158,39 @@ export function AppProvider({ children }) {
 
   // Derived: customized slot states
   const slotStates = useMemo(() => buildSlotStates(slotStateCustomizations), [slotStateCustomizations])
+
+  // --- Notifications (messages across all rooms) ---
+  const NOTIF_LAST_SEEN_KEY = 'coordie-notifications-last-seen'
+  const [notificationsLastSeen, setNotificationsLastSeen] = useState(() => {
+    try { return localStorage.getItem(NOTIF_LAST_SEEN_KEY) || null } catch { return null }
+  })
+
+  const markNotificationsSeen = useCallback(() => {
+    const now = new Date().toISOString()
+    setNotificationsLastSeen(now)
+    try { localStorage.setItem(NOTIF_LAST_SEEN_KEY, now) } catch { /* full */ }
+  }, [])
+
+  const recentNotifications = useMemo(() => {
+    return productions
+      .flatMap(p => p.groups.flatMap(g =>
+        g.room.messages.map(m => ({
+          ...m,
+          productionName: p.name,
+          groupName: g.name,
+          openToken: g.openToken,
+          productionId: p.id,
+          groupId: g.id,
+        }))
+      ))
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 30)
+  }, [productions])
+
+  const unreadNotificationCount = useMemo(() => {
+    if (!notificationsLastSeen) return recentNotifications.length
+    return recentNotifications.filter(n => new Date(n.timestamp) > new Date(notificationsLastSeen)).length
+  }, [recentNotifications, notificationsLastSeen])
 
   // Pending request counts per group (for notifications)
   const [pendingRequestCounts, setPendingRequestCounts] = useState({}) // { groupId: count }
@@ -184,6 +226,26 @@ export function AppProvider({ children }) {
           const groupId = payload.new.group_id
           setPendingRequestCounts(prev => ({ ...prev, [groupId]: Math.max(0, (prev[groupId] || 0) - 1) }))
         }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [user])
+
+  // Real-time subscription for new messages (notifications)
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase
+      .channel('messages-notify')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const msg = payload.new
+        setProductions(prev => prev.map(p => ({
+          ...p,
+          groups: p.groups.map(g =>
+            g.id === msg.group_id
+              ? { ...g, room: { ...g.room, messages: [...g.room.messages, { id: msg.id, senderId: msg.sender_id, senderName: msg.sender_name, text: msg.text, timestamp: msg.timestamp, read: msg.read }] } }
+              : g
+          ),
+        })))
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
@@ -584,6 +646,7 @@ export function AppProvider({ children }) {
       createDateRequest, fetchDateRequests, updateDateRequestStatus,
       // Notifications
       pendingRequestCounts, getPendingRequestCount, getTotalPendingRequests,
+      recentNotifications, unreadNotificationCount, markNotificationsSeen,
       // Helpers
       getProduction, getGroup, getGroupByToken, getRoomLink, getMembersForGroup, resolveToken,
     }}>

@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
+import { NotificationsDropdown } from '../ui/NotificationsDropdown'
 
 const NAV = [
   { to: '/', label: 'Projects', icon: '⬡' },
@@ -25,8 +26,11 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
       ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
       {/* Logo */}
       <div className="px-5 py-5 border-b border-surface-700">
-        <div className="flex items-center gap-2.5">
-          <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
+          </div>
+          <NotificationsDropdown />
         </div>
       </div>
 

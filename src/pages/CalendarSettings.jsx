@@ -361,19 +361,15 @@ export function CalendarSettings() {
       {/* ── Appearance ── */}
       <div className="py-5">
         <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Appearance</p>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-zinc-300">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</p>
-            <p className="text-xs text-zinc-600 mt-0.5">Switch between dark and light interface.</p>
-          </div>
-          <button onClick={toggleTheme}
-            className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
-              theme === 'dark' ? 'bg-accent' : 'bg-surface-700'
-            }`}>
-            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-              theme === 'dark' ? 'translate-x-[18px]' : 'translate-x-0.5'
-            }`} />
-          </button>
+        <div className="flex items-center gap-1 bg-surface-800 rounded-lg p-0.5 w-fit">
+          <button onClick={() => theme !== 'dark' && toggleTheme()}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${
+              theme === 'dark' ? 'bg-surface-600 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+            }`}>Dark</button>
+          <button onClick={() => theme !== 'light' && toggleTheme()}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-150 ${
+              theme === 'light' ? 'bg-surface-600 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+            }`}>Light</button>
         </div>
       </div>
 

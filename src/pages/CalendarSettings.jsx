@@ -467,12 +467,19 @@ export function CalendarSettings() {
                 <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cal.color }} />
                 <p className="text-sm text-zinc-300 truncate">{cal.name}</p>
               </div>
-              <select
-                value={assigningRoles[cal.googleCalendarId] ?? 'governs'}
-                onChange={e => setAssigningRoles(r => ({ ...r, [cal.googleCalendarId]: e.target.value }))}
-                className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent self-start sm:self-auto">
-                {ROLES.map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
-              </select>
+              <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                <select
+                  value={assigningRoles[cal.googleCalendarId] ?? 'governs'}
+                  onChange={e => setAssigningRoles(r => ({ ...r, [cal.googleCalendarId]: e.target.value }))}
+                  className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent">
+                  {ROLES.map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
+                </select>
+                <button onClick={() => setPendingCals(prev => prev.filter(c => c.googleCalendarId !== cal.googleCalendarId))}
+                  className="p-1 rounded text-zinc-600 hover:text-red-400 transition-colors flex-shrink-0"
+                  title="Remove calendar">
+                  <Trash2 size={12} strokeWidth={1.75} />
+                </button>
+              </div>
             </div>
           ))}
         </div>

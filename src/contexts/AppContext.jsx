@@ -67,6 +67,7 @@ function buildProductions(prods, grps, notes, msgs) {
     endDate: p.end_date,
     ownerNotes: p.owner_notes,
     ownerId: p.owner_id,
+    availability_config: p.availability_config || null,
     createdAt: p.created_at,
     groups: (grps || [])
       .filter(g => g.production_id === p.id)

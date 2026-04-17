@@ -92,7 +92,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="px-5 sm:px-8 lg:px-12 py-6 sm:py-10">
+    <div className="px-5 sm:px-8 lg:px-16 py-6 sm:py-10">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-zinc-100">Projects</h1>

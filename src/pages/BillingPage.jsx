@@ -30,7 +30,7 @@ export function BillingPage() {
   }
 
   return (
-    <div className="px-5 sm:px-8 lg:px-12 py-6 sm:py-10">
+    <div className="px-5 sm:px-8 lg:px-16 py-6 sm:py-10">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-zinc-100 mb-1">Billing</h1>

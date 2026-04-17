@@ -123,16 +123,26 @@ export function AppProvider({ children }) {
   }
 
   useEffect(() => {
+    let resolved = false
     supabase.auth.getSession().then(({ data: { session } }) => {
+      resolved = true
       setUser(session?.user ?? null)
       fetchPlan(session?.user?.id ?? null)
       setAuthLoading(false)
     }).catch(err => {
+      resolved = true
       console.error('getSession failed:', err)
       setAuthLoading(false)
     })
-    // Safety net: never stay stuck on loading
-    const timeout = setTimeout(() => setAuthLoading(false), 5000)
+    // Auto-recover: if auth hangs (corrupted token), clear it and proceed
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        console.warn('Auth timed out — clearing stale session')
+        localStorage.removeItem('sb-xwuekcysigkujhyucugi-auth-token')
+        setUser(null)
+        setAuthLoading(false)
+      }
+    }, 4000)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null)
       fetchPlan(session?.user?.id ?? null)

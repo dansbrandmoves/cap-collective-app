@@ -12,7 +12,7 @@ import { CalendarDays, X, CheckCircle2, CircleDot, Share2 } from 'lucide-react'
 const TABS = ['Availability', 'Notes']
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
-function NamePrompt({ token, onConfirm, ownerLogo }) {
+function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
   const [name, setName] = useState('')
   const { theme } = useApp()
   function handleSubmit(e) {
@@ -26,7 +26,7 @@ function NamePrompt({ token, onConfirm, ownerLogo }) {
       <div className="bg-surface-900 border border-surface-700 rounded-2xl px-8 py-8 w-full max-w-sm">
         <div className="flex items-center gap-3 mb-6">
           {ownerLogo ? (
-            <div className={`rounded-lg px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-white' : 'bg-zinc-900'}`}>
+            <div className={`rounded-lg px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-zinc-100' : 'bg-zinc-800'}`}>
               <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
             </div>
           ) : (
@@ -308,10 +308,10 @@ export function RoomView() {
   const isOwner = !!user && production?.ownerId === user.id
 
   useEffect(() => {
-    if (!production?.ownerId || isOwner) return
+    if (!production?.ownerId) return
     supabase.from('profiles').select('logo_url, logo_is_dark').eq('id', production.ownerId).single()
       .then(({ data }) => { setOwnerLogo(data?.logo_url || null); setOwnerLogoDark(data?.logo_is_dark ?? true) })
-  }, [production?.ownerId, isOwner])
+  }, [production?.ownerId])
 
   useEffect(() => {
     if (!resolved) return
@@ -356,7 +356,7 @@ export function RoomView() {
   }
 
   if (!isOwner && mode === 'open_link' && !guestName) {
-    return <NamePrompt token={token} onConfirm={setGuestName} ownerLogo={ownerLogo} />
+    return <NamePrompt token={token} onConfirm={setGuestName} ownerLogo={ownerLogo} ownerLogoDark={ownerLogoDark} />
   }
 
   return (
@@ -372,7 +372,7 @@ export function RoomView() {
           {!isOwner && (
             <div className="flex items-center gap-2 flex-shrink-0">
               {ownerLogo ? (
-                <div className={`rounded-md px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-white' : 'bg-zinc-900'}`}>
+                <div className={`rounded-md px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-zinc-100' : 'bg-zinc-800'}`}>
                   <img src={ownerLogo} alt="" className="max-h-4 max-w-[80px] object-contain" />
                 </div>
               ) : (

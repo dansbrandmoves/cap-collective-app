@@ -136,17 +136,17 @@ export function AppProvider({ children }) {
       }
     }, 2000)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (initialLoad) { initialLoad = false; clearTimeout(timeout); setAuthLoading(false) }
+      // Set user FIRST, then resolve authLoading — prevents race where
+      // data fetch sees authLoading=false but user is still null
       setUser(session?.user ?? null)
       fetchPlan(session?.user?.id ?? null)
-      // Send welcome email on sign-in
+      if (initialLoad) { initialLoad = false; clearTimeout(timeout); setAuthLoading(false) }
+      // Send welcome email on sign-in (fire-and-forget)
       if (event === 'SIGNED_IN' && session?.user) {
         const u = session.user
-        try {
-          await supabase.functions.invoke('send-welcome-email', {
-            body: { email: u.email, name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'there' },
-          })
-        } catch (err) { console.error('Welcome email failed:', err) }
+        supabase.functions.invoke('send-welcome-email', {
+          body: { email: u.email, name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'there' },
+        }).catch(err => console.error('Welcome email failed:', err))
       }
     })
     return () => { clearTimeout(timeout); subscription.unsubscribe() }
@@ -313,10 +313,13 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (authLoading) return
     const ownerId = user?.id ?? null
+    setLoading(true)
+
+    console.log('[Coordie] Loading data for:', ownerId || 'guest')
 
     // Safety timeout — never stay stuck on loading
     const loadTimeout = setTimeout(() => {
-      console.warn('Data load timed out — proceeding with empty state')
+      console.warn('[Coordie] Data load timed out — proceeding with empty state')
       setLoading(false)
     }, 6000)
 
@@ -328,12 +331,21 @@ export function AppProvider({ children }) {
 
     Promise.all([dataPromise, bookingPromise])
       .then(async ([{ prods, grps, notes, msgs, members }, { data: bPages }]) => {
+        console.log('[Coordie] Fetched:', { prods: prods?.length || 0, grps: grps?.length || 0, bookingPages: bPages?.length || 0 })
         setBookingPages(bPages || [])
         if (!prods?.length && ownerId) {
-          await seedSupabase(ownerId)
-          const fresh = await fetchAll(ownerId)
-          setProductions(buildProductions(fresh.prods, fresh.grps, fresh.notes, fresh.msgs))
-          setGroupMembers(fresh.members || [])
+          // Only seed if this is a brand new user — check if any productions exist at all
+          const { count } = await supabase.from('productions').select('id', { count: 'exact', head: true })
+          if (count === 0) {
+            await seedSupabase(ownerId)
+            const fresh = await fetchAll(ownerId)
+            setProductions(buildProductions(fresh.prods, fresh.grps, fresh.notes, fresh.msgs))
+            setGroupMembers(fresh.members || [])
+          } else {
+            // User just has no productions yet — that's fine, show empty state
+            setProductions([])
+            setGroupMembers(members || [])
+          }
         } else {
           // Backfill any groups missing an open_token
           const missing = (grps || []).filter(g => !g.open_token)

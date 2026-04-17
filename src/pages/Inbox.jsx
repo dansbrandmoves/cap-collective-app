@@ -67,9 +67,9 @@ export function Inbox() {
   const pendingCount = requests.filter(r => r.status === 'pending').length
 
   return (
-    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-6 sm:py-10">
-      <div className="flex items-end justify-between mb-8">
-        <div>
+    <div className="px-5 sm:px-8 lg:px-12 py-6 sm:py-10">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-zinc-100">Inbox</h1>
           <p className="text-sm text-zinc-500 mt-1">Date requests from your guests.</p>
         </div>
@@ -110,8 +110,8 @@ export function Inbox() {
             const isPending = req.status === 'pending'
 
             return (
-              <div key={req.id} className={`bg-surface-900 border rounded-xl px-5 py-4 transition-all duration-150 ${
-                isPending ? 'border-surface-700 hover:border-surface-500' : 'border-surface-800'
+              <div key={req.id} className={`bg-surface-900 border rounded-xl px-5 sm:px-6 py-4 sm:py-5 shadow-sm shadow-black/10 transition-all duration-150 ${
+                isPending ? 'border-surface-700 hover:border-surface-500 hover:shadow-lg hover:shadow-black/20' : 'border-surface-800'
               }`}>
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0">

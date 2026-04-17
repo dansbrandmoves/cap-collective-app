@@ -6,7 +6,7 @@ export function AvailabilityRules() {
   const { availabilityRules, slots, calendarEvents, connectedCalendars, prefixRules, slotStates } = useApp()
 
   return (
-    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-6 sm:py-10">
+    <div className="px-5 sm:px-8 lg:px-12 py-6 sm:py-10">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-zinc-100 mb-1">Availability</h1>
         <p className="text-sm text-zinc-500">

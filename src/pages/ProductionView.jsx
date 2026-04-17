@@ -524,7 +524,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
           ) : (
             <div className="space-y-3">
               {dateRequests.map(req => (
-                <div key={req.id} className="bg-surface-900 border border-surface-700 rounded-xl px-5 py-4">
+                <div key={req.id} className="bg-surface-900 border border-surface-700 rounded-xl px-5 sm:px-6 py-4 sm:py-5 shadow-sm shadow-black/10">
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div>
                       <p className="text-sm font-medium text-zinc-200">{req.requester_name}</p>

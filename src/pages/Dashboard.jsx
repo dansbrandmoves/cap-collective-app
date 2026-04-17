@@ -35,7 +35,7 @@ function ProjectCard({ production }) {
   return (
     <div
       onClick={() => navigate(`/production/${production.id}`)}
-      className="bg-surface-900 border border-surface-700 rounded-xl p-5 cursor-pointer hover:border-surface-500 hover:bg-surface-800/80 hover:shadow-lg hover:shadow-black/10 transition-all duration-150 group"
+      className="bg-surface-900 border border-surface-700 rounded-xl p-5 sm:p-6 cursor-pointer shadow-sm shadow-black/10 hover:border-surface-500 hover:bg-surface-800/80 hover:shadow-lg hover:shadow-black/20 transition-all duration-150 group"
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <h3 className="text-base font-semibold text-zinc-100 leading-snug group-hover:text-white">
@@ -92,12 +92,13 @@ export function Dashboard() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-6 sm:py-10">
-      <div className="flex items-end justify-between mb-8">
-        <div>
+    <div className="px-5 sm:px-8 lg:px-12 py-6 sm:py-10">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-zinc-100">Projects</h1>
+          <p className="text-sm text-zinc-500 mt-1">Your active productions, all in one place.</p>
         </div>
-        <Button onClick={openNewProject}>
+        <Button onClick={openNewProject} className="flex-shrink-0 self-start">
           <Plus size={14} strokeWidth={2} className="mr-1.5" />
           New Project
         </Button>
@@ -131,7 +132,7 @@ export function Dashboard() {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {productions.map(p => (
             <ProjectCard key={p.id} production={p} />
           ))}

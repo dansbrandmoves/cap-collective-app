@@ -54,8 +54,6 @@ export function DailyView({ date, slots, calendarEvents, connectedCalendars, ava
                 </div>
                 <Badge variant={STATE_BADGE[state]}>{meta.label}</Badge>
               </div>
-
-              {/* Event details removed — daily view only shows slot status */}
             </div>
           )
         })}

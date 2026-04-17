@@ -12,7 +12,7 @@ import {
   fetchAllGoverningEvents,
   isConfigured,
 } from '../utils/googleCalendar'
-import { RefreshCw, Plug, Unplug, Plus, Trash2 } from 'lucide-react'
+import { RefreshCw, Plug, Unplug, Plus, Trash2, Sun, Moon, Monitor } from 'lucide-react'
 
 const ROLE_META = {
   governs:       { label: 'Governs availability', badge: 'green',  desc: 'Events block or color slots — drives what groups see.' },
@@ -64,6 +64,7 @@ export function CalendarSettings() {
   const [newPrefix, setNewPrefix] = useState('')
   const [newState, setNewState] = useState('blocked')
   const [editingHours, setEditingHours] = useState(false)
+  const [themeOpen, setThemeOpen] = useState(false)
 
   const configured = isConfigured()
 
@@ -387,13 +388,39 @@ export function CalendarSettings() {
 
       {/* ── Appearance ── */}
       <div className="py-5">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Appearance</p>
-          <select value={theme} onChange={e => e.target.value !== theme && toggleTheme()}
-            className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-400 focus:outline-none focus:border-accent">
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-          </select>
+        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Appearance</p>
+        <div className="relative w-fit">
+          <button onClick={() => setThemeOpen(!themeOpen)}
+            className="flex items-center gap-2.5 bg-surface-800 border border-surface-700 rounded-lg px-3.5 py-2 text-sm text-zinc-300 hover:border-surface-500 transition-colors min-w-[160px]">
+            {theme === 'dark'
+              ? <Moon size={14} strokeWidth={1.75} className="text-zinc-400" />
+              : <Sun size={14} strokeWidth={1.75} className="text-amber-400" />
+            }
+            <span className="flex-1 text-left">{theme === 'dark' ? 'Dark' : 'Light'}</span>
+            <svg className={`w-3 h-3 text-zinc-500 transition-transform ${themeOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          {themeOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setThemeOpen(false)} />
+              <div className="absolute top-full left-0 mt-1 w-full bg-surface-800 border border-surface-700 rounded-lg shadow-xl shadow-black/30 overflow-hidden z-20">
+                {[
+                  { value: 'dark', label: 'Dark', icon: Moon, iconClass: 'text-zinc-400' },
+                  { value: 'light', label: 'Light', icon: Sun, iconClass: 'text-amber-400' },
+                ].map(({ value, label, icon: Icon, iconClass }) => (
+                  <button key={value} onClick={() => { if (value !== theme) toggleTheme(); setThemeOpen(false) }}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors ${
+                      value === theme
+                        ? 'bg-accent/10 text-zinc-100'
+                        : 'text-zinc-400 hover:bg-surface-700 hover:text-zinc-200'
+                    }`}>
+                    <Icon size={14} strokeWidth={1.75} className={iconClass} />
+                    {label}
+                    {value === theme && <span className="ml-auto text-accent text-xs">✓</span>}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

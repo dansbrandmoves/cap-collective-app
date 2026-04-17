@@ -92,9 +92,6 @@ export function MonthlyView({
                                       title={`${slot.name}: ${meta.label}`} />
                                   )
                                 })}
-                                {pi < 2 && phases[pi + 1]?.length > 0 && (
-                                  <div className="h-px bg-surface-600/50" />
-                                )}
                               </div>
                             )
                           })}

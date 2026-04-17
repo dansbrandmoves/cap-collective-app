@@ -319,39 +319,55 @@ export function CalendarSettings() {
 
       {/* ── Business Hours ── */}
       <div className="py-5 border-b border-surface-800">
-        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Business Hours</p>
-        <div className="space-y-0">
-          {DAY_NAMES.map((name, i) => {
-            const day = schedule[i]
-            const isActive = !!day
-            return (
-              <div key={i} className="flex items-center h-8 gap-2 group/day">
-                <button onClick={() => toggleDay(i)}
-                  className={`w-10 text-left text-xs font-medium transition-colors ${
-                    isActive ? 'text-zinc-200' : 'text-zinc-600 line-through'
-                  }`}>
-                  {name.slice(0, 3)}
-                </button>
-                {isActive ? (
-                  <>
-                    <TimeSelect value={day.start} onChange={v => updateDayTime(i, 'start', v)} />
-                    <span className="text-[10px] text-zinc-600">–</span>
-                    <TimeSelect value={day.end} onChange={v => updateDayTime(i, 'end', v)} />
-                    <button onClick={() => applyToAll(i)}
-                      className="text-[10px] text-zinc-600 hover:text-accent transition-colors opacity-0 group-hover/day:opacity-100 ml-1">
-                      Apply to all
-                    </button>
-                  </>
-                ) : (
-                  <button onClick={() => toggleDay(i)} className="text-[10px] text-zinc-600 hover:text-accent transition-colors">
-                    Enable
-                  </button>
-                )}
-              </div>
-            )
-          })}
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Business Hours</p>
+          <button onClick={() => setBusinessHours(prev => ({ ...prev, enabled: !prev.enabled }))}
+            className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
+              businessHours.enabled !== false ? 'bg-accent' : 'bg-surface-700'
+            }`}>
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+              businessHours.enabled !== false ? 'translate-x-4' : 'translate-x-0'
+            }`} />
+          </button>
         </div>
-        <p className="text-xs text-zinc-600 mt-3">These hours apply to all booking pages and constrain calendar availability.</p>
+        {businessHours.enabled !== false ? (
+          <>
+            <div className="space-y-0">
+              {DAY_NAMES.map((name, i) => {
+                const day = schedule[i]
+                const isActive = !!day
+                return (
+                  <div key={i} className="flex items-center h-8 gap-2 group/day">
+                    <button onClick={() => toggleDay(i)}
+                      className={`w-10 text-left text-xs font-medium transition-colors ${
+                        isActive ? 'text-zinc-200' : 'text-zinc-600 line-through'
+                      }`}>
+                      {name.slice(0, 3)}
+                    </button>
+                    {isActive ? (
+                      <>
+                        <TimeSelect value={day.start} onChange={v => updateDayTime(i, 'start', v)} />
+                        <span className="text-[10px] text-zinc-600">–</span>
+                        <TimeSelect value={day.end} onChange={v => updateDayTime(i, 'end', v)} />
+                        <button onClick={() => applyToAll(i)}
+                          className="text-[10px] text-zinc-600 hover:text-accent transition-colors opacity-0 group-hover/day:opacity-100 ml-1">
+                          Apply to all
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => toggleDay(i)} className="text-[10px] text-zinc-600 hover:text-accent transition-colors">
+                        Enable
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-xs text-zinc-600 mt-3">These hours apply to all booking pages and constrain calendar availability.</p>
+          </>
+        ) : (
+          <p className="text-xs text-zinc-500">Off — your calendar and per-page settings determine availability instead.</p>
+        )}
       </div>
 
       {/* ── Guest Calendar Access ── */}

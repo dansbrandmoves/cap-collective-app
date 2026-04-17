@@ -21,14 +21,18 @@ function resizeImage(file, maxW, maxH) {
       // Sample brightness from pixel data
       const data = ctx.getImageData(0, 0, w, h).data
       let totalBrightness = 0, opaquePixels = 0
-      for (let i = 0; i < data.length; i += 16) { // sample every 4th pixel
+      const totalPixels = data.length / 4
+      for (let i = 0; i < data.length; i += 4) {
         const a = data[i + 3]
-        if (a < 50) continue // skip transparent
+        if (a < 30) continue // skip transparent
         totalBrightness += (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114)
         opaquePixels++
       }
-      const avgBrightness = opaquePixels > 0 ? totalBrightness / opaquePixels : 128
-      const isDark = avgBrightness < 128
+      // If mostly transparent, treat visible content as the signal
+      const avgBrightness = opaquePixels > 0 ? totalBrightness / opaquePixels : 200
+      // Light logos (bright content) need a dark background
+      // Dark logos (dark content) need a light background
+      const isDark = avgBrightness < 140
       canvas.toBlob(blob => resolve({ blob, isDark }), 'image/webp', 0.85)
     }
     img.src = URL.createObjectURL(file)

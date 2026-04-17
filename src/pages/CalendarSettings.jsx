@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useApp } from '../contexts/AppContext'
+import { supabase } from '../utils/supabase'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
@@ -74,7 +75,7 @@ export function CalendarSettings() {
     guestCalendarEnabled, setGuestCalendarEnabled,
     theme, toggleTheme,
     availabilityMode, setAvailabilityMode, blockDuration, setBlockDuration,
-    logoUrl, uploadLogo, removeLogo,
+    logoUrl, logoIsDark, setLogoIsDark, uploadLogo, removeLogo, user,
   } = useApp()
 
   const [gisReady, setGisReady] = useState(false)
@@ -300,10 +301,25 @@ export function CalendarSettings() {
         <p className="text-xs text-zinc-600 mb-3">Your logo appears on booking pages and room links instead of Coordie.</p>
         <div className="flex items-center gap-4">
           {logoUrl ? (
-            <div className="flex items-center gap-3">
-              <div className={`rounded-lg px-3 py-2 flex items-center justify-center ${logoIsDark ? 'bg-white' : 'bg-zinc-900'}`}>
-                <img src={logoUrl} alt="Your logo" className="max-h-8 max-w-[120px] object-contain" />
+            <div className="space-y-3">
+              {/* Preview: pick which background works */}
+              <div className="flex items-center gap-3">
+                <button onClick={async () => {
+                  setLogoIsDark(true)
+                  await supabase.from('profiles').update({ logo_is_dark: true }).eq('id', user?.id)
+                }}
+                  className={`rounded-lg px-4 py-3 flex items-center justify-center bg-white transition-all ${logoIsDark ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-75'}`}>
+                  <img src={logoUrl} alt="" className="max-h-8 max-w-[100px] object-contain" />
+                </button>
+                <button onClick={async () => {
+                  setLogoIsDark(false)
+                  await supabase.from('profiles').update({ logo_is_dark: false }).eq('id', user?.id)
+                }}
+                  className={`rounded-lg px-4 py-3 flex items-center justify-center bg-zinc-900 transition-all ${!logoIsDark ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-75'}`}>
+                  <img src={logoUrl} alt="" className="max-h-8 max-w-[100px] object-contain" />
+                </button>
               </div>
+              <p className="text-[10px] text-zinc-600">Click the background that makes your logo look best.</p>
               <div className="flex items-center gap-2">
                 <label className="text-xs text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors">
                   Replace

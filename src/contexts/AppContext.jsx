@@ -969,7 +969,7 @@ export function AppProvider({ children }) {
       // Availability Mode
       availabilityMode, setAvailabilityMode, blockDuration, setBlockDuration,
       // Branding
-      logoUrl, logoIsDark, uploadLogo, removeLogo,
+      logoUrl, logoIsDark, setLogoIsDark, uploadLogo, removeLogo,
       // Helpers
       getProduction, getGroup, getGroupByToken, getRoomLink, getMembersForGroup, resolveToken,
     }}>

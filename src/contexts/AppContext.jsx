@@ -942,6 +942,7 @@ export function AppProvider({ children }) {
         groupName,
         productionName,
         ownerEmail: user?.email ?? null,
+        groupId,
       },
     }).catch(err => console.warn('Date request email notification failed:', err))
 

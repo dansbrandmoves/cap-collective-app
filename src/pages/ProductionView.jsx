@@ -6,18 +6,7 @@ import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
-import { Lock, HelpCircle } from 'lucide-react'
-
-function Hint({ text }) {
-  return (
-    <span className="relative group/hint inline-flex ml-1">
-      <HelpCircle size={12} strokeWidth={1.75} className="text-zinc-600 hover:text-zinc-400 cursor-help transition-colors" />
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-[11px] text-zinc-300 leading-snug shadow-lg opacity-0 pointer-events-none group-hover/hint:opacity-100 transition-opacity z-30 max-w-[240px] whitespace-normal text-center">
-        {text}
-      </span>
-    </span>
-  )
-}
+import { Lock } from 'lucide-react'
 
 export function ProductionView() {
   const { id } = useParams()
@@ -228,7 +217,7 @@ export function ProductionView() {
                 )}
                 <div className="hidden group-hover/item:flex items-center gap-0.5 pr-2">
                   <button onClick={() => { setEditingGroupId(group.id); setEditGroupName(group.name) }} className="text-xs text-zinc-600 hover:text-zinc-300 px-1 py-1 transition-colors">Edit</button>
-                  <button onClick={() => setDeletingGroupId(group.id)} className="text-xs text-red-700 hover:text-red-400 px-1 py-1 transition-colors">Del</button>
+                  <button onClick={() => setDeletingGroupId(group.id)} className="text-xs text-red-700 hover:text-red-400 px-1 py-1 transition-colors">Delete</button>
                 </div>
               </div>
             )
@@ -287,7 +276,7 @@ export function ProductionView() {
               className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent"
               autoFocus
             />
-            <p className="text-sm text-zinc-500 mt-1.5">You choose the name. This creates a Room for this group.</p>
+            <p className="text-sm text-zinc-500 mt-1.5">Each group gets a shared space for notes, dates, and messages.</p>
           </div>
           <div className="flex justify-end gap-3 pt-1">
             <Button variant="secondary" onClick={() => setShowNewGroup(false)}>Cancel</Button>
@@ -455,7 +444,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           {pendingCount > 0 && <Badge variant="accent">{pendingCount} pending</Badge>}
-          <Button size="sm" onClick={() => navigate(`/room/${openToken}`)}>Open Room →</Button>
+          <Button size="sm" onClick={() => navigate(`/room/${openToken}`)}>Open →</Button>
         </div>
       </div>
 
@@ -463,7 +452,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
 
         {/* Access mode + link sharing */}
         <div>
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Room Access <Hint text="Open Link: one shared link, guests enter their name. Invite Only: each person gets a unique link." /></p>
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Sharing</p>
           <div className="bg-surface-900 border border-surface-700 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <button

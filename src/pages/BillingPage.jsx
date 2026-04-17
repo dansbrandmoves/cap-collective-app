@@ -150,8 +150,7 @@ export function BillingPage() {
         <div className="bg-surface-900 border border-surface-700 rounded-2xl p-5">
           <p className="text-sm text-zinc-400">
             To manage your subscription, cancel, or update payment details, contact{' '}
-            <a href={`mailto:${user?.email}`} className="text-accent hover:underline">support</a>{' '}
-            or visit the Stripe customer portal (link coming soon).
+            <a href={`mailto:${user?.email}`} className="text-accent hover:underline">support</a>.
           </p>
         </div>
       )}

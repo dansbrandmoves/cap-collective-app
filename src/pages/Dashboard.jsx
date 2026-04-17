@@ -108,7 +108,7 @@ export function Dashboard() {
       {!isProPlan && productions.length >= FREE_PROJECT_LIMIT && (
         <div className="mb-6 flex items-center justify-between gap-4 bg-accent/8 border border-accent/20 rounded-xl px-4 py-3">
           <p className="text-sm text-zinc-400">
-            Free plan includes <span className="text-zinc-200 font-medium">{FREE_PROJECT_LIMIT} project</span>. Upgrade to add more.
+            Free plan includes <span className="text-zinc-200 font-medium">{FREE_PROJECT_LIMIT} project{FREE_PROJECT_LIMIT !== 1 ? 's' : ''}</span>. Upgrade to add more.
           </p>
           <button
             onClick={() => setShowUpgrade(true)}

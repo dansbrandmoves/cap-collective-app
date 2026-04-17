@@ -265,8 +265,8 @@ function GuestCalendarPanel({ bookingSlots }) {
         <div className="flex items-center gap-3">
           <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-500 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-zinc-400">Check your availability</p>
-            <p className="text-[11px] text-zinc-600">Connect Google Calendar to see your free days.</p>
+            <p className="text-xs font-medium text-zinc-400">See your free days</p>
+            <p className="text-[11px] text-zinc-600">Connect your Google Calendar to highlight days that work for you.</p>
           </div>
         </div>
         <button
@@ -488,7 +488,7 @@ export function BookingPageView() {
               <div className="flex-1 flex items-center justify-center text-center">
                 <div>
                   <CalendarDays size={20} className="text-zinc-700 mx-auto mb-2" />
-                  <p className="text-xs text-zinc-600">Select a date to see available times</p>
+                  <p className="text-xs text-zinc-600">Pick a date to view open time slots</p>
                 </div>
               </div>
             ) : selectedSlot ? (

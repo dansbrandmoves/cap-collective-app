@@ -124,7 +124,7 @@ export function Inbox() {
                         onClick={() => navigate(`/production/${prod.id}`)}
                         className="text-xs text-zinc-500 hover:text-accent transition-colors"
                       >
-                        {prod.name} → {groupName}
+                        {prod.name} · {groupName}
                       </button>
                     )}
                   </div>

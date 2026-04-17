@@ -586,6 +586,12 @@ export function AppProvider({ children }) {
   // --- Productions ---
   const createProduction = useCallback(async (data) => {
     const ownerId = user?.id ?? null
+    const defaultAvailConfig = {
+      mode: availabilityMode,
+      blockDuration,
+      businessHours,
+      customSlots: availabilityMode === 'slots' ? effectiveSlots : undefined,
+    }
     const production = {
       id: data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + nanoid(6),
       name: data.name,
@@ -594,6 +600,7 @@ export function AppProvider({ children }) {
       endDate: data.endDate || '',
       ownerNotes: '',
       ownerId,
+      availability_config: defaultAvailConfig,
       createdAt: new Date().toISOString(),
       groups: [],
     }
@@ -603,6 +610,7 @@ export function AppProvider({ children }) {
       start_date: production.startDate, end_date: production.endDate,
       owner_notes: production.ownerNotes, created_at: production.createdAt,
       owner_id: ownerId,
+      availability_config: defaultAvailConfig,
     })
     if (error) {
       console.error('createProduction failed:', error)

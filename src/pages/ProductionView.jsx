@@ -447,6 +447,20 @@ function ProjectCalendar({ onMobileBack, groupIds, production, onUpdateProductio
   const [showSettings, setShowSettings] = useState(false)
 
   const config = production.availabilityConfig || production.availability_config
+
+  // Auto-sync global settings to production if no config exists
+  // This ensures rooms (guest-facing) always have the right data
+  useEffect(() => {
+    if (config) return
+    const globalConfig = {
+      mode: availabilityMode,
+      blockDuration,
+      businessHours,
+      customSlots: availabilityMode === 'slots' ? effectiveSlots : undefined,
+    }
+    onUpdateProduction(production.id, { availability_config: globalConfig })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const isCustom = !!config
   const projectSlots = useMemo(() => {
     if (!config) return effectiveSlots
@@ -484,15 +498,22 @@ function ProjectCalendar({ onMobileBack, groupIds, production, onUpdateProductio
       .then(({ data }) => setSharedAvailability(data || []))
   }, [groupIds])
 
+  function buildGlobalConfig() {
+    return {
+      mode: availabilityMode,
+      blockDuration,
+      businessHours,
+      customSlots: availabilityMode === 'slots' ? effectiveSlots : undefined,
+    }
+  }
+
   function handleCustomize() {
-    onUpdateProduction(production.id, {
-      availability_config: { mode: availabilityMode, blockDuration, businessHours },
-    })
+    onUpdateProduction(production.id, { availability_config: buildGlobalConfig() })
     setShowSettings(false)
   }
 
   function handleResetToGlobal() {
-    onUpdateProduction(production.id, { availability_config: null })
+    onUpdateProduction(production.id, { availability_config: buildGlobalConfig() })
     setShowSettings(false)
   }
 

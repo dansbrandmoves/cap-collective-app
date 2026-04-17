@@ -12,7 +12,18 @@ import {
   fetchAllGoverningEvents,
   isConfigured,
 } from '../utils/googleCalendar'
-import { RefreshCw, Plug, Unplug, Plus, Trash2, Sun, Moon, Monitor } from 'lucide-react'
+import { RefreshCw, Plug, Unplug, Plus, Trash2, Sun, Moon, Monitor, HelpCircle } from 'lucide-react'
+
+function Hint({ text }) {
+  return (
+    <span className="relative group/hint inline-flex ml-1">
+      <HelpCircle size={12} strokeWidth={1.75} className="text-zinc-600 hover:text-zinc-400 cursor-help transition-colors" />
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-[11px] text-zinc-300 leading-snug whitespace-nowrap shadow-lg opacity-0 pointer-events-none group-hover/hint:opacity-100 transition-opacity z-30 max-w-[240px] whitespace-normal text-center">
+        {text}
+      </span>
+    </span>
+  )
+}
 
 const ROLE_META = {
   governs:       { label: 'Governs availability', badge: 'green',  desc: 'Events block or color slots — drives what groups see.' },
@@ -285,7 +296,7 @@ export function CalendarSettings() {
       {/* ── Connected Calendars ── */}
       {connectedCalendars.length > 0 && (
         <div className="py-5 border-b border-surface-800">
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Connected Calendars</p>
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Connected Calendars <Hint text="'Governs' calendars block booking slots. 'Informational' are visible only to you. 'Ignored' have no effect." /></p>
           <div className="space-y-2">
             {connectedCalendars.map(cal => (
               <div key={cal.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-1.5">
@@ -320,7 +331,7 @@ export function CalendarSettings() {
       {/* ── Business Hours ── */}
       <div className="py-5 border-b border-surface-800">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Business Hours</p>
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Business Hours <Hint text="Sets when you're available for bookings. Times outside these hours won't show as available." /></p>
           <button onClick={() => setBusinessHours(prev => ({ ...prev, enabled: !prev.enabled }))}
             className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
               businessHours.enabled !== false ? 'bg-accent' : 'bg-surface-700'
@@ -377,7 +388,7 @@ export function CalendarSettings() {
       <div className="py-5 border-b border-surface-800">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Guest Calendar Access</p>
+            <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Guest Calendar Access <Hint text="When on, guests can connect their Google Calendar on your booking and room pages to see their own free days." /></p>
             <p className="text-xs text-zinc-600 mt-1">
               {guestCalendarEnabled
                 ? 'Guests can connect their Google Calendar on booking and room pages.'
@@ -397,7 +408,7 @@ export function CalendarSettings() {
 
       {/* ── Prefix Rules ── */}
       <div className="py-5 border-b border-surface-800">
-        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-1">Prefix Rules</p>
+        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-1">Prefix Rules <Hint text="Add a character to the start of a Google Calendar event title to override its status. e.g. '*Meeting' = blocked." /></p>
         <p className="text-xs text-zinc-600 mb-3">Event title prefixes that override the default calendar state.</p>
         {prefixRules.length > 0 && (
           <div className="space-y-1.5 mb-3">
@@ -440,7 +451,7 @@ export function CalendarSettings() {
       {/* ── Status Labels ── */}
       <div className="py-5 border-b border-surface-800">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Status Labels</p>
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Status Labels <Hint text="Rename or recolor the availability states shown on your calendar and to guests." /></p>
           <button onClick={resetSlotStateCustomizations} className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">Reset</button>
         </div>
         <div className="space-y-1.5">

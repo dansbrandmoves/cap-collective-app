@@ -6,7 +6,18 @@ import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
-import { Lock } from 'lucide-react'
+import { Lock, HelpCircle } from 'lucide-react'
+
+function Hint({ text }) {
+  return (
+    <span className="relative group/hint inline-flex ml-1">
+      <HelpCircle size={12} strokeWidth={1.75} className="text-zinc-600 hover:text-zinc-400 cursor-help transition-colors" />
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 text-[11px] text-zinc-300 leading-snug shadow-lg opacity-0 pointer-events-none group-hover/hint:opacity-100 transition-opacity z-30 max-w-[240px] whitespace-normal text-center">
+        {text}
+      </span>
+    </span>
+  )
+}
 
 export function ProductionView() {
   const { id } = useParams()
@@ -452,7 +463,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
 
         {/* Access mode + link sharing */}
         <div>
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Room Access</p>
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Room Access <Hint text="Open Link: one shared link, guests enter their name. Invite Only: each person gets a unique link." /></p>
           <div className="bg-surface-900 border border-surface-700 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <button

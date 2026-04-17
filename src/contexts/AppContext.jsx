@@ -423,6 +423,23 @@ export function AppProvider({ children }) {
 
   const toggleTheme = useCallback(() => setTheme(t => t === 'dark' ? 'light' : 'dark'), [])
 
+  // Sync global availability settings to ALL projects when they change
+  // This ensures room links always reflect current settings
+  useEffect(() => {
+    if (!user?.id || !productions.length) return
+    const globalConfig = {
+      mode: availabilityMode,
+      blockDuration,
+      businessHours,
+      customSlots: availabilityMode === 'slots' ? effectiveSlots : undefined,
+    }
+    // Update all productions owned by this user
+    supabase.from('productions')
+      .update({ availability_config: globalConfig })
+      .eq('owner_id', user.id)
+      .then(({ error }) => { if (error) console.error('Sync availability to projects:', error) })
+  }, [availabilityMode, blockDuration, businessHours, effectiveSlots]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Fetch productions once auth is resolved
   useEffect(() => {
     if (authLoading) return

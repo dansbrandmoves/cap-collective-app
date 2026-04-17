@@ -62,7 +62,7 @@ export function MonthlyView({
                       return (
                         <div
                           key={slot.id}
-                          className="h-2 rounded-sm flex-shrink-0 opacity-80"
+                          className="h-3 sm:h-4 rounded-sm flex-shrink-0 opacity-80"
                           style={{ backgroundColor: meta.color }}
                           title={`${slot.name}: ${meta.label}`}
                         />

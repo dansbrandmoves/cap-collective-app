@@ -196,6 +196,8 @@ export function AppProvider({ children }) {
   const [lastSynced, setLastSynced] = useState(() => stored?.lastSynced ?? null)
   const [theme, setTheme] = useState(() => stored?.theme ?? 'dark')
   const [slotStateCustomizations, setSlotStateCustomizations] = useState(() => stored?.slotStateCustomizations ?? {})
+  const [businessHours, setBusinessHours] = useState(() => stored?.businessHours ?? { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', enabled: true })
+  const [guestCalendarEnabled, setGuestCalendarEnabled] = useState(() => stored?.guestCalendarEnabled ?? false)
 
   // Derived: customized slot states
   const slotStates = useMemo(() => buildSlotStates(slotStateCustomizations), [slotStateCustomizations])
@@ -371,10 +373,11 @@ export function AppProvider({ children }) {
     saveToStorage({
       slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced,
-      theme, slotStateCustomizations,
+      theme, slotStateCustomizations, businessHours, guestCalendarEnabled,
     })
   }, [slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
-      googleAccessToken, googleTokenExpiresAt, lastSynced, theme, slotStateCustomizations])
+      googleAccessToken, googleTokenExpiresAt, lastSynced, theme, slotStateCustomizations,
+      businessHours, guestCalendarEnabled])
 
   // --- Slots ---
   const createSlot = useCallback((data) => {
@@ -839,6 +842,9 @@ export function AppProvider({ children }) {
       // Notifications
       pendingRequestCounts, getPendingRequestCount, getTotalPendingRequests,
       recentNotifications, unreadNotificationCount, markNotificationsSeen, notificationsLastSeen,
+      // Business Hours & Guest Calendar
+      businessHours, setBusinessHours,
+      guestCalendarEnabled, setGuestCalendarEnabled,
       // Helpers
       getProduction, getGroup, getGroupByToken, getRoomLink, getMembersForGroup, resolveToken,
     }}>

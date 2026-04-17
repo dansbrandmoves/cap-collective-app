@@ -224,12 +224,12 @@ function GuestCalendarPanel({ slots, groupId }) {
 }
 
 function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots }) {
-  const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates } = useApp()
+  const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, guestCalendarEnabled } = useApp()
   return (
     <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
         <>
-          <GuestCalendarPanel slots={slots} groupId={groupId} />
+          {guestCalendarEnabled && <GuestCalendarPanel slots={slots} groupId={groupId} />}
           <p className="text-sm text-zinc-400 mb-4">Tap dates to select them, then send a request.</p>
         </>
       )}

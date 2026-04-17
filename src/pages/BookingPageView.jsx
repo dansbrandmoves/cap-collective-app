@@ -311,7 +311,7 @@ function GuestCalendarPanel({ bookingSlots }) {
 /* ── Main Component ── */
 export function BookingPageView() {
   const { slug } = useParams()
-  const { resolveBookingSlug, createBooking } = useApp()
+  const { resolveBookingSlug, createBooking, guestCalendarEnabled } = useApp()
 
   const [page, setPage] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -377,9 +377,7 @@ export function BookingPageView() {
   if (loading) {
     return (
       <div className="min-h-screen bg-surface-950 flex items-center justify-center">
-        <div className="w-10 h-10 rounded-xl bg-accent/15 border border-accent/25 flex items-center justify-center animate-pulse">
-          <span className="text-accent font-bold text-sm">Co</span>
-        </div>
+        <img src="/coordie-logo.svg" alt="Coordie" className="h-5 animate-pulse" style={{ filter: 'invert(1)' }} />
       </div>
     )
   }
@@ -430,9 +428,7 @@ export function BookingPageView() {
             </div>
           </div>
           <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-600">
-            <div className="w-4 h-4 rounded bg-accent/15 flex items-center justify-center">
-              <span className="text-accent font-bold text-[7px]">Co</span>
-            </div>
+            <img src="/coordie-logo.svg" alt="" className="h-3" style={{ filter: 'invert(1)' }} />
             Powered by Coordie
           </div>
         </div>
@@ -452,11 +448,8 @@ export function BookingPageView() {
         <div className="hidden md:flex">
           {/* Left: Info */}
           <div className="w-[280px] lg:w-[300px] flex-shrink-0 border-r border-surface-800 p-6 lg:p-8 flex flex-col">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-accent/15 border border-accent/25 flex items-center justify-center">
-                <span className="text-accent font-bold text-xs">Co</span>
-              </div>
-              <span className="text-xs font-medium text-zinc-500">Coordie</span>
+            <div className="mb-5">
+              <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
             </div>
             <h1 className="text-xl font-semibold text-zinc-100 leading-tight mb-2">{page.name}</h1>
             {page.description && <p className="text-sm text-zinc-500 leading-relaxed mb-4">{page.description}</p>}
@@ -465,7 +458,7 @@ export function BookingPageView() {
               <span>{page.duration_minutes} min</span>
             </div>
             <div className="mt-auto">
-              <GuestCalendarPanel bookingSlots={timeSlots} />
+              {guestCalendarEnabled && <GuestCalendarPanel bookingSlots={timeSlots} />}
             </div>
           </div>
 
@@ -512,18 +505,15 @@ export function BookingPageView() {
         <div className="md:hidden">
           {/* Header */}
           <div className="px-5 pt-5 pb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-lg bg-accent/15 border border-accent/25 flex items-center justify-center">
-                <span className="text-accent font-bold text-[10px]">Co</span>
-              </div>
-              <span className="text-xs font-medium text-zinc-500">Coordie</span>
+            <div className="mb-3">
+              <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: 'invert(1)' }} />
             </div>
             <h1 className="text-lg font-semibold text-zinc-100 leading-tight">{page.name}</h1>
             {page.description && <p className="text-sm text-zinc-500 mt-1">{page.description}</p>}
             <div className="flex items-center gap-1.5 mt-2 text-xs text-zinc-500">
               <Clock size={12} className="text-zinc-600" /> {page.duration_minutes} min
             </div>
-            <GuestCalendarPanel bookingSlots={timeSlots} />
+            {guestCalendarEnabled && <GuestCalendarPanel bookingSlots={timeSlots} />}
           </div>
 
           <div className="border-t border-surface-800" />
@@ -574,9 +564,7 @@ export function BookingPageView() {
           {/* Footer */}
           <div className="px-5 pb-4 safe-bottom-sm">
             <div className="flex items-center justify-center gap-1.5 text-[10px] text-zinc-700">
-              <div className="w-3.5 h-3.5 rounded bg-accent/15 flex items-center justify-center">
-                <span className="text-accent font-bold text-[6px]">Co</span>
-              </div>
+              <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(1)' }} />
               Powered by Coordie
             </div>
           </div>

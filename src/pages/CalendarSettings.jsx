@@ -144,9 +144,9 @@ export function CalendarSettings() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-1">Calendar Settings</h1>
+    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-6 sm:py-10">
+      <div className="mb-8">
+        <h1 className="text-2xl font-semibold text-zinc-100 mb-1">Calendar Settings</h1>
         <p className="text-sm text-zinc-500">
           Control what the app knows. Each calendar has a role — governs availability, informational only, or ignored.
         </p>

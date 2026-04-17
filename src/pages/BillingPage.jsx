@@ -30,10 +30,10 @@ export function BillingPage() {
   }
 
   return (
-    <div className="flex-1 px-4 sm:px-8 py-8 sm:py-12 max-w-3xl mx-auto w-full">
+    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-6 sm:py-10 w-full">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-xl font-semibold text-zinc-100 mb-1">Billing</h1>
+        <h1 className="text-2xl font-semibold text-zinc-100 mb-1">Billing</h1>
         <p className="text-sm text-zinc-500">Manage your plan and subscription.</p>
       </div>
 

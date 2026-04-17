@@ -444,10 +444,11 @@ export function BookingPageView() {
               </div>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-1.5 text-xs text-zinc-600">
-            <img src="/coordie-logo.svg" alt="" className="h-3" style={{ filter: 'invert(1)' }} />
+          <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
+            <img src="/coordie-logo.svg" alt="" className="h-3" style={{ filter: 'invert(0.4)' }} />
             Powered by Coordie
-          </div>
+          </a>
         </div>
       </div>
     )
@@ -467,7 +468,7 @@ export function BookingPageView() {
           <div className="w-[280px] lg:w-[300px] flex-shrink-0 border-r border-surface-800 p-6 lg:p-8 flex flex-col">
             <div className="mb-5">
               {ownerLogo ? (
-                <div className="bg-white/10 rounded-lg px-2.5 py-1.5 inline-flex">
+                <div className="bg-white rounded-lg px-2.5 py-1.5 inline-flex">
                   <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
                 </div>
               ) : (
@@ -530,7 +531,7 @@ export function BookingPageView() {
           <div className="px-5 pt-5 pb-4">
             <div className="mb-3">
               {ownerLogo ? (
-                <div className="bg-white/10 rounded-lg px-2 py-1 inline-flex">
+                <div className="bg-white rounded-lg px-2 py-1 inline-flex">
                   <img src={ownerLogo} alt="" className="max-h-5 max-w-[80px] object-contain" />
                 </div>
               ) : (

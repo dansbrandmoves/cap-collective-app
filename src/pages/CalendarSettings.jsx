@@ -301,7 +301,7 @@ export function CalendarSettings() {
         <div className="flex items-center gap-4">
           {logoUrl ? (
             <div className="flex items-center gap-3">
-              <div className="bg-white/10 rounded-lg px-3 py-2 flex items-center justify-center">
+              <div className="bg-white rounded-lg px-3 py-2 flex items-center justify-center">
                 <img src={logoUrl} alt="Your logo" className="max-h-8 max-w-[120px] object-contain" />
               </div>
               <div className="flex items-center gap-2">

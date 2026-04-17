@@ -26,7 +26,7 @@ function NamePrompt({ token, onConfirm, ownerLogo }) {
       <div className="bg-surface-900 border border-surface-700 rounded-2xl px-8 py-8 w-full max-w-sm">
         <div className="flex items-center gap-3 mb-6">
           {ownerLogo ? (
-            <div className="bg-white/10 rounded-lg px-2.5 py-1.5 inline-flex">
+            <div className="bg-white rounded-lg px-2.5 py-1.5 inline-flex">
               <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
             </div>
           ) : (
@@ -371,7 +371,7 @@ export function RoomView() {
           {!isOwner && (
             <div className="flex items-center gap-2 flex-shrink-0">
               {ownerLogo ? (
-                <div className="bg-white/10 rounded-md px-2 py-1 inline-flex">
+                <div className="bg-white rounded-md px-2 py-1 inline-flex">
                   <img src={ownerLogo} alt="" className="max-h-4 max-w-[80px] object-contain" />
                 </div>
               ) : (
@@ -415,6 +415,17 @@ export function RoomView() {
           guestName={guestName}
           slots={slots}
         />
+      )}
+
+      {/* Footer */}
+      {!isOwner && (
+        <div className="px-5 py-3 border-t border-surface-800 flex items-center justify-center">
+          <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-[10px] text-zinc-700 hover:text-zinc-500 transition-colors">
+            <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
+            Powered by Coordie
+          </a>
+        </div>
       )}
     </div>
   )

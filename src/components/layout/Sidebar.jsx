@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { NotificationsDropdown } from '../ui/NotificationsDropdown'
-import { LayoutGrid, Inbox, CalendarDays, Settings, Sun, Moon } from 'lucide-react'
+import { LayoutGrid, Inbox, CalendarDays, Settings, Sun, Moon, LogOut } from 'lucide-react'
 
 const NAV = [
   { to: '/', label: 'Projects', icon: LayoutGrid, showBadge: false },
@@ -92,20 +92,9 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
       </nav>
 
       {/* Footer: user + theme toggle */}
-      <div className="px-4 py-4 border-t border-surface-700 space-y-2">
-        <button
-          onClick={toggleTheme}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors"
-        >
-          {theme === 'dark'
-            ? <Sun size={14} strokeWidth={1.75} />
-            : <Moon size={14} strokeWidth={1.75} />
-          }
-          <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
-        </button>
-
+      <div className="px-4 py-4 border-t border-surface-700 space-y-1">
         {user && (
-          <div className="flex items-center gap-2 px-3 py-2">
+          <div className="flex items-center gap-2 px-3 py-2 mb-1">
             {user.user_metadata?.avatar_url ? (
               <img src={user.user_metadata.avatar_url} alt="" className="w-6 h-6 rounded-full flex-shrink-0" />
             ) : (
@@ -116,10 +105,26 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
             <span className="text-xs text-zinc-400 truncate flex-1">
               {user.user_metadata?.full_name || user.email}
             </span>
-            <button onClick={signOut} className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors flex-shrink-0">
-              Sign out
-            </button>
           </div>
+        )}
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors"
+        >
+          {theme === 'dark'
+            ? <Sun size={14} strokeWidth={1.75} />
+            : <Moon size={14} strokeWidth={1.75} />
+          }
+          <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+        </button>
+        {user && (
+          <button
+            onClick={signOut}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+          >
+            <LogOut size={14} strokeWidth={1.75} />
+            Sign out
+          </button>
         )}
       </div>
     </aside>

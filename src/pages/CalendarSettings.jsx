@@ -259,42 +259,37 @@ export function CalendarSettings() {
       {/* ── Business Hours ── */}
       <div className="py-5 border-b border-surface-800">
         <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Business Hours</p>
-        <div className="space-y-1.5">
+        <div className="space-y-0.5">
           {DAY_NAMES.map((name, i) => {
             const day = schedule[i]
             const isActive = !!day
             return (
-              <div key={i} className="flex items-center gap-3 py-1.5">
+              <div key={i} className="flex items-center gap-2 py-1 group/day">
                 <button onClick={() => toggleDay(i)}
-                  className={`w-16 text-left text-xs font-medium transition-colors ${
-                    isActive ? 'text-zinc-200' : 'text-zinc-600'
+                  className={`w-10 text-left text-xs font-medium transition-colors ${
+                    isActive ? 'text-zinc-200' : 'text-zinc-600 line-through'
                   }`}>
                   {name.slice(0, 3)}
                 </button>
                 {isActive ? (
-                  <div className="flex items-center gap-1.5 flex-1">
+                  <>
                     <input type="time" value={day.start}
                       onChange={e => updateDayTime(i, 'start', e.target.value)}
-                      className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent w-[100px]" />
-                    <span className="text-xs text-zinc-600">–</span>
+                      className="text-xs bg-surface-800 border border-surface-700 rounded-md px-1.5 py-0.5 text-zinc-300 focus:outline-none focus:border-accent w-[88px]" />
+                    <span className="text-[10px] text-zinc-600">–</span>
                     <input type="time" value={day.end}
                       onChange={e => updateDayTime(i, 'end', e.target.value)}
-                      className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent w-[100px]" />
+                      className="text-xs bg-surface-800 border border-surface-700 rounded-md px-1.5 py-0.5 text-zinc-300 focus:outline-none focus:border-accent w-[88px]" />
                     <button onClick={() => applyToAll(i)}
-                      className="text-[10px] text-zinc-600 hover:text-accent transition-colors ml-1"
-                      title="Apply these hours to all active days">
+                      className="text-[10px] text-zinc-600 hover:text-accent transition-colors opacity-0 group-hover/day:opacity-100">
                       Apply to all
                     </button>
-                  </div>
+                  </>
                 ) : (
-                  <span className="text-xs text-zinc-600 italic">Unavailable</span>
+                  <button onClick={() => toggleDay(i)} className="text-[10px] text-zinc-600 hover:text-accent transition-colors">
+                    Enable
+                  </button>
                 )}
-                <button onClick={() => toggleDay(i)}
-                  className={`text-[10px] transition-colors flex-shrink-0 ${
-                    isActive ? 'text-zinc-600 hover:text-red-400' : 'text-zinc-600 hover:text-accent'
-                  }`}>
-                  {isActive ? 'Off' : 'On'}
-                </button>
               </div>
             )
           })}

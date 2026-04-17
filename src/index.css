@@ -41,6 +41,16 @@ html.light {
     @apply transition-all duration-150;
   }
 
+  /* Fix native time/date input icons in dark mode */
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+  }
+  html.light input[type="time"]::-webkit-calendar-picker-indicator,
+  html.light input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: none;
+  }
+
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { @apply bg-surface-600 rounded-full; }

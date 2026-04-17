@@ -555,12 +555,17 @@ function GroupOverview({ productionId, group, onMobileBack }) {
                   {req.message && (
                     <p className="text-xs text-zinc-500 italic mt-1">"{req.message}"</p>
                   )}
-                  {req.status === 'pending' && (
-                    <div className="flex gap-2 mt-3">
+                  <div className="flex gap-2 mt-3">
+                    {req.status !== 'approved' && (
                       <Button size="sm" onClick={() => handleRequestAction(req.id, 'approved')}>Approve</Button>
-                      <Button size="sm" variant="secondary" onClick={() => handleRequestAction(req.id, 'declined')}>Decline</Button>
-                    </div>
-                  )}
+                    )}
+                    {req.status !== 'pending' && (
+                      <Button size="sm" variant="secondary" onClick={() => handleRequestAction(req.id, 'pending')}>Reopen</Button>
+                    )}
+                    {req.status !== 'declined' && (
+                      <Button size="sm" variant="ghost" onClick={() => handleRequestAction(req.id, 'declined')}>Decline</Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

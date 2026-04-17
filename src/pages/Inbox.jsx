@@ -154,12 +154,17 @@ export function Inbox() {
                   </div>
                 )}
 
-                {isPending && (
-                  <div className="flex gap-2 mt-3 pt-3 border-t border-surface-800">
+                <div className="flex gap-2 mt-3 pt-3 border-t border-surface-800">
+                  {req.status !== 'approved' && (
                     <Button size="sm" onClick={() => handleAction(req.id, 'approved')}>Approve</Button>
+                  )}
+                  {req.status !== 'pending' && (
+                    <Button size="sm" variant="secondary" onClick={() => handleAction(req.id, 'pending')}>Reopen</Button>
+                  )}
+                  {req.status !== 'declined' && (
                     <Button size="sm" variant="ghost" onClick={() => handleAction(req.id, 'declined')}>Decline</Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )
           })}

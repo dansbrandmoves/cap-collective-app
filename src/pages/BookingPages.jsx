@@ -4,14 +4,24 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
-import { CalendarCheck, Plus, Copy, Check, Trash2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import { CalendarCheck, Plus, Copy, Check, Trash2, ChevronDown, ChevronUp, ExternalLink, Pencil } from 'lucide-react'
 
 const DURATIONS = [15, 30, 45, 60]
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-function BookingPageCard({ page, onToggle, onDelete, onFetchBookings, onUpdateBookingStatus, onDeleteBooking }) {
+function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, onUpdateBookingStatus, onDeleteBooking }) {
   const [copied, setCopied] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: page.name,
+    description: page.description || '',
+    durationMinutes: page.duration_minutes,
+    startHour: page.available_hours?.start || '09:00',
+    endHour: page.available_hours?.end || '17:00',
+    days: page.available_days || [1, 2, 3, 4, 5],
+    requiredFields: page.required_fields || { name: true, email: true, message: false },
+  })
   const [bookings, setBookings] = useState(null)
   const [loadingBookings, setLoadingBookings] = useState(false)
 
@@ -47,21 +57,20 @@ function BookingPageCard({ page, onToggle, onDelete, onFetchBookings, onUpdateBo
       <div className="p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3 mb-2">
           <h3 className="text-base font-semibold text-zinc-100">{page.name}</h3>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <button
-              onClick={copyLink}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button onClick={() => setEditing(true)}
               className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-700 transition-colors"
-              title="Copy booking link"
-            >
+              title="Edit booking page">
+              <Pencil size={13} />
+            </button>
+            <button onClick={copyLink}
+              className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-700 transition-colors"
+              title="Copy booking link">
               {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
             </button>
-            <a
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
+            <a href={link} target="_blank" rel="noopener noreferrer"
               className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-700 transition-colors"
-              title="Open booking page"
-            >
+              title="Open booking page">
               <ExternalLink size={14} />
             </a>
           </div>
@@ -142,6 +151,105 @@ function BookingPageCard({ page, onToggle, onDelete, onFetchBookings, onUpdateBo
           )}
         </div>
       )}
+
+      {/* Edit Modal */}
+      <Modal isOpen={editing} onClose={() => setEditing(false)} title="Edit Booking Page">
+        <form onSubmit={async (e) => {
+          e.preventDefault()
+          if (!editForm.name) return
+          await onEdit(page.id, {
+            name: editForm.name,
+            description: editForm.description,
+            duration_minutes: editForm.durationMinutes,
+            available_hours: { start: editForm.startHour, end: editForm.endHour },
+            available_days: editForm.days,
+            required_fields: editForm.requiredFields,
+          })
+          setEditing(false)
+        }} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Page Name</label>
+            <input type="text" value={editForm.name}
+              onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+              className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent" autoFocus />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Description (optional)</label>
+            <textarea value={editForm.description}
+              onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+              rows={2} className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent resize-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Duration</label>
+            <div className="flex gap-2">
+              {DURATIONS.map(d => (
+                <button key={d} type="button" onClick={() => setEditForm(f => ({ ...f, durationMinutes: d }))}
+                  className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                    editForm.durationMinutes === d
+                      ? 'border-accent text-accent bg-accent/10'
+                      : 'border-surface-600 text-zinc-400 bg-surface-700 hover:border-surface-500'
+                  }`}>{d} min</button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Start Time</label>
+              <input type="time" value={editForm.startHour}
+                onChange={e => setEditForm(f => ({ ...f, startHour: e.target.value }))}
+                className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-accent" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">End Time</label>
+              <input type="time" value={editForm.endHour}
+                onChange={e => setEditForm(f => ({ ...f, endHour: e.target.value }))}
+                className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-accent" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Available Days</label>
+            <div className="flex gap-1.5">
+              {DAY_LABELS.map((label, i) => (
+                <button key={i} type="button"
+                  onClick={() => setEditForm(f => ({
+                    ...f, days: f.days.includes(i) ? f.days.filter(x => x !== i) : [...f.days, i].sort(),
+                  }))}
+                  className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                    editForm.days.includes(i)
+                      ? 'bg-accent/15 border border-accent/30 text-accent'
+                      : 'bg-surface-700 border border-surface-600 text-zinc-600 hover:text-zinc-400'
+                  }`}>{label}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-2">Required Fields</label>
+            <div className="space-y-2">
+              {[
+                { key: 'name', label: 'Name', locked: true },
+                { key: 'email', label: 'Email' },
+                { key: 'message', label: 'Message' },
+              ].map(({ key, label, locked }) => (
+                <label key={key} className="flex items-center gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={editForm.requiredFields[key]}
+                    disabled={locked}
+                    onChange={() => !locked && setEditForm(f => ({
+                      ...f, requiredFields: { ...f.requiredFields, [key]: !f.requiredFields[key] },
+                    }))}
+                    className="w-3.5 h-3.5 rounded border-surface-600 bg-surface-700 text-accent focus:ring-accent/30 disabled:opacity-50" />
+                  <span className={`text-sm ${locked ? 'text-zinc-500' : 'text-zinc-300'}`}>
+                    {label}{locked ? ' (always required)' : ''}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setEditing(false)}>Cancel</Button>
+            <Button type="submit" disabled={!editForm.name || editForm.days.length === 0}>Save</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }
@@ -240,6 +348,7 @@ export function BookingPages() {
               page={p}
               onToggle={(id, active) => updateBookingPage(id, { is_active: active })}
               onDelete={deleteBookingPage}
+              onEdit={updateBookingPage}
               onFetchBookings={fetchBookingsForPage}
               onUpdateBookingStatus={updateBookingStatus}
               onDeleteBooking={deleteBooking}

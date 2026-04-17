@@ -78,7 +78,7 @@ export function MonthlyView({
                         phases[h < 12 ? 0 : h < 17 ? 1 : 2].push(s)
                       })
                       return (
-                        <div className="flex flex-col flex-1 gap-px rounded-sm overflow-hidden">
+                        <div className="flex flex-col flex-1 rounded-sm overflow-hidden">
                           {phases.map((phase, pi) => {
                             if (!phase.length) return null
                             return (

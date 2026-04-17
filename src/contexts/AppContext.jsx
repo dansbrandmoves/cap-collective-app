@@ -147,6 +147,16 @@ export function AppProvider({ children }) {
   const isOwner = !!user
   const isProPlan = plan === 'pro'
 
+  const signOut = useCallback(() => {
+    setUser(null) // clear immediately so UI redirects right away
+    setPlan('free')
+    supabase.auth.signOut().catch(err => console.error('signOut error:', err))
+  }, [])
+
+  // Supabase-backed
+  const [productions, setProductions] = useState([])
+  const [groupMembers, setGroupMembers] = useState([])
+
   const canAddProject = useCallback(() => {
     if (isProPlan) return true
     return productions.length < FREE_PROJECT_LIMIT
@@ -158,16 +168,6 @@ export function AppProvider({ children }) {
     if (!prod) return true
     return prod.groups.length < FREE_GROUP_LIMIT
   }, [isProPlan, productions])
-
-  const signOut = useCallback(() => {
-    setUser(null) // clear immediately so UI redirects right away
-    setPlan('free')
-    supabase.auth.signOut().catch(err => console.error('signOut error:', err))
-  }, [])
-
-  // Supabase-backed
-  const [productions, setProductions] = useState([])
-  const [groupMembers, setGroupMembers] = useState([])
   const [loading, setLoading] = useState(true)
 
   // localStorage-backed

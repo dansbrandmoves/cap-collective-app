@@ -89,6 +89,14 @@ export function CalendarSettings() {
 
   const configured = isConfigured()
 
+  // Clear stale Google token on mount
+  useEffect(() => {
+    if (googleAccessToken && googleTokenExpiresAt && Date.now() > googleTokenExpiresAt) {
+      setGoogleAccessToken(null)
+      setGoogleTokenExpiresAt(null)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!configured) return
     loadGoogleIdentityServices()
@@ -154,7 +162,9 @@ export function CalendarSettings() {
       replaceCalendarEvents(events)
     } catch (err) {
       if (err.message?.includes('401')) {
-        setAuthError('Session expired. Please re-connect Google Calendar.')
+        setGoogleAccessToken(null)
+        setGoogleTokenExpiresAt(null)
+        setAuthError('Google Calendar session expired. Reconnect to sync your availability.')
       } else {
         setAuthError(`Sync failed: ${err.message}`)
       }

@@ -54,18 +54,54 @@ export function MonthlyView({
               </span>
               {inMonth && (
                 <div className="flex flex-col gap-0.5 flex-1">
-                  {slots.map(slot => {
-                    const state = dayMatrix[slot.id]?.state ?? slot.defaultState
-                    const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
-                    return (
-                      <div
-                        key={slot.id}
-                        className="h-2 rounded-sm flex-shrink-0 opacity-80"
-                        style={{ backgroundColor: meta.color }}
-                        title={`${slot.name}: ${meta.label}`}
-                      />
-                    )
-                  })}
+                  {slots.length <= 4 ? (
+                    /* Named slots — show individual bars */
+                    slots.map(slot => {
+                      const state = dayMatrix[slot.id]?.state ?? slot.defaultState
+                      const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
+                      return (
+                        <div
+                          key={slot.id}
+                          className="h-2 rounded-sm flex-shrink-0 opacity-80"
+                          style={{ backgroundColor: meta.color }}
+                          title={`${slot.name}: ${meta.label}`}
+                        />
+                      )
+                    })
+                  ) : (
+                    /* Many time blocks — compact stacked stripes with phase dividers */
+                    (() => {
+                      // Group into 3 phases: morning (<12), afternoon (12-17), evening (>=17)
+                      const phases = [[], [], []]
+                      slots.forEach(s => {
+                        const h = parseInt(s.startTime.split(':')[0])
+                        phases[h < 12 ? 0 : h < 17 ? 1 : 2].push(s)
+                      })
+                      return (
+                        <div className="flex flex-col flex-1 gap-px rounded-sm overflow-hidden">
+                          {phases.map((phase, pi) => {
+                            if (!phase.length) return null
+                            return (
+                              <div key={pi} className="flex flex-col">
+                                {phase.map(slot => {
+                                  const state = dayMatrix[slot.id]?.state ?? slot.defaultState
+                                  const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
+                                  return (
+                                    <div key={slot.id} className="h-1 flex-shrink-0"
+                                      style={{ backgroundColor: meta.color }}
+                                      title={`${slot.name}: ${meta.label}`} />
+                                  )
+                                })}
+                                {pi < 2 && phases[pi + 1]?.length > 0 && (
+                                  <div className="h-px bg-surface-600/50" />
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()
+                  )}
                   {/* Overlay: date requests + shared availability */}
                   {(() => {
                     const reqCount = dateRequests.filter(r => r.dates?.includes(ds) && r.status !== 'declined').length

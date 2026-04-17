@@ -20,7 +20,7 @@ export const DEFAULT_SLOT_STATES = {
   available: { label: 'Available', color: '#22c55e', bg: 'bg-green-500', text: 'text-green-400', dot: 'bg-green-400', ring: 'ring-green-500' },
   hold:      { label: 'Hold',      color: '#f97316', bg: 'bg-orange-500', text: 'text-orange-400', dot: 'bg-orange-400', ring: 'ring-orange-500' },
   booked:    { label: 'Busy',      color: '#3f3f46', bg: 'bg-zinc-700',   text: 'text-zinc-500',   dot: 'bg-zinc-600',   ring: 'ring-zinc-700' },
-  blocked:   { label: 'Blocked',   color: '#ef4444', bg: 'bg-red-500',    text: 'text-red-400',    dot: 'bg-red-400',    ring: 'ring-red-500' },
+  blocked:   { label: 'Blocked',   color: '#52525b', bg: 'bg-zinc-600',   text: 'text-zinc-500',   dot: 'bg-zinc-500',   ring: 'ring-zinc-600' },
 }
 
 // Keep a backwards-compatible reference

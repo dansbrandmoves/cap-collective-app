@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
@@ -278,6 +278,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
         prefixRules={prefixRules}
         isOwner={isOwner}
         slotStates={slotStates}
+        businessHours={production?.availability_config?.businessHours || businessHours}
         groupId={groupId}
         guestName={guestName}
         onRequestSubmit={createDateRequest}
@@ -288,7 +289,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
 
 export function RoomView() {
   const { token } = useParams()
-  const { getProduction, getGroup, user, availabilityRules, effectiveSlots: slots, loading, refreshRoom, resolveToken, theme } = useApp()
+  const { getProduction, getGroup, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours } = useApp()
   const [activeTab, setActiveTab] = useState('Availability')
   const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)
@@ -306,6 +307,36 @@ export function RoomView() {
 
   const production = resolved ? getProduction(resolved.productionId) : null
   const isOwner = !!user && production?.ownerId === user.id
+
+  // Use project-specific slots if configured, otherwise global
+  const slots = useMemo(() => {
+    const config = production?.availabilityConfig || production?.availability_config
+    if (!config) return effectiveSlots
+    if (config.mode === 'slots') return config.customSlots || rawSlots
+    // Generate blocks from project business hours
+    const schedule = config.businessHours?.schedule || {}
+    let earliest = '23:59', latest = '00:00'
+    for (const day of Object.values(schedule)) {
+      if (!day) continue
+      if (day.start < earliest) earliest = day.start
+      if (day.end > latest) latest = day.end
+    }
+    if (earliest >= latest) return effectiveSlots
+    const dur = config.blockDuration || 30
+    const generated = []
+    let [h, m] = earliest.split(':').map(Number)
+    const endMins = latest.split(':').map(Number).reduce((a, b, i) => a + (i === 0 ? b * 60 : b), 0)
+    while (h * 60 + m + dur <= endMins) {
+      const start = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      const te = h * 60 + m + dur
+      const end = `${String(Math.floor(te / 60)).padStart(2, '0')}:${String(te % 60).padStart(2, '0')}`
+      const period = h >= 12 ? 'PM' : 'AM'
+      generated.push({ id: `block-${start}`, name: `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`, startTime: start, endTime: end, color: '#22c55e', defaultState: 'available' })
+      m += dur
+      if (m >= 60) { h += Math.floor(m / 60); m = m % 60 }
+    }
+    return generated
+  }, [production, effectiveSlots, rawSlots])
 
   useEffect(() => {
     if (!production?.ownerId) return

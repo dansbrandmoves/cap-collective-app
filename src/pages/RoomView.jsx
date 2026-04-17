@@ -386,7 +386,14 @@ export function RoomView() {
   const group = getGroup(productionId, groupId)
 
   if (!production || !group) {
-    return <div className="flex items-center justify-center h-screen text-zinc-500">Room not found.</div>
+    return (
+      <div className="flex items-center justify-center h-screen bg-surface-950 px-5">
+        <div className="text-center max-w-sm">
+          <p className="text-zinc-300 font-medium mb-2">This room is no longer available</p>
+          <p className="text-sm text-zinc-600">The project it belonged to may have been removed. Contact the person who shared this link for an updated one.</p>
+        </div>
+      </div>
+    )
   }
 
   if (!isOwner && mode === 'open_link' && !guestName) {

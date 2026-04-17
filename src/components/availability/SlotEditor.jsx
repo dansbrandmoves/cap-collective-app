@@ -1,135 +1,199 @@
 import { useState } from 'react'
 import { useApp } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
-import { Modal } from '../ui/Modal'
+import { SlotTimeline } from './SlotTimeline'
 import { SLOT_STATES } from '../../utils/availability'
+import { Trash2 } from 'lucide-react'
 
 const PRESET_COLORS = ['#22c55e', '#f59e0b', '#6366f1', '#ef4444', '#ec4899', '#06b6d4', '#8b5cf6', '#84cc16']
-const DEFAULT_STATES = ['available', 'hold', 'booked', 'blocked']
+const STATE_KEYS = ['available', 'hold', 'booked', 'blocked']
 
-function SlotRow({ slot, onEdit, onDelete }) {
-  const meta = SLOT_STATES[slot.defaultState]
-  return (
-    <div className="flex items-center gap-3 bg-surface-800 border border-surface-700 rounded-xl px-4 py-3">
-      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: slot.color }} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-zinc-200">{slot.name}</p>
-        <p className="text-xs text-zinc-500">{slot.startTime} – {slot.endTime} · Default: {meta.label}</p>
-      </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <button onClick={() => onEdit(slot)} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2 py-1 rounded hover:bg-surface-700">Edit</button>
-        <button onClick={() => onDelete(slot.id)} className="text-xs text-red-600 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-surface-700">Remove</button>
-      </div>
-    </div>
-  )
+const HOUR_OPTIONS = (() => {
+  const opts = []
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      const period = h >= 12 ? 'PM' : 'AM'
+      opts.push({ val, label: `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}` })
+    }
+  }
+  return opts
+})()
+
+const PRESETS = [
+  { label: 'Morning / Afternoon', slots: [
+    { name: 'Morning', startTime: '08:00', endTime: '12:00', color: '#22c55e', defaultState: 'available' },
+    { name: 'Afternoon', startTime: '13:00', endTime: '17:00', color: '#6366f1', defaultState: 'available' },
+  ]},
+  { label: 'Full Day', slots: [
+    { name: 'Full Day', startTime: '08:00', endTime: '17:00', color: '#22c55e', defaultState: 'available' },
+  ]},
+  { label: 'Split Day', slots: [
+    { name: 'Morning', startTime: '08:00', endTime: '12:00', color: '#22c55e', defaultState: 'available' },
+    { name: 'Afternoon', startTime: '13:00', endTime: '16:00', color: '#6366f1', defaultState: 'available' },
+    { name: 'Evening', startTime: '17:00', endTime: '20:00', color: '#f59e0b', defaultState: 'available' },
+  ]},
+]
+
+function formatTime(t) {
+  const [h, m] = t.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
 }
 
 export function SlotEditor() {
-  const { slots, createSlot, updateSlot, deleteSlot } = useApp()
-  const [showModal, setShowModal] = useState(false)
-  const [editingSlot, setEditingSlot] = useState(null)
-  const [form, setForm] = useState({ name: '', startTime: '08:00', endTime: '12:00', color: '#22c55e', defaultState: 'available' })
+  const { slots, createSlot, updateSlot, deleteSlot, businessHours } = useApp()
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState(null)
+  const [adding, setAdding] = useState(false)
+  const [newForm, setNewForm] = useState({ name: '', startTime: '08:00', endTime: '12:00', color: '#22c55e', defaultState: 'available' })
 
-  function openCreate() {
-    setEditingSlot(null)
-    setForm({ name: '', startTime: '08:00', endTime: '12:00', color: '#22c55e', defaultState: 'available' })
-    setShowModal(true)
+  function startEdit(slot) {
+    setEditingId(slot.id)
+    setEditForm({ name: slot.name, startTime: slot.startTime, endTime: slot.endTime, color: slot.color, defaultState: slot.defaultState })
+    setAdding(false)
   }
 
-  function openEdit(slot) {
-    setEditingSlot(slot)
-    setForm({ name: slot.name, startTime: slot.startTime, endTime: slot.endTime, color: slot.color, defaultState: slot.defaultState })
-    setShowModal(true)
+  function saveEdit() {
+    if (!editForm.name.trim()) return
+    updateSlot(editingId, editForm)
+    setEditingId(null)
+    setEditForm(null)
   }
 
-  function handleSave(e) {
-    e.preventDefault()
-    if (!form.name.trim()) return
-    if (editingSlot) {
-      updateSlot(editingSlot.id, form)
-    } else {
-      createSlot(form)
-    }
-    setShowModal(false)
+  function cancelEdit() {
+    setEditingId(null)
+    setEditForm(null)
+  }
+
+  function startAdd() {
+    setAdding(true)
+    setNewForm({ name: '', startTime: '08:00', endTime: '12:00', color: PRESET_COLORS[slots.length % PRESET_COLORS.length], defaultState: 'available' })
+    setEditingId(null)
+  }
+
+  function saveNew() {
+    if (!newForm.name.trim()) return
+    createSlot(newForm)
+    setAdding(false)
+  }
+
+  function applyPreset(preset) {
+    // Clear existing and add preset slots
+    slots.forEach(s => deleteSlot(s.id))
+    preset.slots.forEach(s => createSlot(s))
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Availability Slots</p>
-          <p className="text-xs text-zinc-600 mt-0.5">Define the time blocks you offer for coordination.</p>
-        </div>
-        <Button size="sm" variant="secondary" onClick={openCreate}>+ Add Slot</Button>
+      {/* Timeline visualization */}
+      <SlotTimeline slots={slots} businessHours={businessHours} />
+
+      {/* Slot list */}
+      <div className="space-y-1">
+        {slots.map(slot => {
+          if (editingId === slot.id && editForm) {
+            return (
+              <div key={slot.id} className="bg-surface-800 border border-accent/30 rounded-lg px-4 py-3 space-y-3">
+                <input type="text" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full bg-surface-700 border border-surface-600 rounded-md px-2.5 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-accent"
+                  placeholder="Slot name" autoFocus />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select value={editForm.startTime} onChange={e => setEditForm(f => ({ ...f, startTime: e.target.value }))}
+                    className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent">
+                    {HOUR_OPTIONS.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
+                  </select>
+                  <span className="text-xs text-zinc-600">–</span>
+                  <select value={editForm.endTime} onChange={e => setEditForm(f => ({ ...f, endTime: e.target.value }))}
+                    className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent">
+                    {HOUR_OPTIONS.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
+                  </select>
+                  <div className="flex items-center gap-1 ml-1">
+                    {PRESET_COLORS.map(c => (
+                      <button key={c} type="button" onClick={() => setEditForm(f => ({ ...f, color: c }))}
+                        className={`w-4 h-4 rounded-full transition-transform hover:scale-125 ${editForm.color === c ? 'ring-2 ring-white ring-offset-1 ring-offset-surface-800' : ''}`}
+                        style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                  <select value={editForm.defaultState} onChange={e => setEditForm(f => ({ ...f, defaultState: e.target.value }))}
+                    className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent">
+                    {STATE_KEYS.map(s => <option key={s} value={s}>{SLOT_STATES[s].label}</option>)}
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={saveEdit} disabled={!editForm.name.trim()}>Save</Button>
+                  <button onClick={cancelEdit} className="text-xs text-zinc-500 hover:text-zinc-300 px-2 py-1">Cancel</button>
+                </div>
+              </div>
+            )
+          }
+
+          return (
+            <div key={slot.id} className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-surface-800 transition-colors group/slot">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: slot.color }} />
+              <span className="text-sm font-medium text-zinc-200 w-28 truncate">{slot.name}</span>
+              <span className="text-xs text-zinc-500">{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</span>
+              <span className="text-[10px] text-zinc-600 ml-auto">{SLOT_STATES[slot.defaultState]?.label}</span>
+              <div className="flex items-center gap-1 opacity-0 group-hover/slot:opacity-100 transition-opacity">
+                <button onClick={() => startEdit(slot)} className="text-xs text-zinc-500 hover:text-zinc-300 px-1.5 py-0.5 rounded hover:bg-surface-700 transition-colors">Edit</button>
+                <button onClick={() => deleteSlot(slot.id)} className="p-1 rounded text-zinc-600 hover:text-red-400 hover:bg-surface-700 transition-colors">
+                  <Trash2 size={12} strokeWidth={1.75} />
+                </button>
+              </div>
+            </div>
+          )
+        })}
+
+        {/* Add new slot — inline */}
+        {adding ? (
+          <div className="bg-surface-800 border border-accent/30 rounded-lg px-4 py-3 space-y-3">
+            <input type="text" value={newForm.name} onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))}
+              className="w-full bg-surface-700 border border-surface-600 rounded-md px-2.5 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-accent"
+              placeholder="Slot name (e.g. Morning, Golden Hour...)" autoFocus />
+            <div className="flex items-center gap-2 flex-wrap">
+              <select value={newForm.startTime} onChange={e => setNewForm(f => ({ ...f, startTime: e.target.value }))}
+                className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent">
+                {HOUR_OPTIONS.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
+              </select>
+              <span className="text-xs text-zinc-600">–</span>
+              <select value={newForm.endTime} onChange={e => setNewForm(f => ({ ...f, endTime: e.target.value }))}
+                className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent">
+                {HOUR_OPTIONS.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
+              </select>
+              <div className="flex items-center gap-1 ml-1">
+                {PRESET_COLORS.map(c => (
+                  <button key={c} type="button" onClick={() => setNewForm(f => ({ ...f, color: c }))}
+                    className={`w-4 h-4 rounded-full transition-transform hover:scale-125 ${newForm.color === c ? 'ring-2 ring-white ring-offset-1 ring-offset-surface-800' : ''}`}
+                    style={{ backgroundColor: c }} />
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={saveNew} disabled={!newForm.name.trim()}>Add Slot</Button>
+              <button onClick={() => setAdding(false)} className="text-xs text-zinc-500 hover:text-zinc-300 px-2 py-1">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={startAdd} className="text-xs text-accent hover:text-amber-400 transition-colors px-4 py-2">
+            + Add slot
+          </button>
+        )}
       </div>
 
-      {slots.length === 0 ? (
-        <div className="border border-dashed border-surface-600 rounded-xl p-6 text-center">
-          <p className="text-xs text-zinc-600 mb-3">No slots defined.</p>
-          <Button size="sm" onClick={openCreate}>Create first slot</Button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {slots.map(slot => (
-            <SlotRow key={slot.id} slot={slot} onEdit={openEdit} onDelete={deleteSlot} />
-          ))}
+      {/* Quick-add presets */}
+      {slots.length === 0 && (
+        <div className="mt-5 pt-5 border-t border-surface-800">
+          <p className="text-xs text-zinc-600 mb-3">Quick start — pick a pattern:</p>
+          <div className="flex flex-wrap gap-2">
+            {PRESETS.map(p => (
+              <button key={p.label} onClick={() => applyPreset(p)}
+                className="text-xs bg-surface-800 border border-surface-700 text-zinc-400 hover:text-zinc-200 hover:border-surface-500 px-3 py-1.5 rounded-lg transition-colors">
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
-
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingSlot ? 'Edit Slot' : 'New Slot'}>
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Slot Name</label>
-            <input
-              type="text"
-              placeholder="e.g. Morning, Full Day, Golden Hour..."
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent"
-              autoFocus
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Start Time</label>
-              <input type="time" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
-                className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-accent" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">End Time</label>
-              <input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
-                className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-accent" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Color</label>
-            <div className="flex items-center gap-2 flex-wrap">
-              {PRESET_COLORS.map(c => (
-                <button key={c} type="button" onClick={() => setForm(f => ({ ...f, color: c }))}
-                  className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${form.color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-surface-800' : ''}`}
-                  style={{ backgroundColor: c }} />
-              ))}
-              <input type="color" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-                className="w-6 h-6 rounded-full border-0 bg-transparent cursor-pointer" title="Custom color" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Default State</label>
-            <select value={form.defaultState} onChange={e => setForm(f => ({ ...f, defaultState: e.target.value }))}
-              className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-accent">
-              {DEFAULT_STATES.map(s => (
-                <option key={s} value={s}>{SLOT_STATES[s].label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex justify-end gap-3 pt-1">
-            <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-            <Button type="submit" disabled={!form.name.trim()}>
-              {editingSlot ? 'Save Changes' : 'Create Slot'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   )
 }

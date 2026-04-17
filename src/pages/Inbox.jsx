@@ -121,7 +121,7 @@ export function Inbox() {
                     </div>
                     {prod && (
                       <button
-                        onClick={() => navigate(`/production/${prod.id}`)}
+                        onClick={() => navigate(`/project/${prod.id}`)}
                         className="text-xs text-zinc-500 hover:text-accent transition-colors"
                       >
                         {prod.name} · {groupName}

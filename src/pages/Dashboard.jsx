@@ -34,7 +34,7 @@ function ProjectCard({ production }) {
 
   return (
     <div
-      onClick={() => navigate(`/production/${production.id}`)}
+      onClick={() => navigate(`/project/${production.id}`)}
       className="bg-surface-900 border border-surface-700 rounded-xl p-5 sm:p-6 cursor-pointer shadow-sm shadow-black/10 hover:border-surface-500 hover:bg-surface-800/80 hover:shadow-lg hover:shadow-black/20 transition-all duration-150 group"
     >
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -80,7 +80,7 @@ export function Dashboard() {
     const id = await createProduction(form)
     setShowModal(false)
     setForm({ name: '', description: '', startDate: '', endDate: '' })
-    navigate(`/production/${id}`)
+    navigate(`/project/${id}`)
   }
 
   if (loading) {

@@ -69,7 +69,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 return (
                   <NavLink
                     key={p.id}
-                    to={`/production/${p.id}`}
+                    to={`/project/${p.id}`}
                     onClick={onMobileClose}
                     className={({ isActive }) =>
                       `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${

@@ -48,7 +48,7 @@ function AppRoutes() {
       {/* Auth-gated routes with AppShell layout */}
       <Route element={<AuthGate />}>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/production/:id" element={<ProductionView />} />
+        <Route path="/project/:id" element={<ProductionView />} />
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/availability" element={<AvailabilityRules />} />
         <Route path="/calendars" element={<CalendarSettings />} />

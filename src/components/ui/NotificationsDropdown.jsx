@@ -40,7 +40,7 @@ export function NotificationsDropdown() {
     if (notif.openToken) {
       navigate(`/room/${notif.openToken}`)
     } else if (notif.productionId && notif.groupId) {
-      navigate(`/production/${notif.productionId}`)
+      navigate(`/project/${notif.productionId}`)
     }
   }
 

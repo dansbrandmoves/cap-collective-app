@@ -351,7 +351,7 @@ export function RoomView() {
       <div className="flex items-center justify-between px-5 sm:px-8 py-3 sm:py-4 border-b border-surface-700 bg-surface-900">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           {isOwner && (
-            <Link to={`/production/${productionId}`} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex-shrink-0">
+            <Link to={`/project/${productionId}`} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex-shrink-0">
               ← <span className="hidden sm:inline">{production.name}</span><span className="sm:hidden">Back</span>
             </Link>
           )}

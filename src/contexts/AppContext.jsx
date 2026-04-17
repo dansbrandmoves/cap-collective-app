@@ -115,6 +115,7 @@ export function AppProvider({ children }) {
 
   const FREE_PROJECT_LIMIT = 1
   const FREE_GROUP_LIMIT = 2
+  const FREE_BOOKING_PAGE_LIMIT = 1
 
   async function fetchPlan(userId) {
     if (!userId) { setPlan('free'); return }
@@ -171,6 +172,7 @@ export function AppProvider({ children }) {
   // Supabase-backed
   const [productions, setProductions] = useState([])
   const [groupMembers, setGroupMembers] = useState([])
+  const [bookingPages, setBookingPages] = useState([])
 
   const canAddProject = useCallback(() => {
     if (isProPlan) return true
@@ -183,6 +185,11 @@ export function AppProvider({ children }) {
     if (!prod) return true
     return prod.groups.length < FREE_GROUP_LIMIT
   }, [isProPlan, productions])
+
+  const canAddBookingPage = useCallback(() => {
+    if (isProPlan) return true
+    return bookingPages.length < FREE_BOOKING_PAGE_LIMIT
+  }, [isProPlan, bookingPages])
   const [loading, setLoading] = useState(true)
 
   // localStorage-backed
@@ -347,6 +354,13 @@ export function AppProvider({ children }) {
         setProductions(stored?.productions ?? SEED_DATA.productions)
       })
       .finally(() => { clearTimeout(loadTimeout); setLoading(false) })
+
+    // Fetch booking pages for owner
+    if (ownerId) {
+      supabase.from('booking_pages').select('*').eq('owner_id', ownerId).order('created_at')
+        .then(({ data }) => setBookingPages(data || []))
+        .catch(err => console.error('Failed to fetch booking pages:', err))
+    }
   }, [authLoading, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -614,6 +628,84 @@ export function AppProvider({ children }) {
       : p))
   }, [])
 
+  // --- Booking Pages ---
+  function toSlug(name) {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + nanoid(4)
+  }
+
+  const createBookingPage = useCallback(async ({ name, description, durationMinutes, availableHours, availableDays }) => {
+    const page = {
+      id: `bp-${Date.now()}`,
+      owner_id: user?.id,
+      name,
+      slug: toSlug(name),
+      description: description || '',
+      duration_minutes: durationMinutes || 30,
+      available_hours: availableHours || { start: '09:00', end: '17:00' },
+      available_days: availableDays || [1, 2, 3, 4, 5],
+      is_active: true,
+      created_at: new Date().toISOString(),
+    }
+    setBookingPages(prev => [...prev, page])
+    const { error } = await supabase.from('booking_pages').insert(page)
+    if (error) {
+      console.error('createBookingPage:', error)
+      setBookingPages(prev => prev.filter(p => p.id !== page.id))
+      return null
+    }
+    return page.id
+  }, [user?.id])
+
+  const updateBookingPage = useCallback(async (id, updates) => {
+    setBookingPages(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p))
+    const { error } = await supabase.from('booking_pages').update(updates).eq('id', id)
+    if (error) console.error('updateBookingPage:', error)
+    return !error
+  }, [])
+
+  const deleteBookingPage = useCallback(async (id) => {
+    setBookingPages(prev => prev.filter(p => p.id !== id))
+    const { error } = await supabase.from('booking_pages').delete().eq('id', id)
+    if (error) console.error('deleteBookingPage:', error)
+    return !error
+  }, [])
+
+  const resolveBookingSlug = useCallback(async (slug) => {
+    const { data } = await supabase.from('booking_pages').select('*').eq('slug', slug).eq('is_active', true).limit(1)
+    return data?.[0] ?? null
+  }, [])
+
+  const fetchBookingsForPage = useCallback(async (bookingPageId) => {
+    const { data, error } = await supabase
+      .from('bookings').select('*')
+      .eq('booking_page_id', bookingPageId)
+      .order('date', { ascending: false })
+    if (error) { console.error('fetchBookingsForPage:', error); return [] }
+    return data || []
+  }, [])
+
+  const createBooking = useCallback(async ({ bookingPageId, guestName, guestEmail, date, startTime, endTime }) => {
+    const booking = {
+      id: `bk-${Date.now()}`,
+      booking_page_id: bookingPageId,
+      guest_name: guestName,
+      guest_email: guestEmail || '',
+      date,
+      start_time: startTime,
+      end_time: endTime,
+      status: 'confirmed',
+    }
+    const { error } = await supabase.from('bookings').insert(booking)
+    if (error) { console.error('createBooking:', error); return false }
+    return true
+  }, [])
+
+  const updateBookingStatus = useCallback(async (id, status) => {
+    const { error } = await supabase.from('bookings').update({ status }).eq('id', id)
+    if (error) console.error('updateBookingStatus:', error)
+    return !error
+  }, [])
+
   // --- Date Requests ---
   const createDateRequest = useCallback(async (groupId, { requesterName, requesterEmail, dates, message }) => {
     const request = {
@@ -685,8 +777,8 @@ export function AppProvider({ children }) {
       // Auth
       user, authLoading, isOwner, signOut,
       // Plan
-      plan, isProPlan, canAddProject, canAddGroup,
-      FREE_PROJECT_LIMIT, FREE_GROUP_LIMIT,
+      plan, isProPlan, canAddProject, canAddGroup, canAddBookingPage,
+      FREE_PROJECT_LIMIT, FREE_GROUP_LIMIT, FREE_BOOKING_PAGE_LIMIT,
       // State
       productions, slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, setGoogleAccessToken,
@@ -714,6 +806,9 @@ export function AppProvider({ children }) {
       addGroupMember, removeGroupMember,
       // Room
       updateSharedNotes, refreshRoom,
+      // Booking Pages
+      bookingPages, createBookingPage, updateBookingPage, deleteBookingPage,
+      resolveBookingSlug, fetchBookingsForPage, createBooking, updateBookingStatus,
       // Date Requests
       createDateRequest, fetchDateRequests, updateDateRequestStatus,
       // Notifications

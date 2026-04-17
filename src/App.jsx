@@ -12,6 +12,8 @@ import { HomePage } from './pages/HomePage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
 import { BillingPage } from './pages/BillingPage'
+import { BookingPages } from './pages/BookingPages'
+import { BookingPageView } from './pages/BookingPageView'
 
 function AppRoutes() {
   const { isOwner, authLoading } = useApp()
@@ -36,8 +38,9 @@ function AppRoutes() {
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
 
-      {/* Room is accessible without auth (shareable link) */}
+      {/* Public shareable links (no auth needed) */}
       <Route path="/room/:token" element={<RoomView />} />
+      <Route path="/book/:slug" element={<BookingPageView />} />
 
       {isOwner ? (
         <Route element={<AppShell />}>
@@ -46,6 +49,7 @@ function AppRoutes() {
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/availability" element={<AvailabilityRules />} />
           <Route path="/calendars" element={<CalendarSettings />} />
+          <Route path="/booking-pages" element={<BookingPages />} />
           <Route path="/billing" element={<BillingPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

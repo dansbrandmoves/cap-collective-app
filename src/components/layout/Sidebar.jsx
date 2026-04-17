@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { NotificationsDropdown } from '../ui/NotificationsDropdown'
-import { LayoutGrid, Inbox, CalendarDays, Settings, Sun, Moon, LogOut, Zap, CreditCard } from 'lucide-react'
+import { LayoutGrid, Inbox, CalendarCheck, CalendarDays, Settings, Sun, Moon, LogOut, Zap, CreditCard } from 'lucide-react'
 
 const NAV = [
   { to: '/', label: 'Projects', icon: LayoutGrid, showBadge: false },
   { to: '/inbox', label: 'Inbox', icon: Inbox, showBadge: true },
+  { to: '/booking-pages', label: 'Booking', icon: CalendarCheck, showBadge: false },
   { to: '/availability', label: 'Availability', icon: CalendarDays, showBadge: false },
   { to: '/calendars', label: 'Settings', icon: Settings, showBadge: false },
 ]

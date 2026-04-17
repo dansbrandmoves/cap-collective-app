@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
+import { Lock } from 'lucide-react'
 
 export function ProductionView() {
   const { id } = useParams()
@@ -226,7 +227,7 @@ export function ProductionView() {
         {/* Private notes */}
         <div className="border-t border-surface-700 bg-surface-950 px-5 py-4">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs">🔒</span>
+            <Lock size={12} strokeWidth={1.75} className="text-zinc-600" />
             <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Private Notes</p>
           </div>
           {editingNotes ? (

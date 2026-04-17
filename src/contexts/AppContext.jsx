@@ -735,12 +735,13 @@ export function AppProvider({ children }) {
     return data || []
   }, [])
 
-  const createBooking = useCallback(async ({ bookingPageId, guestName, guestEmail, date, startTime, endTime }) => {
+  const createBooking = useCallback(async ({ bookingPageId, guestName, guestEmail, guestMessage, date, startTime, endTime }) => {
     const booking = {
       id: `bk-${Date.now()}`,
       booking_page_id: bookingPageId,
       guest_name: guestName,
       guest_email: guestEmail || '',
+      message: guestMessage || '',
       date,
       start_time: startTime,
       end_time: endTime,

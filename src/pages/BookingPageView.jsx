@@ -147,7 +147,7 @@ function TimeSlotPicker({ slots, takenSlots, ownerEvents, selectedDate, selected
 
 /* ── Confirm Form ── */
 function ConfirmForm({ page, selectedDate, selectedSlot, onConfirm, submitting }) {
-  const [form, setForm] = useState({ name: '', email: '' })
+  const [form, setForm] = useState({ name: '', email: '', message: '' })
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -170,7 +170,7 @@ function ConfirmForm({ page, selectedDate, selectedSlot, onConfirm, submitting }
       <div>
         <label className="block text-xs font-medium text-zinc-500 mb-1.5">Name</label>
         <div className="relative">
-          <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600" />
+          <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
           <input type="text" placeholder="Your name" value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full pl-10" autoFocus />
         </div>
@@ -178,10 +178,16 @@ function ConfirmForm({ page, selectedDate, selectedSlot, onConfirm, submitting }
       <div>
         <label className="block text-xs font-medium text-zinc-500 mb-1.5">Email <span className="text-zinc-700">(optional)</span></label>
         <div className="relative">
-          <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600" />
+          <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
           <input type="email" placeholder="your@email.com" value={form.email}
             onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="w-full pl-10" />
         </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-zinc-500 mb-1.5">Message <span className="text-zinc-700">(optional)</span></label>
+        <textarea placeholder="Anything you'd like us to know..." value={form.message}
+          onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={2}
+          className="w-full bg-surface-800 border border-surface-700 rounded-lg px-3.5 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-accent resize-none" />
       </div>
       <Button type="submit" size="lg" className="w-full justify-center" disabled={!form.name.trim() || submitting}>
         {submitting ? 'Confirming...' : 'Confirm Booking'}
@@ -367,6 +373,7 @@ export function BookingPageView() {
     setSubmitting(true)
     const success = await createBooking({
       bookingPageId: page.id, guestName: form.name.trim(), guestEmail: form.email.trim(),
+      guestMessage: form.message.trim(),
       date: selectedDate, startTime: selectedSlot.startTime, endTime: selectedSlot.endTime,
     })
     setSubmitting(false)

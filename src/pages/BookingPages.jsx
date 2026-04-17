@@ -113,6 +113,7 @@ function BookingPageCard({ page, onToggle, onDelete, onFetchBookings, onUpdateBo
                   <div className="min-w-0">
                     <span className="text-zinc-200">{b.guest_name}</span>
                     {b.guest_email && <span className="text-zinc-600 ml-2 text-xs">{b.guest_email}</span>}
+                    {b.message && <p className="text-xs text-zinc-500 italic mt-0.5 truncate">"{b.message}"</p>}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-xs text-zinc-500">

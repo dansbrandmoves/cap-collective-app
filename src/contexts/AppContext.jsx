@@ -125,7 +125,7 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     let initialLoad = true
-    // Safety timeout in case onAuthStateChange never fires
+    // Safety timeout — 2s is plenty for auth
     const timeout = setTimeout(() => {
       if (initialLoad) {
         console.warn('Auth timed out — clearing stale session')
@@ -134,7 +134,7 @@ export function AppProvider({ children }) {
         setAuthLoading(false)
         initialLoad = false
       }
-    }, 4000)
+    }, 2000)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (initialLoad) { initialLoad = false; clearTimeout(timeout); setAuthLoading(false) }
       setUser(session?.user ?? null)
@@ -318,10 +318,17 @@ export function AppProvider({ children }) {
     const loadTimeout = setTimeout(() => {
       console.warn('Data load timed out — proceeding with empty state')
       setLoading(false)
-    }, 8000)
+    }, 6000)
 
-    fetchAll(ownerId)
-      .then(async ({ prods, grps, notes, msgs, members }) => {
+    // Fetch everything in parallel (productions + booking pages)
+    const dataPromise = fetchAll(ownerId)
+    const bookingPromise = ownerId
+      ? supabase.from('booking_pages').select('*').eq('owner_id', ownerId).order('created_at')
+      : Promise.resolve({ data: [] })
+
+    Promise.all([dataPromise, bookingPromise])
+      .then(async ([{ prods, grps, notes, msgs, members }, { data: bPages }]) => {
+        setBookingPages(bPages || [])
         if (!prods?.length && ownerId) {
           await seedSupabase(ownerId)
           const fresh = await fetchAll(ownerId)
@@ -346,13 +353,6 @@ export function AppProvider({ children }) {
         setProductions(stored?.productions ?? SEED_DATA.productions)
       })
       .finally(() => { clearTimeout(loadTimeout); setLoading(false) })
-
-    // Fetch booking pages for owner
-    if (ownerId) {
-      supabase.from('booking_pages').select('*').eq('owner_id', ownerId).order('created_at')
-        .then(({ data }) => setBookingPages(data || []))
-        .catch(err => console.error('Failed to fetch booking pages:', err))
-    }
   }, [authLoading, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

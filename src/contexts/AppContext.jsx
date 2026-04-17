@@ -666,19 +666,22 @@ export function AppProvider({ children }) {
   const deleteProduction = useCallback(async (productionId) => {
     const prod = productions.find(p => p.id === productionId)
     if (!prod) return
+    // Capture group IDs before clearing state
+    const groupIds = prod.groups.map(g => g.id)
     // Remove from UI immediately
     setProductions(prev => prev.filter(p => p.id !== productionId))
-    // Delete child data
+    // Delete from DB — use group IDs from Supabase directly as fallback
     try {
-      for (const g of prod.groups) {
-        await supabase.from('date_requests').delete().eq('group_id', g.id)
-        await supabase.from('shared_availability').delete().eq('group_id', g.id)
-        await supabase.from('messages').delete().eq('group_id', g.id)
-        await supabase.from('shared_notes').delete().eq('group_id', g.id)
-        await supabase.from('group_members').delete().eq('group_id', g.id)
+      const { data: dbGroups } = await supabase.from('groups').select('id').eq('production_id', productionId)
+      const allGroupIds = [...new Set([...groupIds, ...(dbGroups || []).map(g => g.id)])]
+      if (allGroupIds.length) {
+        await supabase.from('date_requests').delete().in('group_id', allGroupIds)
+        await supabase.from('shared_availability').delete().in('group_id', allGroupIds)
+        await supabase.from('messages').delete().in('group_id', allGroupIds)
+        await supabase.from('shared_notes').delete().in('group_id', allGroupIds)
+        await supabase.from('group_members').delete().in('group_id', allGroupIds)
+        await supabase.from('groups').delete().in('id', allGroupIds)
       }
-      const groupIds = prod.groups.map(g => g.id)
-      if (groupIds.length) await supabase.from('groups').delete().in('id', groupIds)
       const { error } = await supabase.from('productions').delete().eq('id', productionId)
       if (error) console.error('deleteProduction:', error)
     } catch (err) {

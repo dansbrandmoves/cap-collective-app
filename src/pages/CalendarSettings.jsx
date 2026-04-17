@@ -24,6 +24,27 @@ const ROLES = ['governs', 'informational', 'ignored']
 const DAY_LABELS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+const HOUR_OPTIONS = []
+for (let h = 0; h < 24; h++) {
+  for (const m of [0, 30]) {
+    const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+    const period = h >= 12 ? 'PM' : 'AM'
+    const label = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
+    HOUR_OPTIONS.push({ val, label })
+  }
+}
+
+function TimeSelect({ value, onChange }) {
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)}
+      className="text-xs bg-surface-800 border border-surface-700 rounded-md px-1.5 py-1 text-zinc-300 focus:outline-none focus:border-accent appearance-none cursor-pointer">
+      {HOUR_OPTIONS.map(o => (
+        <option key={o.val} value={o.val}>{o.label}</option>
+      ))}
+    </select>
+  )
+}
+
 function formatLastSynced(iso) {
   if (!iso) return 'Never'
   const d = new Date(iso)
@@ -173,7 +194,7 @@ export function CalendarSettings() {
   }
 
   return (
-    <div className="px-5 sm:px-8 lg:px-16 py-6 sm:py-10 max-w-3xl">
+    <div className="px-5 sm:px-8 lg:px-16 py-6 sm:py-10">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-zinc-100 mb-1">Settings</h1>
         <p className="text-sm text-zinc-500">Calendar, availability, and preferences.</p>
@@ -259,12 +280,12 @@ export function CalendarSettings() {
       {/* ── Business Hours ── */}
       <div className="py-5 border-b border-surface-800">
         <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Business Hours</p>
-        <div className="space-y-0.5">
+        <div className="space-y-0">
           {DAY_NAMES.map((name, i) => {
             const day = schedule[i]
             const isActive = !!day
             return (
-              <div key={i} className="flex items-center gap-2 py-1 group/day">
+              <div key={i} className="flex items-center h-8 gap-2 group/day">
                 <button onClick={() => toggleDay(i)}
                   className={`w-10 text-left text-xs font-medium transition-colors ${
                     isActive ? 'text-zinc-200' : 'text-zinc-600 line-through'
@@ -273,15 +294,11 @@ export function CalendarSettings() {
                 </button>
                 {isActive ? (
                   <>
-                    <input type="time" value={day.start}
-                      onChange={e => updateDayTime(i, 'start', e.target.value)}
-                      className="text-xs bg-surface-800 border border-surface-700 rounded-md px-1.5 py-0.5 text-zinc-300 focus:outline-none focus:border-accent w-[88px]" />
+                    <TimeSelect value={day.start} onChange={v => updateDayTime(i, 'start', v)} />
                     <span className="text-[10px] text-zinc-600">–</span>
-                    <input type="time" value={day.end}
-                      onChange={e => updateDayTime(i, 'end', e.target.value)}
-                      className="text-xs bg-surface-800 border border-surface-700 rounded-md px-1.5 py-0.5 text-zinc-300 focus:outline-none focus:border-accent w-[88px]" />
+                    <TimeSelect value={day.end} onChange={v => updateDayTime(i, 'end', v)} />
                     <button onClick={() => applyToAll(i)}
-                      className="text-[10px] text-zinc-600 hover:text-accent transition-colors opacity-0 group-hover/day:opacity-100">
+                      className="text-[10px] text-zinc-600 hover:text-accent transition-colors opacity-0 group-hover/day:opacity-100 ml-1">
                       Apply to all
                     </button>
                   </>

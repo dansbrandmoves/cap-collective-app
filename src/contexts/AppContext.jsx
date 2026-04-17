@@ -196,7 +196,30 @@ export function AppProvider({ children }) {
   const [lastSynced, setLastSynced] = useState(() => stored?.lastSynced ?? null)
   const [theme, setTheme] = useState(() => stored?.theme ?? 'dark')
   const [slotStateCustomizations, setSlotStateCustomizations] = useState(() => stored?.slotStateCustomizations ?? {})
-  const [businessHours, setBusinessHours] = useState(() => stored?.businessHours ?? { days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00', enabled: true })
+  const [businessHours, setBusinessHours] = useState(() => {
+    const saved = stored?.businessHours
+    // Migrate old flat format → per-day schedule
+    if (saved && !saved.schedule) {
+      const schedule = {}
+      for (let d = 0; d < 7; d++) {
+        schedule[d] = (saved.days || [1,2,3,4,5]).includes(d)
+          ? { start: saved.start || '09:00', end: saved.end || '17:00' }
+          : null
+      }
+      return { schedule }
+    }
+    return saved ?? {
+      schedule: {
+        0: null,
+        1: { start: '09:00', end: '17:00' },
+        2: { start: '09:00', end: '17:00' },
+        3: { start: '09:00', end: '17:00' },
+        4: { start: '09:00', end: '17:00' },
+        5: { start: '09:00', end: '17:00' },
+        6: null,
+      }
+    }
+  })
   const [guestCalendarEnabled, setGuestCalendarEnabled] = useState(() => stored?.guestCalendarEnabled ?? false)
 
   // Derived: customized slot states

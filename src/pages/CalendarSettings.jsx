@@ -21,7 +21,8 @@ const ROLE_META = {
 }
 
 const ROLES = ['governs', 'informational', 'ignored']
-const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const DAY_LABELS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 function formatLastSynced(iso) {
   if (!iso) return 'Never'
@@ -140,14 +141,35 @@ export function CalendarSettings() {
     }
   }
 
+  const schedule = businessHours.schedule || {}
+
   function toggleDay(d) {
-    setBusinessHours(prev => ({
-      ...prev,
-      days: prev.days.includes(d) ? prev.days.filter(x => x !== d) : [...prev.days, d].sort(),
-    }))
+    setBusinessHours(prev => {
+      const s = { ...prev.schedule }
+      s[d] = s[d] ? null : { start: '09:00', end: '17:00' }
+      return { ...prev, schedule: s }
+    })
   }
 
-  const activeDays = (businessHours.days || [1,2,3,4,5]).map(d => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')
+  function updateDayTime(d, field, value) {
+    setBusinessHours(prev => {
+      const s = { ...prev.schedule }
+      s[d] = { ...s[d], [field]: value }
+      return { ...prev, schedule: s }
+    })
+  }
+
+  function applyToAll(sourceDay) {
+    const src = schedule[sourceDay]
+    if (!src) return
+    setBusinessHours(prev => {
+      const s = { ...prev.schedule }
+      for (let d = 0; d < 7; d++) {
+        if (s[d]) s[d] = { ...src }
+      }
+      return { ...prev, schedule: s }
+    })
+  }
 
   return (
     <div className="px-5 sm:px-8 lg:px-16 py-6 sm:py-10 max-w-3xl">
@@ -235,43 +257,48 @@ export function CalendarSettings() {
 
       {/* ── Business Hours ── */}
       <div className="py-5 border-b border-surface-800">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Business Hours</p>
-          <button onClick={() => setEditingHours(!editingHours)}
-            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-            {editingHours ? 'Done' : 'Edit'}
-          </button>
-        </div>
-        {editingHours ? (
-          <div className="mt-3 space-y-3">
-            <div className="flex gap-1.5">
-              {DAY_LABELS.map((label, i) => (
-                <button key={i} type="button" onClick={() => toggleDay(i)}
-                  className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
-                    businessHours.days.includes(i)
-                      ? 'bg-accent/15 border border-accent/30 text-accent'
-                      : 'bg-surface-800 border border-surface-700 text-zinc-600 hover:text-zinc-400'
+        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Business Hours</p>
+        <div className="space-y-1.5">
+          {DAY_NAMES.map((name, i) => {
+            const day = schedule[i]
+            const isActive = !!day
+            return (
+              <div key={i} className="flex items-center gap-3 py-1.5">
+                <button onClick={() => toggleDay(i)}
+                  className={`w-16 text-left text-xs font-medium transition-colors ${
+                    isActive ? 'text-zinc-200' : 'text-zinc-600'
                   }`}>
-                  {label}
+                  {name.slice(0, 3)}
                 </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="time" value={businessHours.start}
-                onChange={e => setBusinessHours(prev => ({ ...prev, start: e.target.value }))}
-                className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent" />
-              <span className="text-xs text-zinc-600">to</span>
-              <input type="time" value={businessHours.end}
-                onChange={e => setBusinessHours(prev => ({ ...prev, end: e.target.value }))}
-                className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent" />
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-zinc-400 mt-1">
-            {activeDays} · {formatTime(businessHours.start)} – {formatTime(businessHours.end)}
-          </p>
-        )}
-        <p className="text-xs text-zinc-600 mt-2">Default hours for new booking pages. Also constrains calendar availability.</p>
+                {isActive ? (
+                  <div className="flex items-center gap-1.5 flex-1">
+                    <input type="time" value={day.start}
+                      onChange={e => updateDayTime(i, 'start', e.target.value)}
+                      className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent w-[100px]" />
+                    <span className="text-xs text-zinc-600">–</span>
+                    <input type="time" value={day.end}
+                      onChange={e => updateDayTime(i, 'end', e.target.value)}
+                      className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent w-[100px]" />
+                    <button onClick={() => applyToAll(i)}
+                      className="text-[10px] text-zinc-600 hover:text-accent transition-colors ml-1"
+                      title="Apply these hours to all active days">
+                      Apply to all
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-zinc-600 italic">Unavailable</span>
+                )}
+                <button onClick={() => toggleDay(i)}
+                  className={`text-[10px] transition-colors flex-shrink-0 ${
+                    isActive ? 'text-zinc-600 hover:text-red-400' : 'text-zinc-600 hover:text-accent'
+                  }`}>
+                  {isActive ? 'Off' : 'On'}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+        <p className="text-xs text-zinc-600 mt-3">These hours apply to all booking pages and constrain calendar availability.</p>
       </div>
 
       {/* ── Guest Calendar Access ── */}

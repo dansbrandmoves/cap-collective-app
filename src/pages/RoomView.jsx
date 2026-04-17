@@ -26,7 +26,7 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
       <div className="bg-surface-900 border border-surface-700 rounded-2xl px-8 py-8 w-full max-w-sm">
         <div className="flex items-center gap-3 mb-6">
           {ownerLogo ? (
-            <div className={`rounded-lg px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-zinc-100' : 'bg-zinc-800'}`}>
+            <div className={`rounded-lg px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-surface-700' : 'bg-transparent'}`}>
               <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
             </div>
           ) : (
@@ -372,7 +372,7 @@ export function RoomView() {
           {!isOwner && (
             <div className="flex items-center gap-2 flex-shrink-0">
               {ownerLogo ? (
-                <div className={`rounded-md px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-zinc-100' : 'bg-zinc-800'}`}>
+                <div className={`rounded-md px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-surface-700' : 'bg-transparent'}`}>
                   <img src={ownerLogo} alt="" className="max-h-4 max-w-[80px] object-contain" />
                 </div>
               ) : (

@@ -308,14 +308,14 @@ export function CalendarSettings() {
                   setLogoIsDark(true)
                   await supabase.from('profiles').update({ logo_is_dark: true }).eq('id', user?.id)
                 }}
-                  className={`rounded-lg px-4 py-3 flex items-center justify-center bg-zinc-100 transition-all ${logoIsDark ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-75'}`}>
+                  className={`rounded-lg px-4 py-3 flex items-center justify-center bg-surface-700 transition-all ${logoIsDark ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-75'}`}>
                   <img src={logoUrl} alt="" className="max-h-8 max-w-[100px] object-contain" />
                 </button>
                 <button onClick={async () => {
                   setLogoIsDark(false)
                   await supabase.from('profiles').update({ logo_is_dark: false }).eq('id', user?.id)
                 }}
-                  className={`rounded-lg px-4 py-3 flex items-center justify-center bg-zinc-800 transition-all ${!logoIsDark ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-75'}`}>
+                  className={`rounded-lg px-4 py-3 flex items-center justify-center bg-transparent transition-all ${!logoIsDark ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-75'}`}>
                   <img src={logoUrl} alt="" className="max-h-8 max-w-[100px] object-contain" />
                 </button>
               </div>
@@ -405,7 +405,7 @@ export function CalendarSettings() {
                   className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
                     isActive ? 'bg-accent' : 'bg-surface-700'
                   }`}>
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-zinc-100 transition-transform ${
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-surface-700 transition-transform ${
                     isActive ? 'translate-x-4' : 'translate-x-0'
                   }`} />
                 </button>
@@ -451,7 +451,7 @@ export function CalendarSettings() {
             className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
               guestCalendarEnabled ? 'bg-accent' : 'bg-surface-700'
             }`}>
-            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-zinc-100 transition-transform ${
+            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-surface-700 transition-transform ${
               guestCalendarEnabled ? 'translate-x-[18px]' : 'translate-x-0.5'
             }`} />
           </button>

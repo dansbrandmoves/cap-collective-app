@@ -5,7 +5,6 @@ import { SlotTimeline } from './SlotTimeline'
 import { SLOT_STATES, deriveSlotState } from '../../utils/availability'
 import { Trash2 } from 'lucide-react'
 
-const PRESET_COLORS = ['#22c55e', '#f59e0b', '#6366f1', '#ef4444', '#ec4899', '#06b6d4', '#8b5cf6', '#84cc16']
 const STATE_KEYS = ['available', 'hold', 'booked', 'blocked']
 
 const HOUR_OPTIONS = (() => {
@@ -78,7 +77,7 @@ export function SlotEditor() {
 
   function startAdd() {
     setAdding(true)
-    setNewForm({ name: '', startTime: '08:00', endTime: '12:00', color: PRESET_COLORS[slots.length % PRESET_COLORS.length], defaultState: 'available' })
+    setNewForm({ name: '', startTime: '08:00', endTime: '12:00', color: SLOT_STATES.available.color, defaultState: 'available' })
     setEditingId(null)
   }
 
@@ -118,14 +117,7 @@ export function SlotEditor() {
                     className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent">
                     {HOUR_OPTIONS.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
                   </select>
-                  <div className="flex items-center gap-1 ml-1">
-                    {PRESET_COLORS.map(c => (
-                      <button key={c} type="button" onClick={() => setEditForm(f => ({ ...f, color: c }))}
-                        className={`w-4 h-4 rounded-full transition-transform hover:scale-125 ${editForm.color === c ? 'ring-2 ring-white ring-offset-1 ring-offset-surface-800' : ''}`}
-                        style={{ backgroundColor: c }} />
-                    ))}
-                  </div>
-                  <select value={editForm.defaultState} onChange={e => setEditForm(f => ({ ...f, defaultState: e.target.value }))}
+                  <select value={editForm.defaultState} onChange={e => setEditForm(f => ({ ...f, defaultState: e.target.value, color: SLOT_STATES[e.target.value]?.color || f.color }))}
                     className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent">
                     {STATE_KEYS.map(s => <option key={s} value={s}>{SLOT_STATES[s].label}</option>)}
                   </select>
@@ -140,7 +132,7 @@ export function SlotEditor() {
 
           return (
             <div key={slot.id} className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-surface-800 transition-colors group/slot">
-              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: slot.color }} />
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: todayStates[slot.id] ? (SLOT_STATES[todayStates[slot.id].state]?.color || slot.color) : slot.color }} />
               <span className="text-sm font-medium text-zinc-200 w-28 truncate">{slot.name}</span>
               <span className="text-xs text-zinc-500">{formatTime(slot.startTime)} – {formatTime(slot.endTime)}</span>
               <span className="text-[10px] text-zinc-600 ml-auto">{SLOT_STATES[slot.defaultState]?.label}</span>
@@ -170,13 +162,6 @@ export function SlotEditor() {
                 className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent">
                 {HOUR_OPTIONS.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
               </select>
-              <div className="flex items-center gap-1 ml-1">
-                {PRESET_COLORS.map(c => (
-                  <button key={c} type="button" onClick={() => setNewForm(f => ({ ...f, color: c }))}
-                    className={`w-4 h-4 rounded-full transition-transform hover:scale-125 ${newForm.color === c ? 'ring-2 ring-white ring-offset-1 ring-offset-surface-800' : ''}`}
-                    style={{ backgroundColor: c }} />
-                ))}
-              </div>
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={saveNew} disabled={!newForm.name.trim()}>Add Slot</Button>

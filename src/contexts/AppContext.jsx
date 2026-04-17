@@ -210,6 +210,29 @@ export function AppProvider({ children }) {
   const isOwner = !!user
   const isProPlan = plan === 'pro'
 
+  // Handle Google Calendar OAuth redirect at app level
+  const [googleAuthPending, setGoogleAuthPending] = useState(false)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('state') === 'google-calendar' && params.get('code') && user) {
+      setGoogleAuthPending(true)
+      // Clean URL immediately
+      window.history.replaceState({}, '', window.location.pathname)
+      // Exchange code via edge function
+      supabase.functions.invoke('google-calendar-auth', {
+        body: { action: 'exchange', code: params.get('code'), redirectUri: window.location.origin },
+      }).then(({ data, error }) => {
+        if (data?.access_token) {
+          setGoogleAccessToken(data.access_token)
+          setGoogleTokenExpiresAt(data.expires_at)
+        }
+        setGoogleAuthPending(false)
+        // Navigate to settings to complete calendar setup
+        window.location.href = '/calendars?connected=1'
+      }).catch(() => setGoogleAuthPending(false))
+    }
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const signOut = useCallback(() => {
     setUser(null) // clear immediately so UI redirects right away
     setPlan('free')

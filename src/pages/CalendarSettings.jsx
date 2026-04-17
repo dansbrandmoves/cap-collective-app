@@ -95,34 +95,32 @@ export function CalendarSettings() {
   const configured = isConfigured()
   const [connected, setConnected] = useState(false)
 
-  // Check connection status + handle OAuth redirect on mount
+  // Check connection status + handle post-connect calendar picker
   useEffect(() => {
     if (!configured) return
     async function init() {
-      // Handle redirect from Google OAuth
-      const tokens = await handleGoogleRedirect()
-      if (tokens) {
-        setGoogleAccessToken(tokens.access_token)
-        setGoogleTokenExpiresAt(tokens.expires_at)
-        setConnected(true)
-        // Fetch calendars after connecting
-        try {
-          const cals = await fetchCalendarList(tokens.access_token)
-          const roles = {}
-          cals.forEach(cal => {
-            const existing = connectedCalendars.find(c => c.googleCalendarId === cal.googleCalendarId)
-            roles[cal.googleCalendarId] = existing?.role ?? 'governs'
-          })
-          setAssigningRoles(roles)
-          setPendingCals(cals)
-          setShowRoleModal(true)
-        } catch (err) { setAuthError(`Failed to fetch calendars: ${err.message}`) }
-        return
-      }
-      // Check if already connected
       const isConn = await isGoogleConnected()
       setConnected(isConn)
-      if (isConn) setGisReady(true)
+
+      // If we just came back from Google OAuth, show calendar picker
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('connected') === '1' && isConn) {
+        window.history.replaceState({}, '', window.location.pathname)
+        try {
+          const accessToken = await getValidAccessToken()
+          if (accessToken) {
+            const cals = await fetchCalendarList(accessToken)
+            const roles = {}
+            cals.forEach(cal => {
+              const existing = connectedCalendars.find(c => c.googleCalendarId === cal.googleCalendarId)
+              roles[cal.googleCalendarId] = existing?.role ?? 'governs'
+            })
+            setAssigningRoles(roles)
+            setPendingCals(cals)
+            setShowRoleModal(true)
+          }
+        } catch (err) { setAuthError(`Failed to fetch calendars: ${err.message}`) }
+      }
     }
     init()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps

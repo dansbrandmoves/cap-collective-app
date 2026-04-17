@@ -25,6 +25,8 @@ export function startGoogleAuth() {
     console.warn('VITE_GOOGLE_CLIENT_ID is not set.')
     return
   }
+  // Must match an authorized redirect URI in Google Console
+  // We use the origin (not full path) because Google requires exact match
   const redirectUri = window.location.origin
   const params = new URLSearchParams({
     client_id: CLIENT_ID,

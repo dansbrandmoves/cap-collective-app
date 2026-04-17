@@ -195,39 +195,60 @@ export function AvailabilityCalendar({
         />
       )}
 
-      {/* Slot picker for granular selection */}
+      {/* Slot picker side panel */}
       {isSelectionMode && guestSlotSelection && slotPickerDate && (
-        <div className="mt-3 bg-surface-800 border border-surface-700 rounded-xl p-4 animate-fadeIn">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-medium text-zinc-300">
-              {new Date(slotPickerDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-            </p>
-            <button onClick={() => setSlotPickerDate(null)} className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">Close</button>
+        <>
+          <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setSlotPickerDate(null)} />
+          <div className="fixed right-0 top-0 bottom-0 w-full sm:w-80 bg-surface-900 border-l border-surface-700 z-50 flex flex-col animate-slideIn shadow-2xl shadow-black/40">
+            <div className="px-5 py-4 border-b border-surface-700 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-zinc-100">
+                  {new Date(slotPickerDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}
+                </p>
+                <p className="text-xs text-zinc-500">
+                  {new Date(slotPickerDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+              <button onClick={() => setSlotPickerDate(null)}
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Done</button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+              <p className="text-xs text-zinc-600 mb-3">Select the time slots that work for you.</p>
+              {slots.map(slot => {
+                const isChecked = (selectedSlotMap[slotPickerDate] || []).includes(slot.id)
+                const derived = deriveSlotState(new Date(slotPickerDate + 'T00:00:00'), slot, calendarEvents, connectedCalendars, prefixRules, businessHours)
+                const stateColor = slotStates[derived.state]?.color || '#22c55e'
+                const isAvailable = derived.state === 'available'
+                return (
+                  <button key={slot.id} onClick={() => toggleSlotForDate(slotPickerDate, slot.id)}
+                    className={`w-full text-left rounded-xl px-4 py-3 transition-all border ${
+                      isChecked
+                        ? 'bg-accent/10 border-accent/30'
+                        : 'bg-surface-800 border-surface-700 hover:border-surface-500'
+                    }`}
+                    style={{ borderLeftColor: stateColor, borderLeftWidth: '3px' }}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={`text-sm font-medium ${isChecked ? 'text-zinc-100' : 'text-zinc-300'}`}>{slot.name}</p>
+                        <p className="text-xs text-zinc-500 mt-0.5">{slot.startTime} – {slot.endTime}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] ${isAvailable ? 'text-green-400' : 'text-zinc-600'}`}>
+                          {slotStates[derived.state]?.label}
+                        </span>
+                        {isChecked && (
+                          <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center">
+                            <span className="text-white text-xs">✓</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
-          <div className="space-y-1.5">
-            {slots.map(slot => {
-              const isChecked = (selectedSlotMap[slotPickerDate] || []).includes(slot.id)
-              const derived = deriveSlotState(new Date(slotPickerDate + 'T00:00:00'), slot, calendarEvents, connectedCalendars, prefixRules, businessHours)
-              const stateColor = slotStates[derived.state]?.color || '#22c55e'
-              return (
-                <label key={slot.id}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    isChecked ? 'bg-accent/10 border border-accent/20' : 'hover:bg-surface-700 border border-transparent'
-                  }`}>
-                  <input type="checkbox" checked={isChecked}
-                    onChange={() => toggleSlotForDate(slotPickerDate, slot.id)}
-                    className="w-3.5 h-3.5 rounded border-surface-600 bg-surface-700 text-accent focus:ring-accent/30 cursor-pointer" />
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: stateColor }} />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-zinc-200">{slot.name}</span>
-                    <span className="text-xs text-zinc-500 ml-2">{slot.startTime} – {slot.endTime}</span>
-                  </div>
-                  <span className="text-[10px] text-zinc-600">{slotStates[derived.state]?.label}</span>
-                </label>
-              )
-            })}
-          </div>
-        </div>
+        </>
       )}
 
       {/* Selection bar for guests */}

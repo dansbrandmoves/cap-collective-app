@@ -666,18 +666,24 @@ export function AppProvider({ children }) {
   const deleteProduction = useCallback(async (productionId) => {
     const prod = productions.find(p => p.id === productionId)
     if (!prod) return
-    // Delete child data first
-    for (const g of prod.groups) {
-      await supabase.from('date_requests').delete().eq('group_id', g.id)
-      await supabase.from('messages').delete().eq('group_id', g.id)
-      await supabase.from('shared_notes').delete().eq('group_id', g.id)
-      await supabase.from('group_members').delete().eq('group_id', g.id)
-    }
-    const groupIds = prod.groups.map(g => g.id)
-    if (groupIds.length) await supabase.from('groups').delete().in('id', groupIds)
-    const { error } = await supabase.from('productions').delete().eq('id', productionId)
-    if (error) { console.error('deleteProduction:', error); return }
+    // Remove from UI immediately
     setProductions(prev => prev.filter(p => p.id !== productionId))
+    // Delete child data
+    try {
+      for (const g of prod.groups) {
+        await supabase.from('date_requests').delete().eq('group_id', g.id)
+        await supabase.from('shared_availability').delete().eq('group_id', g.id)
+        await supabase.from('messages').delete().eq('group_id', g.id)
+        await supabase.from('shared_notes').delete().eq('group_id', g.id)
+        await supabase.from('group_members').delete().eq('group_id', g.id)
+      }
+      const groupIds = prod.groups.map(g => g.id)
+      if (groupIds.length) await supabase.from('groups').delete().in('id', groupIds)
+      const { error } = await supabase.from('productions').delete().eq('id', productionId)
+      if (error) console.error('deleteProduction:', error)
+    } catch (err) {
+      console.error('deleteProduction failed:', err)
+    }
   }, [productions])
 
   // --- Groups ---

@@ -114,7 +114,7 @@ export function ProductionView() {
         w-full md:w-72
         ${mobileShowDetail ? 'hidden md:flex' : 'flex'}
       `}>
-        <div className="px-5 py-4 border-b border-surface-700">
+        <div className="px-5 py-5 border-b border-surface-700">
           <button onClick={() => navigate('/')} className="text-xs text-zinc-500 hover:text-zinc-300 mb-3 flex items-center gap-1 transition-colors">
             ← Projects
           </button>
@@ -136,7 +136,7 @@ export function ProductionView() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-3">
+        <div className="flex-1 overflow-y-auto px-3 py-4">
           {/* Calendar nav item */}
           <button
             onClick={handleShowCalendar}
@@ -209,7 +209,7 @@ export function ProductionView() {
         </div>
 
         {/* Private notes */}
-        <div className="border-t border-surface-700 bg-surface-950 px-4 py-4">
+        <div className="border-t border-surface-700 bg-surface-950 px-5 py-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs">🔒</span>
             <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Private Notes</p>
@@ -344,13 +344,13 @@ function ProjectCalendar({ onMobileBack }) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-4 sm:px-8 py-4 sm:py-5 border-b border-surface-700 flex items-center gap-3">
+      <div className="px-5 sm:px-8 py-4 border-b border-surface-700 flex items-center gap-3">
         <button onClick={onMobileBack} className="md:hidden text-xs text-zinc-500 hover:text-zinc-300 flex-shrink-0 transition-colors">
           ← Back
         </button>
         <h2 className="text-lg font-semibold text-zinc-100">Availability</h2>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6">
+      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-5 sm:py-6">
         <AvailabilityCalendar
           slots={slots}
           calendarEvents={calendarEvents}
@@ -419,7 +419,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-4 sm:px-8 py-4 sm:py-5 border-b border-surface-700 flex items-center justify-between gap-3">
+      <div className="px-5 sm:px-8 py-4 border-b border-surface-700 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={onMobileBack} className="md:hidden text-xs text-zinc-500 hover:text-zinc-300 flex-shrink-0 transition-colors">
             ← Back
@@ -432,7 +432,7 @@ function GroupOverview({ productionId, group, onMobileBack }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 space-y-6 sm:space-y-8">
+      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-5 sm:py-6 space-y-6 sm:space-y-8">
 
         {/* Access mode + link sharing */}
         <div>

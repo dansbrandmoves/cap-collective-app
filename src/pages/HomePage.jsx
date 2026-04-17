@@ -48,7 +48,7 @@ export function HomePage() {
   return (
     <div className="min-h-screen bg-surface-950 flex flex-col">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 sm:px-12 py-5 border-b border-surface-800/60 sticky top-0 bg-surface-950/90 backdrop-blur-sm z-40">
+      <nav className="flex items-center justify-between px-5 sm:px-8 py-5 border-b border-surface-800/60 sticky top-0 bg-surface-950/90 backdrop-blur-sm z-40">
         <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: logoFilter }} />
         <div className="flex items-center gap-6">
           <a href="#features" className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors hidden sm:inline">Features</a>
@@ -63,7 +63,7 @@ export function HomePage() {
       </nav>
 
       {/* Hero */}
-      <section className="flex flex-col items-center justify-center text-center px-6 pt-20 pb-24 sm:pt-28 sm:pb-32">
+      <section className="flex flex-col items-center justify-center text-center px-5 pt-20 pb-24 sm:pt-28 sm:pb-32">
         <div className="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 text-accent text-xs font-medium px-3 py-1.5 rounded-full mb-8">
           <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
           Built for creative productions
@@ -82,7 +82,7 @@ export function HomePage() {
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <a
             href="/"
-            className="inline-flex items-center gap-2 bg-accent hover:bg-amber-500 text-white font-semibold text-sm px-6 py-3 rounded-xl transition-colors shadow-lg shadow-accent/20"
+            className="inline-flex items-center gap-2 bg-accent hover:bg-accent-hover text-white font-semibold text-sm px-6 py-3 rounded-xl transition-colors shadow-lg shadow-accent/20"
           >
             Get started free
             <ArrowRight size={15} strokeWidth={2} />
@@ -102,7 +102,7 @@ export function HomePage() {
       <div className="w-full border-t border-surface-800" />
 
       {/* Features */}
-      <section id="features" className="px-6 sm:px-12 py-20 sm:py-28 max-w-6xl mx-auto w-full">
+      <section id="features" className="px-5 sm:px-8 py-20 sm:py-28 max-w-6xl mx-auto w-full">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Features</p>
           <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-3">Everything you need to coordinate</h2>
@@ -131,7 +131,7 @@ export function HomePage() {
       <div className="w-full border-t border-surface-800" />
 
       {/* How it works */}
-      <section id="how-it-works" className="px-6 sm:px-12 py-20 sm:py-28 max-w-5xl mx-auto w-full">
+      <section id="how-it-works" className="px-5 sm:px-8 py-20 sm:py-28 max-w-5xl mx-auto w-full">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">How it works</p>
           <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-3">Up and running in minutes</h2>
@@ -155,7 +155,7 @@ export function HomePage() {
       <div className="w-full border-t border-surface-800" />
 
       {/* CTA */}
-      <section className="px-6 sm:px-12 py-20 sm:py-28 flex flex-col items-center text-center">
+      <section className="px-5 sm:px-8 py-20 sm:py-28 flex flex-col items-center text-center">
         <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-4 max-w-lg">
           Ready to coordinate better?
         </h2>
@@ -164,7 +164,7 @@ export function HomePage() {
         </p>
         <a
           href="/"
-          className="inline-flex items-center gap-2 bg-accent hover:bg-amber-500 text-white font-semibold text-sm px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-accent/20"
+          className="inline-flex items-center gap-2 bg-accent hover:bg-accent-hover text-white font-semibold text-sm px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-accent/20"
         >
           Get started free
           <ArrowRight size={15} strokeWidth={2} />
@@ -180,7 +180,7 @@ export function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="px-6 sm:px-12 py-6 border-t border-surface-800">
+      <footer className="px-5 sm:px-8 py-6 border-t border-surface-800">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: logoFilter }} />

@@ -70,13 +70,13 @@ function NotesTab({ productionId, group, guestName }) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-4 sm:px-8 py-3 border-b border-surface-700">
+      <div className="flex items-center justify-between px-5 sm:px-8 py-3 border-b border-surface-700">
         <p className="text-sm text-zinc-500">Shared notes — both sides can edit</p>
         <span className={`text-xs transition-opacity ${saved ? 'text-zinc-600' : 'text-accent'}`}>
           {saved ? 'Saved' : 'Saving...'}
         </span>
       </div>
-      <div className="flex-1 overflow-hidden px-4 sm:px-8 py-4 sm:py-6">
+      <div className="flex-1 overflow-hidden px-5 sm:px-8 py-4 sm:py-6">
         <textarea
           value={value}
           onChange={handleChange}
@@ -226,7 +226,7 @@ function GuestCalendarPanel({ slots, groupId }) {
 function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots }) {
   const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates } = useApp()
   return (
-    <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6">
+    <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
         <>
           <GuestCalendarPanel slots={slots} groupId={groupId} />
@@ -317,7 +317,7 @@ export function RoomView() {
   return (
     <div className="flex flex-col h-screen bg-surface-950">
       {/* Room header */}
-      <div className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4 border-b border-surface-700 bg-surface-900">
+      <div className="flex items-center justify-between px-5 sm:px-8 py-3 sm:py-4 border-b border-surface-700 bg-surface-900">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           {isOwner && (
             <Link to={`/production/${productionId}`} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex-shrink-0">
@@ -340,7 +340,7 @@ export function RoomView() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-0 px-4 sm:px-8 border-b border-surface-700 bg-surface-900">
+      <div className="flex items-center gap-0 px-5 sm:px-8 border-b border-surface-700 bg-surface-900">
         {TABS.map(tab => (
           <button
             key={tab}

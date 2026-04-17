@@ -151,7 +151,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
 
         {/* Footer: user info only */}
         {user && (
-          <div className="px-4 py-3 border-t border-surface-700 flex-shrink-0 flex items-center gap-2 safe-bottom-sm">
+          <div className="px-5 py-3 border-t border-surface-700 flex-shrink-0 flex items-center gap-2 safe-bottom-sm">
             {user.user_metadata?.avatar_url ? (
               <img src={user.user_metadata.avatar_url} alt="" className="w-6 h-6 rounded-full flex-shrink-0" />
             ) : (

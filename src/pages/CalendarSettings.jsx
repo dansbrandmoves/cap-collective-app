@@ -5,10 +5,11 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import {
-  loadGoogleIdentityServices,
-  initTokenClient,
-  requestAccessToken,
-  revokeAccessToken,
+  startGoogleAuth,
+  handleGoogleRedirect,
+  getValidAccessToken,
+  disconnectGoogle,
+  isGoogleConnected,
   fetchCalendarList,
   fetchAllGoverningEvents,
   isConfigured,
@@ -92,53 +93,59 @@ export function CalendarSettings() {
   const [themeOpen, setThemeOpen] = useState(false)
 
   const configured = isConfigured()
+  const [connected, setConnected] = useState(false)
 
-  // Clear stale Google token on mount
-  useEffect(() => {
-    if (googleAccessToken && googleTokenExpiresAt && Date.now() > googleTokenExpiresAt) {
-      setGoogleAccessToken(null)
-      setGoogleTokenExpiresAt(null)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
+  // Check connection status + handle OAuth redirect on mount
   useEffect(() => {
     if (!configured) return
-    loadGoogleIdentityServices()
-      .then(() => {
-        initTokenClient(handleTokenResponse)
-        setGisReady(true)
-      })
-      .catch(() => setAuthError('Failed to load Google Identity Services.'))
-  }, [])
+    async function init() {
+      // Handle redirect from Google OAuth
+      const tokens = await handleGoogleRedirect()
+      if (tokens) {
+        setGoogleAccessToken(tokens.access_token)
+        setGoogleTokenExpiresAt(tokens.expires_at)
+        setConnected(true)
+        // Fetch calendars after connecting
+        try {
+          const cals = await fetchCalendarList(tokens.access_token)
+          const roles = {}
+          cals.forEach(cal => {
+            const existing = connectedCalendars.find(c => c.googleCalendarId === cal.googleCalendarId)
+            roles[cal.googleCalendarId] = existing?.role ?? 'governs'
+          })
+          setAssigningRoles(roles)
+          setPendingCals(cals)
+          setShowRoleModal(true)
+        } catch (err) { setAuthError(`Failed to fetch calendars: ${err.message}`) }
+        return
+      }
+      // Check if already connected
+      const isConn = await isGoogleConnected()
+      setConnected(isConn)
+      if (isConn) setGisReady(true)
+    }
+    init()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-sync on mount and every 30 minutes
   useEffect(() => {
-    if (!googleAccessToken || connectedCalendars.length === 0) return
+    if (!connected || connectedCalendars.length === 0) return
     handleSync()
     const interval = setInterval(() => { handleSync() }, 30 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [googleAccessToken, connectedCalendars.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [connected, connectedCalendars.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleTokenResponse(tokenResponse) {
-    if (tokenResponse.error) { setAuthError(`Auth error: ${tokenResponse.error}`); return }
-    setGoogleAccessToken(tokenResponse.access_token)
-    if (tokenResponse.expires_in) setGoogleTokenExpiresAt(Date.now() + (tokenResponse.expires_in * 1000))
+  function handleConnect() {
     setAuthError(null)
-    fetchCalendarList(tokenResponse.access_token)
-      .then(cals => {
-        const roles = {}
-        cals.forEach(cal => {
-          const existing = connectedCalendars.find(c => c.googleCalendarId === cal.googleCalendarId)
-          roles[cal.googleCalendarId] = existing?.role ?? 'governs'
-        })
-        setAssigningRoles(roles)
-        setPendingCals(cals)
-        setShowRoleModal(true)
-      })
-      .catch(err => setAuthError(`Failed to fetch calendars: ${err.message}`))
+    startGoogleAuth()
   }
 
-  function handleConnect() { setAuthError(null); requestAccessToken() }
-  function handleDisconnect() { revokeAccessToken(googleAccessToken); setGoogleAccessToken(null); setGoogleTokenExpiresAt(null) }
+  async function handleDisconnect() {
+    await disconnectGoogle()
+    setGoogleAccessToken(null)
+    setGoogleTokenExpiresAt(null)
+    setConnected(false)
+  }
 
   function handleSaveRoles() {
     pendingCals.forEach(cal => {
@@ -156,22 +163,23 @@ export function CalendarSettings() {
   }, [connectedCalendars]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSync() {
-    if (!googleAccessToken) { setAuthError('Not authenticated. Connect Google Calendar first.'); return }
     setCalendarSyncing(true)
     setAuthError(null)
     try {
+      const accessToken = await getValidAccessToken()
+      if (!accessToken) {
+        setConnected(false)
+        setAuthError('Google Calendar disconnected. Reconnect to sync.')
+        setCalendarSyncing(false)
+        return
+      }
+      setGoogleAccessToken(accessToken)
       const timeMin = new Date(); timeMin.setMonth(timeMin.getMonth() - 1)
       const timeMax = new Date(); timeMax.setMonth(timeMax.getMonth() + 3)
-      const events = await fetchAllGoverningEvents(googleAccessToken, connectedCalendars, timeMin, timeMax)
+      const events = await fetchAllGoverningEvents(accessToken, connectedCalendars, timeMin, timeMax)
       replaceCalendarEvents(events)
     } catch (err) {
-      if (err.message?.includes('401')) {
-        setGoogleAccessToken(null)
-        setGoogleTokenExpiresAt(null)
-        setAuthError('Google Calendar session expired. Reconnect to sync your availability.')
-      } else {
-        setAuthError(`Sync failed: ${err.message}`)
-      }
+      setAuthError(`Sync failed: ${err.message}`)
     } finally {
       setCalendarSyncing(false)
     }
@@ -235,22 +243,25 @@ export function CalendarSettings() {
           <div className="min-w-0">
             <p className="text-sm font-medium text-zinc-200">Google Calendar</p>
             <p className="text-xs text-zinc-500 mt-0.5">
-              {googleAccessToken
+              {connected
                 ? `Connected · Last synced ${formatLastSynced(lastSynced)}`
-                : 'Grant read access to derive availability from your calendars.'}
+                : 'Connect once — stays synced automatically.'}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {googleAccessToken ? (
+            {connected ? (
               <>
                 <button onClick={handleSync} disabled={calendarSyncing}
                   className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors disabled:opacity-50">
                   <RefreshCw size={14} strokeWidth={1.75} className={calendarSyncing ? 'animate-spin' : ''} />
                 </button>
+                <button onClick={handleConnect} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                  Reconnect
+                </button>
                 <Button variant="secondary" size="sm" onClick={handleDisconnect}>Disconnect</Button>
               </>
             ) : (
-              <Button size="sm" onClick={handleConnect} disabled={!configured || !gisReady}>Connect</Button>
+              <Button size="sm" onClick={handleConnect} disabled={!configured}>Connect</Button>
             )}
           </div>
         </div>

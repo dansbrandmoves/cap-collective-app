@@ -76,6 +76,7 @@ export function CalendarSettings() {
     theme, toggleTheme,
     availabilityMode, setAvailabilityMode, blockDuration, setBlockDuration,
     logoUrl, logoIsDark, setLogoIsDark, uploadLogo, removeLogo, user,
+    resetAllSettings,
   } = useApp()
 
   const [gisReady, setGisReady] = useState(false)
@@ -522,6 +523,17 @@ export function CalendarSettings() {
             )
           })}
         </div>
+      </div>
+
+      {/* ── Reset ── */}
+      <div className="py-5">
+        <button onClick={() => {
+          if (confirm('Reset all settings to defaults? This won\'t affect your projects, booking pages, or calendar connection.')) {
+            resetAllSettings()
+          }
+        }} className="text-xs text-zinc-600 hover:text-red-400 transition-colors">
+          Reset all settings to defaults
+        </button>
       </div>
 
       {/* Role assignment modal */}

@@ -534,6 +534,27 @@ export function AppProvider({ children }) {
     setSlotStateCustomizations({})
   }, [])
 
+  const resetAllSettings = useCallback(() => {
+    setSlots(SEED_DATA.slots)
+    setPrefixRules(SEED_DATA.prefixRules)
+    setSlotStateCustomizations({})
+    setAvailabilityMode('blocks')
+    setBlockDuration(30)
+    setBusinessHours({
+      schedule: {
+        0: null,
+        1: { start: '09:00', end: '17:00' },
+        2: { start: '09:00', end: '17:00' },
+        3: { start: '09:00', end: '17:00' },
+        4: { start: '09:00', end: '17:00' },
+        5: { start: '09:00', end: '17:00' },
+        6: null,
+      }
+    })
+    setGuestCalendarEnabled(false)
+    setTheme('dark')
+  }, [])
+
   // --- Connected Calendars ---
   const addConnectedCalendar = useCallback((calData) => {
     setConnectedCalendars(prev => {
@@ -949,7 +970,7 @@ export function AppProvider({ children }) {
       theme, toggleTheme,
       // Slot States (customizable)
       slotStates, slotStateCustomizations,
-      updateSlotStateCustomization, resetSlotStateCustomizations,
+      updateSlotStateCustomization, resetSlotStateCustomizations, resetAllSettings,
       // Slots
       createSlot, updateSlot, deleteSlot, reorderSlots,
       // Prefix Rules

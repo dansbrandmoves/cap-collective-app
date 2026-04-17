@@ -329,6 +329,7 @@ export function BookingPageView() {
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [takenSlots, setTakenSlots] = useState([])
   const [ownerEvents, setOwnerEvents] = useState([])
+  const [ownerLogo, setOwnerLogo] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -346,6 +347,11 @@ export function BookingPageView() {
       .select('*')
       .eq('owner_id', page.owner_id)
       .then(({ data }) => setOwnerEvents(data || []))
+    supabase.from('profiles')
+      .select('logo_url')
+      .eq('id', page.owner_id)
+      .single()
+      .then(({ data }) => setOwnerLogo(data?.logo_url || null))
   }, [page])
 
   useEffect(() => {
@@ -460,7 +466,13 @@ export function BookingPageView() {
           {/* Left: Info */}
           <div className="w-[280px] lg:w-[300px] flex-shrink-0 border-r border-surface-800 p-6 lg:p-8 flex flex-col">
             <div className="mb-5">
-              <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
+              {ownerLogo ? (
+                <div className="bg-white/10 rounded-lg px-2.5 py-1.5 inline-flex">
+                  <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
+                </div>
+              ) : (
+                <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
+              )}
             </div>
             <h1 className="text-xl font-semibold text-zinc-100 leading-tight mb-2">{page.name}</h1>
             {page.description && <p className="text-sm text-zinc-500 leading-relaxed mb-4">{page.description}</p>}
@@ -517,7 +529,13 @@ export function BookingPageView() {
           {/* Header */}
           <div className="px-5 pt-5 pb-4">
             <div className="mb-3">
-              <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: 'invert(1)' }} />
+              {ownerLogo ? (
+                <div className="bg-white/10 rounded-lg px-2 py-1 inline-flex">
+                  <img src={ownerLogo} alt="" className="max-h-5 max-w-[80px] object-contain" />
+                </div>
+              ) : (
+                <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: 'invert(1)' }} />
+              )}
             </div>
             <h1 className="text-lg font-semibold text-zinc-100 leading-tight">{page.name}</h1>
             {page.description && <p className="text-sm text-zinc-500 mt-1">{page.description}</p>}

@@ -12,7 +12,7 @@ import { CalendarDays, X, CheckCircle2, CircleDot, Share2 } from 'lucide-react'
 const TABS = ['Availability', 'Notes']
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
-function NamePrompt({ token, onConfirm }) {
+function NamePrompt({ token, onConfirm, ownerLogo }) {
   const [name, setName] = useState('')
   const { theme } = useApp()
   function handleSubmit(e) {
@@ -25,7 +25,13 @@ function NamePrompt({ token, onConfirm }) {
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
       <div className="bg-surface-900 border border-surface-700 rounded-2xl px-8 py-8 w-full max-w-sm">
         <div className="flex items-center gap-3 mb-6">
-          <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
+          {ownerLogo ? (
+            <div className="bg-white/10 rounded-lg px-2.5 py-1.5 inline-flex">
+              <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
+            </div>
+          ) : (
+            <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
+          )}
         </div>
         <h2 className="text-lg font-semibold text-zinc-100 mb-1">What's your name?</h2>
         <p className="text-sm text-zinc-500 mb-6">So the team knows who they're talking to.</p>
@@ -287,6 +293,7 @@ export function RoomView() {
   const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)
   const [guestName, setGuestName] = useState(null)
+  const [ownerLogo, setOwnerLogo] = useState(null)
 
   useEffect(() => {
     if (loading) return
@@ -298,6 +305,12 @@ export function RoomView() {
 
   const production = resolved ? getProduction(resolved.productionId) : null
   const isOwner = !!user && production?.ownerId === user.id
+
+  useEffect(() => {
+    if (!production?.ownerId || isOwner) return
+    supabase.from('profiles').select('logo_url').eq('id', production.ownerId).single()
+      .then(({ data }) => setOwnerLogo(data?.logo_url || null))
+  }, [production?.ownerId, isOwner])
 
   useEffect(() => {
     if (!resolved) return
@@ -342,7 +355,7 @@ export function RoomView() {
   }
 
   if (!isOwner && mode === 'open_link' && !guestName) {
-    return <NamePrompt token={token} onConfirm={setGuestName} />
+    return <NamePrompt token={token} onConfirm={setGuestName} ownerLogo={ownerLogo} />
   }
 
   return (
@@ -357,7 +370,13 @@ export function RoomView() {
           )}
           {!isOwner && (
             <div className="flex items-center gap-2 flex-shrink-0">
-              <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
+              {ownerLogo ? (
+                <div className="bg-white/10 rounded-md px-2 py-1 inline-flex">
+                  <img src={ownerLogo} alt="" className="max-h-4 max-w-[80px] object-contain" />
+                </div>
+              ) : (
+                <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
+              )}
             </div>
           )}
           <div className="h-4 w-px bg-surface-700 flex-shrink-0" />

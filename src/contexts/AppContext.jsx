@@ -7,6 +7,22 @@ import { buildSlotStates } from '../utils/availability'
 const AppContext = createContext(null)
 const STORAGE_KEY = 'coordie-app'
 
+function resizeImage(file, maxW, maxH) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      let w = img.width, h = img.height
+      if (w > maxW) { h = (h * maxW) / w; w = maxW }
+      if (h > maxH) { w = (w * maxH) / h; h = maxH }
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      canvas.toBlob(resolve, 'image/webp', 0.85)
+    }
+    img.src = URL.createObjectURL(file)
+  })
+}
+
 function loadFromStorage() {
   try {
     // Migrate from old key
@@ -112,16 +128,41 @@ export function AppProvider({ children }) {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [plan, setPlan] = useState('free') // 'free' | 'pro'
+  const [logoUrl, setLogoUrl] = useState(null)
 
   const FREE_PROJECT_LIMIT = 1
   const FREE_GROUP_LIMIT = 2
   const FREE_BOOKING_PAGE_LIMIT = 1
 
   async function fetchPlan(userId) {
-    if (!userId) { setPlan('free'); return }
-    const { data } = await supabase.from('profiles').select('plan').eq('id', userId).single()
+    if (!userId) { setPlan('free'); setLogoUrl(null); return }
+    const { data } = await supabase.from('profiles').select('plan, logo_url').eq('id', userId).single()
     setPlan(data?.plan ?? 'free')
+    setLogoUrl(data?.logo_url ?? null)
   }
+
+  const uploadLogo = useCallback(async (file) => {
+    if (!user?.id) return null
+    // Resize/compress client-side (max 400px wide, quality 0.8)
+    const resized = await resizeImage(file, 400, 120)
+    const path = `${user.id}/logo.webp`
+    const { error: uploadErr } = await supabase.storage.from('logos').upload(path, resized, {
+      contentType: 'image/webp', upsert: true,
+    })
+    if (uploadErr) { console.error('Logo upload failed:', uploadErr); return null }
+    const { data: urlData } = supabase.storage.from('logos').getPublicUrl(path)
+    const url = urlData.publicUrl + '?t=' + Date.now() // cache-bust
+    await supabase.from('profiles').update({ logo_url: url }).eq('id', user.id)
+    setLogoUrl(url)
+    return url
+  }, [user])
+
+  const removeLogo = useCallback(async () => {
+    if (!user?.id) return
+    await supabase.storage.from('logos').remove([`${user.id}/logo.webp`])
+    await supabase.from('profiles').update({ logo_url: null }).eq('id', user.id)
+    setLogoUrl(null)
+  }, [user])
 
   useEffect(() => {
     let initialLoad = true
@@ -914,6 +955,8 @@ export function AppProvider({ children }) {
       guestCalendarEnabled, setGuestCalendarEnabled,
       // Availability Mode
       availabilityMode, setAvailabilityMode, blockDuration, setBlockDuration,
+      // Branding
+      logoUrl, uploadLogo, removeLogo,
       // Helpers
       getProduction, getGroup, getGroupByToken, getRoomLink, getMembersForGroup, resolveToken,
     }}>

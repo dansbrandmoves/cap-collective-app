@@ -74,6 +74,7 @@ export function CalendarSettings() {
     guestCalendarEnabled, setGuestCalendarEnabled,
     theme, toggleTheme,
     availabilityMode, setAvailabilityMode, blockDuration, setBlockDuration,
+    logoUrl, uploadLogo, removeLogo,
   } = useApp()
 
   const [gisReady, setGisReady] = useState(false)
@@ -290,6 +291,35 @@ export function CalendarSettings() {
               </>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* ── Branding ── */}
+      <div className="py-5 border-b border-surface-800">
+        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Branding</p>
+        <p className="text-xs text-zinc-600 mb-3">Your logo appears on booking pages and room links instead of Coordie.</p>
+        <div className="flex items-center gap-4">
+          {logoUrl ? (
+            <div className="flex items-center gap-3">
+              <div className="bg-white/10 rounded-lg px-3 py-2 flex items-center justify-center">
+                <img src={logoUrl} alt="Your logo" className="max-h-8 max-w-[120px] object-contain" />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors">
+                  Replace
+                  <input type="file" accept="image/*" className="hidden"
+                    onChange={async (e) => { if (e.target.files[0]) await uploadLogo(e.target.files[0]) }} />
+                </label>
+                <button onClick={removeLogo} className="text-xs text-zinc-600 hover:text-red-400 transition-colors">Remove</button>
+              </div>
+            </div>
+          ) : (
+            <label className="flex items-center gap-2 text-xs bg-surface-800 border border-surface-700 hover:border-surface-500 text-zinc-400 hover:text-zinc-200 px-3 py-2 rounded-lg cursor-pointer transition-colors">
+              Upload logo
+              <input type="file" accept="image/*" className="hidden"
+                onChange={async (e) => { if (e.target.files[0]) await uploadLogo(e.target.files[0]) }} />
+            </label>
+          )}
         </div>
       </div>
 

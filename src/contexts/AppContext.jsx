@@ -133,9 +133,9 @@ export function AppProvider({ children }) {
   }, [])
 
   const isOwner = !!user
-  const signOut = useCallback(async () => {
-    await supabase.auth.signOut()
-    setUser(null)
+  const signOut = useCallback(() => {
+    setUser(null) // clear immediately so UI redirects right away
+    supabase.auth.signOut().catch(err => console.error('signOut error:', err))
   }, [])
 
   // Supabase-backed

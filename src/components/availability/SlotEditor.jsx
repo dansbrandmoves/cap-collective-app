@@ -58,7 +58,7 @@ export function SlotEditor() {
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Availability Slots</p>
-          <p className="text-xs text-zinc-600 mt-0.5">Define the time blocks Christian offers for coordination.</p>
+          <p className="text-xs text-zinc-600 mt-0.5">Define the time blocks you offer for coordination.</p>
         </div>
         <Button size="sm" variant="secondary" onClick={openCreate}>+ Add Slot</Button>
       </div>

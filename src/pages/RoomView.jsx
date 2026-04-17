@@ -1,12 +1,16 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { supabase } from '../utils/supabase'
+import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
+import { deriveSlotState, dateToStr } from '../utils/availability'
+import { CalendarDays, X, CheckCircle2, CircleDot } from 'lucide-react'
 
 const TABS = ['Availability', 'Notes']
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 function NamePrompt({ token, onConfirm }) {
   const [name, setName] = useState('')
@@ -21,7 +25,7 @@ function NamePrompt({ token, onConfirm }) {
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
       <div className="bg-surface-900 border border-surface-700 rounded-2xl px-8 py-8 w-full max-w-sm">
         <div className="flex items-center gap-3 mb-6">
-          <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
+          <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
         </div>
         <h2 className="text-lg font-semibold text-zinc-100 mb-1">What's your name?</h2>
         <p className="text-sm text-zinc-500 mb-6">So the team knows who they're talking to.</p>
@@ -42,8 +46,7 @@ function NamePrompt({ token, onConfirm }) {
 }
 
 function NotesTab({ productionId, group, guestName }) {
-  const { updateSharedNotes, user } = useApp()
-  const ownerName = user?.user_metadata?.full_name || 'the project owner'
+  const { updateSharedNotes } = useApp()
   const [value, setValue] = useState(group.room.sharedNotes)
   const [saved, setSaved] = useState(true)
   const timerRef = useRef(null)
@@ -86,14 +89,149 @@ function NotesTab({ productionId, group, guestName }) {
   )
 }
 
-function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName }) {
-  const { slots, calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates } = useApp()
+// Guest calendar panel — lets guest connect their Google Calendar and see their free dates
+function GuestCalendarPanel({ slots, groupId }) {
+  const [gisReady, setGisReady] = useState(false)
+  const [guestEvents, setGuestEvents] = useState(null) // null = not connected yet
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const tokenClientRef = useRef(null)
+  const configured = isConfigured()
+
+  useEffect(() => {
+    if (!configured) return
+    loadGoogleIdentityServices()
+      .then(() => {
+        tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/calendar.readonly',
+          callback: handleTokenResponse,
+        })
+        setGisReady(true)
+      })
+      .catch(() => setError('Could not load Google Calendar.'))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleTokenResponse(tokenResponse) {
+    if (tokenResponse.error) { setError('Sign-in failed.'); return }
+    setLoading(true)
+    setError(null)
+    try {
+      const timeMin = new Date()
+      const timeMax = new Date()
+      timeMax.setDate(timeMax.getDate() + 60)
+      const events = await fetchCalendarEvents(tokenResponse.access_token, 'primary', timeMin, timeMax)
+      setGuestEvents(events)
+    } catch {
+      setError('Could not fetch calendar events.')
+    }
+    setLoading(false)
+  }
+
+  // Find dates in the next 60 days where the guest has no events during slot hours
+  const freeDates = useMemo(() => {
+    if (!guestEvents || !slots.length) return []
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const result = []
+    const guestCals = [{ googleCalendarId: 'primary', role: 'governs', defaultState: 'booked' }]
+    const guestEventsTagged = guestEvents.map(e => ({ ...e, calendarId: 'primary' }))
+
+    for (let i = 1; i < 60; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      // Guest is free if they have no conflicting events in ANY of the slots
+      const hasFreeSlot = slots.some(slot => {
+        const { state } = deriveSlotState(date, slot, guestEventsTagged, guestCals, [])
+        return state === 'available'
+      })
+      if (hasFreeSlot) result.push(date)
+    }
+    return result.slice(0, 30)
+  }, [guestEvents, slots])
+
+  if (!configured) return null
+
+  if (guestEvents === null) {
+    return (
+      <div className="border border-dashed border-surface-600 rounded-xl px-5 py-4 mb-5 flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-surface-800 border border-surface-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-400" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-zinc-300 mb-0.5">See your availability</p>
+            <p className="text-xs text-zinc-500">Connect your Google Calendar to see which days you're free.</p>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => tokenClientRef.current?.requestAccessToken()}
+          disabled={!gisReady || loading}
+          className="flex-shrink-0 self-start sm:self-auto"
+        >
+          <CalendarDays size={13} strokeWidth={1.75} className="mr-1.5" />
+          Connect Calendar
+        </Button>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="border border-surface-700 rounded-xl px-5 py-4 mb-5 text-sm text-zinc-500">
+        Loading your calendar...
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-surface-900 border border-surface-700 rounded-xl px-5 py-4 mb-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-400" />
+          <p className="text-sm font-medium text-zinc-200">Your free days (next 60 days)</p>
+        </div>
+        <button
+          onClick={() => setGuestEvents(null)}
+          className="p-1 rounded text-zinc-600 hover:text-zinc-400 transition-colors"
+          aria-label="Disconnect calendar"
+        >
+          <X size={14} strokeWidth={1.75} />
+        </button>
+      </div>
+
+      {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
+
+      {freeDates.length === 0 ? (
+        <p className="text-sm text-zinc-500">No free days found in the next 60 days based on your primary calendar.</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
+          {freeDates.map(date => (
+            <div key={dateToStr(date)} className="flex items-center gap-2 text-sm">
+              <CheckCircle2 size={13} strokeWidth={1.75} className="text-green-500 flex-shrink-0" />
+              <span className="text-zinc-300">
+                {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-zinc-600 mt-3">Based on your Google primary calendar. Tap a date above to include it in your request.</p>
+    </div>
+  )
+}
+
+function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots }) {
+  const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates } = useApp()
   return (
     <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
-        <div className="mb-5">
-          <p className="text-sm text-zinc-400 mb-1">Tap dates to select them, then send a request.</p>
-        </div>
+        <>
+          <GuestCalendarPanel slots={slots} groupId={groupId} />
+          <p className="text-sm text-zinc-400 mb-4">Tap dates to select them, then send a request.</p>
+        </>
       )}
       <AvailabilityCalendar
         slots={slots}
@@ -113,7 +251,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName }) {
 
 export function RoomView() {
   const { token } = useParams()
-  const { getProduction, getGroup, user, availabilityRules, loading, refreshRoom, resolveToken, theme } = useApp()
+  const { getProduction, getGroup, user, availabilityRules, slots, loading, refreshRoom, resolveToken, theme } = useApp()
   const [activeTab, setActiveTab] = useState('Availability')
   const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)
@@ -220,7 +358,13 @@ export function RoomView() {
         <NotesTab productionId={productionId} group={group} guestName={guestName} />
       )}
       {activeTab === 'Availability' && (
-        <AvailabilityTab isOwner={isOwner} availabilityRules={availabilityRules} groupId={groupId} guestName={guestName} />
+        <AvailabilityTab
+          isOwner={isOwner}
+          availabilityRules={availabilityRules}
+          groupId={groupId}
+          guestName={guestName}
+          slots={slots}
+        />
       )}
     </div>
   )

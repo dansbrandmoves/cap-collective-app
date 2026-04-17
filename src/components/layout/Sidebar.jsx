@@ -1,12 +1,13 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { NotificationsDropdown } from '../ui/NotificationsDropdown'
+import { LayoutGrid, Inbox, CalendarDays, Settings, Sun, Moon } from 'lucide-react'
 
 const NAV = [
-  { to: '/', label: 'Projects', icon: '⬡' },
-  { to: '/inbox', label: 'Inbox', icon: '◈', showBadge: true },
-  { to: '/availability', label: 'Availability', icon: '◷' },
-  { to: '/calendars', label: 'Settings', icon: '⚙' },
+  { to: '/', label: 'Projects', icon: LayoutGrid, showBadge: false },
+  { to: '/inbox', label: 'Inbox', icon: Inbox, showBadge: true },
+  { to: '/availability', label: 'Availability', icon: CalendarDays, showBadge: false },
+  { to: '/calendars', label: 'Settings', icon: Settings, showBadge: false },
 ]
 
 export function Sidebar({ mobileOpen = false, onMobileClose }) {
@@ -36,7 +37,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {NAV.map(({ to, label, icon, showBadge }) => (
+        {NAV.map(({ to, label, icon: Icon, showBadge }) => (
           <NavLink
             key={to}
             to={to}
@@ -49,7 +50,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
               }`
             }
           >
-            <span className="text-base opacity-70">{icon}</span>
+            <Icon size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
             <span className="flex-1">{label}</span>
             {showBadge && totalPending > 0 && (
               <span className="bg-accent text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
@@ -96,7 +97,10 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
           onClick={toggleTheme}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors"
         >
-          <span className="text-sm">{theme === 'dark' ? '☀️' : '🌙'}</span>
+          {theme === 'dark'
+            ? <Sun size={14} strokeWidth={1.75} />
+            : <Moon size={14} strokeWidth={1.75} />
+          }
           <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
         </button>
 

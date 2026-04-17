@@ -12,6 +12,7 @@ import {
   fetchAllGoverningEvents,
   isConfigured,
 } from '../utils/googleCalendar'
+import { RefreshCw, Plug, Unplug, Plus, Trash2 } from 'lucide-react'
 
 const ROLE_META = {
   governs:       { label: 'Governs availability', badge: 'green',  desc: 'Events block or color slots — drives what groups see.' },
@@ -67,12 +68,8 @@ export function CalendarSettings() {
   // Auto-sync on mount (if token + calendars exist) and every 30 minutes
   useEffect(() => {
     if (!googleAccessToken || connectedCalendars.length === 0) return
-    // Sync immediately on load
     handleSync()
-    // Then every 30 minutes
-    const interval = setInterval(() => {
-      handleSync()
-    }, 30 * 60 * 1000)
+    const interval = setInterval(() => { handleSync() }, 30 * 60 * 1000)
     return () => clearInterval(interval)
   }, [googleAccessToken, connectedCalendars.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -82,7 +79,6 @@ export function CalendarSettings() {
       return
     }
     setGoogleAccessToken(tokenResponse.access_token)
-    // Store token expiry
     if (tokenResponse.expires_in) {
       setGoogleTokenExpiresAt(Date.now() + (tokenResponse.expires_in * 1000))
     }
@@ -148,16 +144,16 @@ export function CalendarSettings() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-8 py-10">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-zinc-100 mb-1">Calendar Settings</h1>
+    <div className="max-w-3xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-semibold text-zinc-100 mb-1">Calendar Settings</h1>
         <p className="text-sm text-zinc-500">
           Control what the app knows. Each calendar has a role — governs availability, informational only, or ignored.
         </p>
       </div>
 
       {!configured && (
-        <div className="bg-amber-900/30 border border-amber-700/50 rounded-xl px-5 py-4 mb-6">
+        <div className="bg-amber-900/30 border border-amber-700/50 rounded-xl px-4 sm:px-5 py-4 mb-6">
           <p className="text-sm font-medium text-amber-300 mb-1">Google Client ID not configured</p>
           <p className="text-xs text-amber-500">
             Add <code className="bg-amber-900/50 px-1 rounded">VITE_GOOGLE_CLIENT_ID</code> to your <code className="bg-amber-900/50 px-1 rounded">.env</code> file and restart the dev server.
@@ -166,31 +162,39 @@ export function CalendarSettings() {
       )}
 
       {authError && (
-        <div className="bg-red-900/30 border border-red-700/50 rounded-xl px-5 py-3 mb-6">
+        <div className="bg-red-900/30 border border-red-700/50 rounded-xl px-4 sm:px-5 py-3 mb-6">
           <p className="text-xs text-red-400">{authError}</p>
         </div>
       )}
 
       {/* Connect / Disconnect */}
-      <div className="bg-surface-900 border border-surface-700 rounded-xl px-6 py-5 flex items-center justify-between mb-6">
-        <div>
-          <p className="text-sm font-medium text-zinc-300">
-            {googleAccessToken ? 'Google Calendar connected' : 'Connect Google Calendar'}
-          </p>
-          <p className="text-sm text-zinc-500 mt-0.5">
-            {googleAccessToken
-              ? 'Auto-refreshes every 30 minutes.'
-              : 'Grant read access to derive availability from your calendars.'}
-          </p>
-        </div>
-        {googleAccessToken ? (
-          <div className="flex items-center gap-3">
-            <Badge variant="green">Connected</Badge>
-            <Button variant="secondary" size="sm" onClick={handleDisconnect}>Disconnect</Button>
+      <div className="bg-surface-900 border border-surface-700 rounded-xl px-4 sm:px-6 py-4 sm:py-5 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-zinc-300">
+              {googleAccessToken ? 'Google Calendar connected' : 'Connect Google Calendar'}
+            </p>
+            <p className="text-sm text-zinc-500 mt-0.5">
+              {googleAccessToken
+                ? 'Auto-refreshes every 30 minutes.'
+                : 'Grant read access to derive availability from your calendars.'}
+            </p>
           </div>
-        ) : (
-          <Button onClick={handleConnect} disabled={!configured || !gisReady}>Connect →</Button>
-        )}
+          {googleAccessToken ? (
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <Badge variant="green">Connected</Badge>
+              <Button variant="secondary" size="sm" onClick={handleDisconnect}>
+                <Unplug size={13} strokeWidth={1.75} className="mr-1.5" />
+                Disconnect
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={handleConnect} disabled={!configured || !gisReady} className="flex-shrink-0 self-start sm:self-auto">
+              <Plug size={13} strokeWidth={1.75} className="mr-1.5" />
+              Connect
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Connected calendars */}
@@ -200,26 +204,32 @@ export function CalendarSettings() {
       ) : (
         <div className="space-y-3 mb-6">
           {connectedCalendars.map(cal => (
-            <div key={cal.id} className="bg-surface-900 border border-surface-700 rounded-xl px-5 py-3">
-              <div className="flex items-center justify-between gap-3">
+            <div key={cal.id} className="bg-surface-900 border border-surface-700 rounded-xl px-4 sm:px-5 py-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cal.color }} />
                   <p className="text-sm font-medium text-zinc-200 truncate">{cal.name}</p>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-wrap">
                   <select value={cal.role} onChange={e => updateCalendarRole(cal.googleCalendarId, e.target.value)}
-                    className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent">
+                    className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent flex-1 sm:flex-none">
                     {ROLES.map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
                   </select>
                   {cal.role === 'governs' && (
                     <select value={cal.defaultState || 'booked'} onChange={e => updateCalendarDefaultState(cal.googleCalendarId, e.target.value)}
-                      className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1 text-zinc-300 focus:outline-none focus:border-accent">
+                      className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent flex-1 sm:flex-none">
                       {Object.entries(slotStates).map(([key, val]) => (
                         <option key={key} value={key}>{val.label}</option>
                       ))}
                     </select>
                   )}
-                  <button onClick={() => removeConnectedCalendar(cal.googleCalendarId)} className="text-xs text-red-600 hover:text-red-400 transition-colors">Remove</button>
+                  <button
+                    onClick={() => removeConnectedCalendar(cal.googleCalendarId)}
+                    className="p-1.5 rounded-md text-red-600 hover:text-red-400 hover:bg-surface-700 transition-colors flex-shrink-0"
+                    aria-label="Remove calendar"
+                  >
+                    <Trash2 size={13} strokeWidth={1.75} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -234,22 +244,28 @@ export function CalendarSettings() {
         <div className="space-y-2 mb-4">
           {prefixRules.map(rule => (
             <div key={rule.id} className="bg-surface-900 border border-surface-700 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <code className="text-sm font-bold text-accent bg-surface-800 px-2 py-0.5 rounded">{rule.prefix}</code>
-                <span className="text-zinc-500 text-xs">→</span>
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <code className="text-sm font-bold text-accent bg-surface-800 px-2 py-0.5 rounded flex-shrink-0">{rule.prefix}</code>
+                <span className="text-zinc-500 text-xs flex-shrink-0">→</span>
                 <Badge variant={rule.state === 'blocked' ? 'red' : rule.state === 'hold' ? 'yellow' : rule.state === 'available' ? 'ghost' : 'default'}>
                   {slotStates[rule.state]?.label || rule.state}
                 </Badge>
-                {rule.description && <span className="text-xs text-zinc-600 hidden sm:inline">{rule.description}</span>}
+                {rule.description && <span className="text-xs text-zinc-600 hidden sm:inline truncate">{rule.description}</span>}
               </div>
-              <button onClick={() => deletePrefixRule(rule.id)} className="text-xs text-red-600 hover:text-red-400 transition-colors flex-shrink-0">Remove</button>
+              <button
+                onClick={() => deletePrefixRule(rule.id)}
+                className="p-1.5 rounded-md text-red-600 hover:text-red-400 hover:bg-surface-700 transition-colors flex-shrink-0"
+                aria-label="Remove rule"
+              >
+                <Trash2 size={13} strokeWidth={1.75} />
+              </button>
             </div>
           ))}
         </div>
       )}
       {showAddRule ? (
         <div className="bg-surface-900 border border-surface-700 rounded-xl px-4 py-4 mb-6">
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-wrap items-end gap-3">
             <div>
               <label className="text-xs text-zinc-500 block mb-1">Prefix character</label>
               <input value={newPrefix} onChange={e => setNewPrefix(e.target.value.slice(0, 3))} maxLength={3} placeholder="*"
@@ -264,7 +280,7 @@ export function CalendarSettings() {
                 ))}
               </select>
             </div>
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2">
               <Button size="sm" onClick={() => {
                 if (!newPrefix.trim()) return
                 createPrefixRule({ prefix: newPrefix.trim(), state: newState })
@@ -275,7 +291,10 @@ export function CalendarSettings() {
           </div>
         </div>
       ) : (
-        <Button variant="secondary" size="sm" onClick={() => setShowAddRule(true)} className="mb-6">+ Add Prefix Rule</Button>
+        <Button variant="secondary" size="sm" onClick={() => setShowAddRule(true)} className="mb-6">
+          <Plus size={13} strokeWidth={1.75} className="mr-1.5" />
+          Add Prefix Rule
+        </Button>
       )}
 
       {/* Customize Status Labels */}
@@ -288,13 +307,13 @@ export function CalendarSettings() {
               type="color"
               value={val.color}
               onChange={e => updateSlotStateCustomization(key, { color: e.target.value })}
-              className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
+              className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 flex-shrink-0"
             />
             <input
               type="text"
               value={val.label}
               onChange={e => updateSlotStateCustomization(key, { label: e.target.value })}
-              className="flex-1 bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-accent"
+              className="flex-1 bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-accent min-w-0"
             />
           </div>
         ))}
@@ -302,12 +321,13 @@ export function CalendarSettings() {
       </div>
 
       {/* Sync */}
-      <div className="flex items-center justify-between px-5 py-4 bg-surface-900 border border-surface-700 rounded-xl mt-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-4 sm:px-5 py-4 bg-surface-900 border border-surface-700 rounded-xl mt-6">
         <div>
           <p className="text-sm text-zinc-300">Sync calendar events</p>
           <p className="text-xs text-zinc-500 mt-0.5">Last synced: {formatLastSynced(lastSynced)}</p>
         </div>
-        <Button variant="secondary" size="sm" onClick={handleSync} disabled={calendarSyncing || !googleAccessToken}>
+        <Button variant="secondary" size="sm" onClick={handleSync} disabled={calendarSyncing || !googleAccessToken} className="self-start sm:self-auto">
+          <RefreshCw size={13} strokeWidth={1.75} className={`mr-1.5 ${calendarSyncing ? 'animate-spin' : ''}`} />
           {calendarSyncing ? 'Syncing...' : 'Refresh now'}
         </Button>
       </div>
@@ -317,13 +337,15 @@ export function CalendarSettings() {
         <div className="space-y-3 mb-5">
           <p className="text-xs text-zinc-500">Choose how each calendar affects availability.</p>
           {pendingCals.map(cal => (
-            <div key={cal.googleCalendarId} className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cal.color }} />
-              <p className="text-sm text-zinc-300 flex-1 truncate">{cal.name}</p>
+            <div key={cal.googleCalendarId} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cal.color }} />
+                <p className="text-sm text-zinc-300 truncate">{cal.name}</p>
+              </div>
               <select
                 value={assigningRoles[cal.googleCalendarId] ?? 'governs'}
                 onChange={e => setAssigningRoles(r => ({ ...r, [cal.googleCalendarId]: e.target.value }))}
-                className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent">
+                className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent self-start sm:self-auto">
                 {ROLES.map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
               </select>
             </div>

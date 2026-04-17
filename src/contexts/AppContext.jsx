@@ -578,9 +578,30 @@ export function AppProvider({ children }) {
       status: 'pending',
     }
     const { error } = await supabase.from('date_requests').insert(request)
-    if (error) console.error('createDateRequest:', error)
-    return !error
-  }, [])
+    if (error) { console.error('createDateRequest:', error); return false }
+
+    // Find group + production names for the notification email
+    let groupName = '', productionName = ''
+    for (const p of productions) {
+      const g = p.groups.find(g => g.id === groupId)
+      if (g) { groupName = g.name; productionName = p.name; break }
+    }
+
+    // Notify the owner via email (fire-and-forget — don't block on failure)
+    supabase.functions.invoke('notify-date-request', {
+      body: {
+        requesterName,
+        requesterEmail: requesterEmail || '',
+        dates,
+        message: message || '',
+        groupName,
+        productionName,
+        ownerEmail: user?.email ?? null,
+      },
+    }).catch(err => console.warn('Date request email notification failed:', err))
+
+    return true
+  }, [productions, user?.email])
 
   const fetchDateRequests = useCallback(async (groupId) => {
     const { data, error } = await supabase
@@ -646,7 +667,7 @@ export function AppProvider({ children }) {
       createDateRequest, fetchDateRequests, updateDateRequestStatus,
       // Notifications
       pendingRequestCounts, getPendingRequestCount, getTotalPendingRequests,
-      recentNotifications, unreadNotificationCount, markNotificationsSeen,
+      recentNotifications, unreadNotificationCount, markNotificationsSeen, notificationsLastSeen,
       // Helpers
       getProduction, getGroup, getGroupByToken, getRoomLink, getMembersForGroup, resolveToken,
     }}>

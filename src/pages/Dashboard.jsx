@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
+import { FolderOpen, Plus } from 'lucide-react'
 
 function formatDateRange(start, end) {
   const s = new Date(start + 'T00:00:00')
@@ -61,7 +62,7 @@ function ProjectCard({ production }) {
 }
 
 export function Dashboard() {
-  const { productions, createProduction, loading, connectedCalendars, slots } = useApp()
+  const { productions, createProduction, loading } = useApp()
   const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ name: '', description: '', startDate: '', endDate: '' })
@@ -87,26 +88,25 @@ export function Dashboard() {
     <div className="max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
       <div className="flex items-end justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-100">Dashboard</h1>
+          <h1 className="text-2xl font-semibold text-zinc-100">Projects</h1>
         </div>
-        <Button onClick={() => setShowModal(true)}>+ New Project</Button>
+        <Button onClick={() => setShowModal(true)}>
+          <Plus size={14} strokeWidth={2} className="mr-1.5" />
+          New Project
+        </Button>
       </div>
 
-      {/* Setup prompt for new users */}
-      {connectedCalendars.length === 0 && (
-        <div className="bg-accent/10 border border-accent/20 rounded-xl px-6 py-5 mb-6 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-zinc-100 mb-1">Welcome to Coordie!</p>
-            <p className="text-sm text-zinc-400">Connect your Google Calendar and set up your time slots to get started.</p>
-          </div>
-          <Button size="sm" onClick={() => navigate('/calendars')}>Set Up →</Button>
-        </div>
-      )}
-
       {productions.length === 0 ? (
-        <div className="border border-dashed border-surface-600 rounded-xl p-12 text-center">
-          <p className="text-zinc-500 mb-4">No projects yet.</p>
-          <Button onClick={() => setShowModal(true)}>Create your first project</Button>
+        <div className="border border-dashed border-surface-600 rounded-2xl p-12 sm:p-16 text-center">
+          <div className="w-12 h-12 rounded-xl bg-surface-800 border border-surface-700 flex items-center justify-center mx-auto mb-5">
+            <FolderOpen size={20} strokeWidth={1.5} className="text-zinc-500" />
+          </div>
+          <p className="text-sm font-medium text-zinc-300 mb-1">No projects yet</p>
+          <p className="text-sm text-zinc-600 mb-6">Create your first project to get started.</p>
+          <Button onClick={() => setShowModal(true)}>
+            <Plus size={14} strokeWidth={2} className="mr-1.5" />
+            Create project
+          </Button>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">

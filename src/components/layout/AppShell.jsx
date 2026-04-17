@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { useApp } from '../../contexts/AppContext'
 import { NotificationsDropdown } from '../ui/NotificationsDropdown'
+import { Menu } from 'lucide-react'
 
 export function AppShell() {
   const { isOwner, theme } = useApp()
@@ -23,9 +24,10 @@ export function AppShell() {
               <NotificationsDropdown />
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 transition-colors text-lg"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 transition-colors"
+                aria-label="Open menu"
               >
-                ☰
+                <Menu size={18} strokeWidth={1.75} />
               </button>
             </div>
           </div>

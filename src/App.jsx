@@ -11,6 +11,7 @@ import { AuthPage } from './pages/AuthPage'
 import { HomePage } from './pages/HomePage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
+import { BillingPage } from './pages/BillingPage'
 
 function AppRoutes() {
   const { isOwner, authLoading } = useApp()
@@ -45,6 +46,7 @@ function AppRoutes() {
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/availability" element={<AvailabilityRules />} />
           <Route path="/calendars" element={<CalendarSettings />} />
+          <Route path="/billing" element={<BillingPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       ) : (

@@ -168,7 +168,7 @@ export function AvailabilityCalendar({
 
       {/* Selection bar for guests */}
       {isSelectionMode && selectedDates.length > 0 && (
-        <div className="sticky bottom-0 mt-4 bg-surface-900 border border-surface-700 rounded-xl px-5 py-3 flex items-center justify-between gap-3">
+        <div className="sticky bottom-0 mt-4 bg-surface-900 border border-surface-700 rounded-xl px-5 py-3 flex items-center justify-between gap-3 safe-bottom-sm">
           <span className="text-sm text-zinc-300">
             {selectedDates.length} date{selectedDates.length !== 1 ? 's' : ''} selected
           </span>

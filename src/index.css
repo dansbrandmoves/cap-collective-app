@@ -50,6 +50,17 @@ html.light {
 @layer components {
   .prose-room { color: #d4d4d8; @apply leading-relaxed; }
   html.light .prose-room { color: #3f3f46; }
+
+  /* Safe area padding for iOS notch / home indicator */
+  .safe-top {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .safe-bottom-sm {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
 }
 
 /*

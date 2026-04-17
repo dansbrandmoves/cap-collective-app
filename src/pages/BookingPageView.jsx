@@ -435,7 +435,7 @@ export function BookingPageView() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 pb-4">
+        <div className="px-6 pb-4 safe-bottom-sm">
           <div className="flex items-center justify-center gap-1.5 text-[10px] text-zinc-700">
             <div className="w-3.5 h-3.5 rounded bg-accent/15 flex items-center justify-center">
               <span className="text-accent font-bold text-[6px]">Co</span>

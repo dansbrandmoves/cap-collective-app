@@ -50,12 +50,16 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 }`
               }
             >
-              <Icon size={16} strokeWidth={1.75} className={`flex-shrink-0 ${isActive ? 'text-accent opacity-100' : 'opacity-70'}`} />
-              <span className="flex-1">{label}</span>
-              {showBadge && totalPending > 0 && (
-                <span className="bg-accent text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                  {totalPending > 9 ? '9+' : totalPending}
-                </span>
+              {({ isActive }) => (
+                <>
+                  <Icon size={16} strokeWidth={1.75} className={`flex-shrink-0 ${isActive ? 'text-accent' : 'opacity-70'}`} />
+                  <span className="flex-1">{label}</span>
+                  {showBadge && totalPending > 0 && (
+                    <span className="bg-accent text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                      {totalPending > 9 ? '9+' : totalPending}
+                    </span>
+                  )}
+                </>
               )}
             </NavLink>
           ))}
@@ -147,7 +151,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
 
         {/* Footer: user info only */}
         {user && (
-          <div className="px-4 py-3 border-t border-surface-700 flex-shrink-0 flex items-center gap-2">
+          <div className="px-4 py-3 border-t border-surface-700 flex-shrink-0 flex items-center gap-2 safe-bottom-sm">
             {user.user_metadata?.avatar_url ? (
               <img src={user.user_metadata.avatar_url} alt="" className="w-6 h-6 rounded-full flex-shrink-0" />
             ) : (

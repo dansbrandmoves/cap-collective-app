@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import { useApp } from '../../contexts/AppContext'
+import { DEFAULT_SLOT_STATES } from '../../utils/availability'
 
 function timeToMinutes(t) {
   const [h, m] = t.split(':').map(Number)
@@ -24,7 +25,8 @@ function snapMinutes(mins) {
   return Math.round(mins / SNAP) * SNAP
 }
 
-export function SlotTimeline({ slots, businessHours, interactive = true }) {
+export function SlotTimeline({ slots, businessHours, interactive = true, slotStates = null }) {
+  // slotStates: optional { [slotId]: { state, drivingEvent } } for coloring by derived state
   const { updateSlot, createSlot } = useApp()
   const containerRef = useRef(null)
   const [dragState, setDragState] = useState(null) // { slotId, handle: 'left'|'right'|'move', startX, origStart, origEnd }
@@ -255,8 +257,8 @@ export function SlotTimeline({ slots, businessHours, interactive = true }) {
                   width: `${width}%`,
                   top: `${rowIdx * rowHeight + 4}px`,
                   height: `${rowHeight - 8}px`,
-                  backgroundColor: slot.color + '35',
-                  borderLeft: `3px solid ${slot.color}`,
+                  backgroundColor: (slotStates?.[slot.id] ? (DEFAULT_SLOT_STATES[slotStates[slot.id].state]?.color || slot.color) : slot.color) + '35',
+                  borderLeft: `3px solid ${slotStates?.[slot.id] ? (DEFAULT_SLOT_STATES[slotStates[slot.id].state]?.color || slot.color) : slot.color}`,
                 }}
               >
                 {/* Left resize handle */}

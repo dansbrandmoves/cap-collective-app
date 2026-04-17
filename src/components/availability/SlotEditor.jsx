@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useApp } from '../../contexts/AppContext'
 import { Button } from '../ui/Button'
 import { SlotTimeline } from './SlotTimeline'
-import { SLOT_STATES } from '../../utils/availability'
+import { SLOT_STATES, deriveSlotState } from '../../utils/availability'
 import { Trash2 } from 'lucide-react'
 
 const PRESET_COLORS = ['#22c55e', '#f59e0b', '#6366f1', '#ef4444', '#ec4899', '#06b6d4', '#8b5cf6', '#84cc16']
@@ -42,7 +42,17 @@ function formatTime(t) {
 }
 
 export function SlotEditor() {
-  const { slots, createSlot, updateSlot, deleteSlot, businessHours } = useApp()
+  const { slots, createSlot, updateSlot, deleteSlot, businessHours, calendarEvents, connectedCalendars, prefixRules } = useApp()
+
+  // Derive today's slot states for live timeline coloring
+  const todayStates = useMemo(() => {
+    const today = new Date()
+    const result = {}
+    for (const slot of slots) {
+      result[slot.id] = deriveSlotState(today, slot, calendarEvents, connectedCalendars, prefixRules, businessHours)
+    }
+    return result
+  }, [slots, calendarEvents, connectedCalendars, prefixRules, businessHours])
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState(null)
   const [adding, setAdding] = useState(false)
@@ -87,7 +97,7 @@ export function SlotEditor() {
   return (
     <div>
       {/* Timeline visualization */}
-      <SlotTimeline slots={slots} businessHours={businessHours} />
+      <SlotTimeline slots={slots} businessHours={businessHours} slotStates={todayStates} />
 
       {/* Slot list */}
       <div className="space-y-1">

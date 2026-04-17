@@ -896,6 +896,15 @@ export function AppProvider({ children }) {
     }
     const { error } = await supabase.from('bookings').insert(booking)
     if (error) { console.error('createBooking:', error); return false }
+
+    // Notify owner via email (fire-and-forget)
+    supabase.functions.invoke('notify-booking', {
+      body: {
+        guestName, guestEmail: guestEmail || '', date, startTime, endTime,
+        guestMessage: guestMessage || '', bookingPageId,
+      },
+    }).catch(err => console.warn('Booking email notification failed:', err))
+
     return true
   }, [])
 

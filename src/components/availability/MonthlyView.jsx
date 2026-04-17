@@ -71,28 +71,15 @@ export function MonthlyView({
                   ) : (
                     /* Many time blocks — compact stacked stripes with phase dividers */
                     (() => {
-                      // Group into 3 phases: morning (<12), afternoon (12-17), evening (>=17)
-                      const phases = [[], [], []]
-                      slots.forEach(s => {
-                        const h = parseInt(s.startTime.split(':')[0])
-                        phases[h < 12 ? 0 : h < 17 ? 1 : 2].push(s)
-                      })
                       return (
                         <div className="flex flex-col flex-1 rounded-sm overflow-hidden">
-                          {phases.map((phase, pi) => {
-                            if (!phase.length) return null
+                          {slots.map(slot => {
+                            const state = dayMatrix[slot.id]?.state ?? slot.defaultState
+                            const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
                             return (
-                              <div key={pi} className="flex flex-col">
-                                {phase.map(slot => {
-                                  const state = dayMatrix[slot.id]?.state ?? slot.defaultState
-                                  const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
-                                  return (
-                                    <div key={slot.id} className="h-1 flex-shrink-0"
-                                      style={{ backgroundColor: meta.color }}
-                                      title={`${slot.name}: ${meta.label}`} />
-                                  )
-                                })}
-                              </div>
+                              <div key={slot.id} className="flex-1 min-h-0"
+                                style={{ backgroundColor: meta.color }}
+                                title={`${slot.name}: ${meta.label}`} />
                             )
                           })}
                         </div>

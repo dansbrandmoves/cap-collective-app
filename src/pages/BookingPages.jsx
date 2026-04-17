@@ -43,7 +43,7 @@ function BookingPageCard({ page, onToggle, onDelete, onFetchBookings }) {
   }
 
   return (
-    <div className={`bg-surface-900 border rounded-xl overflow-hidden transition-all ${page.is_active ? 'border-surface-700' : 'border-surface-800 opacity-60'}`}>
+    <div className={`bg-surface-900 border rounded-xl overflow-hidden transition-all duration-150 hover:shadow-lg hover:shadow-black/10 ${page.is_active ? 'border-surface-700 hover:border-surface-500' : 'border-surface-800 opacity-60'}`}>
       <div className="p-5">
         <div className="flex items-start justify-between gap-3 mb-2">
           <h3 className="text-base font-semibold text-zinc-100">{page.name}</h3>

@@ -66,7 +66,7 @@ export function AuthPage() {
             Built for creatives who need to stay organized without the noise.
           </p>
 
-          <div className="space-y-7">
+          <div className="space-y-6">
             {FEATURES.map(({ icon: Icon, label, desc }) => (
               <div key={label} className="flex items-start gap-4">
                 <div className="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -131,7 +131,7 @@ export function AuthPage() {
               <button
                 onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-100 text-zinc-900 font-medium text-sm rounded-xl px-4 py-3 transition-colors disabled:opacity-50 shadow-sm mb-3"
+                className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-50 text-zinc-900 font-medium text-sm rounded-xl px-4 py-3 transition-all duration-150 disabled:opacity-50 shadow-sm hover:shadow-md mb-3"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>

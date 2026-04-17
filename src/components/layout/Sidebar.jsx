@@ -43,14 +43,14 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
               end={to === '/'}
               onClick={onMobileClose}
               className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 ${
                   isActive
-                    ? 'bg-surface-700 text-zinc-100'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
+                    ? 'bg-accent/10 text-zinc-100 border border-accent/15'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 border border-transparent'
                 }`
               }
             >
-              <Icon size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
+              <Icon size={16} strokeWidth={1.75} className={`flex-shrink-0 ${isActive ? 'text-accent opacity-100' : 'opacity-70'}`} />
               <span className="flex-1">{label}</span>
               {showBadge && totalPending > 0 && (
                 <span className="bg-accent text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">

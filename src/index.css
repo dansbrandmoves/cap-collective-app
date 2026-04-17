@@ -22,14 +22,27 @@ html.light {
   html {
     @apply bg-surface-950 antialiased;
     color: #f4f4f5;
+    scroll-behavior: smooth;
   }
 
   * {
     @apply box-border;
   }
 
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { @apply bg-surface-900; }
+  /* Smooth focus transitions */
+  input, textarea, select, button, a {
+    @apply transition-colors duration-150;
+  }
+
+  /* Inputs — consistent base styling */
+  input[type="text"], input[type="email"], input[type="date"], input[type="time"], input[type="number"], textarea, select {
+    @apply bg-surface-800 border border-surface-600 rounded-lg px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-600;
+    @apply focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30;
+    @apply transition-all duration-150;
+  }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { @apply bg-surface-600 rounded-full; }
   ::-webkit-scrollbar-thumb:hover { background: #91919b; }
 }

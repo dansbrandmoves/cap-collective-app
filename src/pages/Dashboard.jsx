@@ -35,7 +35,7 @@ function ProjectCard({ production }) {
   return (
     <div
       onClick={() => navigate(`/production/${production.id}`)}
-      className="bg-surface-900 border border-surface-700 rounded-xl p-5 cursor-pointer hover:border-surface-500 hover:bg-surface-800 transition-all group"
+      className="bg-surface-900 border border-surface-700 rounded-xl p-5 cursor-pointer hover:border-surface-500 hover:bg-surface-800/80 hover:shadow-lg hover:shadow-black/10 transition-all duration-150 group"
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <h3 className="text-base font-semibold text-zinc-100 leading-snug group-hover:text-white">

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { useApp } from '../../contexts/AppContext'
-import { NotificationsDropdown } from '../ui/NotificationsDropdown'
 import { Menu } from 'lucide-react'
 
 export function AppShell() {
@@ -21,7 +20,6 @@ export function AppShell() {
               <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
             </div>
             <div className="flex items-center gap-1">
-              <NotificationsDropdown />
               <button
                 onClick={() => setMobileMenuOpen(true)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 transition-colors"

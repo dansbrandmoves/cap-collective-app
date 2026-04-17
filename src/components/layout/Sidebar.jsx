@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
-import { NotificationsDropdown } from '../ui/NotificationsDropdown'
 import { LayoutGrid, Inbox, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditCard } from 'lucide-react'
 
 const NAV = [
@@ -28,10 +27,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
 
         {/* Logo */}
         <div className="px-5 py-5 border-b border-surface-700 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
-            <NotificationsDropdown />
-          </div>
+          <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
         </div>
 
         {/* Scrollable nav — everything goes here so nothing gets cut off */}

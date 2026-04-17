@@ -3,10 +3,10 @@ import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { useApp } from '../../contexts/AppContext'
 import { NotificationsDropdown } from '../ui/NotificationsDropdown'
-import { Menu, LogOut } from 'lucide-react'
+import { Menu } from 'lucide-react'
 
 export function AppShell() {
-  const { isOwner, theme, signOut } = useApp()
+  const { isOwner, theme } = useApp()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
@@ -22,13 +22,6 @@ export function AppShell() {
             </div>
             <div className="flex items-center gap-1">
               <NotificationsDropdown />
-              <button
-                onClick={signOut}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                aria-label="Sign out"
-              >
-                <LogOut size={16} strokeWidth={1.75} />
-              </button>
               <button
                 onClick={() => setMobileMenuOpen(true)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 transition-colors"

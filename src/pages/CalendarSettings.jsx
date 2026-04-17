@@ -281,7 +281,7 @@ export function CalendarSettings() {
                       className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm transition-colors ${
                         value === theme
                           ? 'bg-accent/10 text-zinc-100'
-                          : 'text-zinc-400 hover:bg-surface-700 hover:text-zinc-200'
+                          : 'text-zinc-400 hover:bg-[#f0f0f0] hover:text-zinc-200'
                       }`}>
                       <Icon size={14} strokeWidth={1.75} className={iconClass} />
                       {label}
@@ -308,14 +308,14 @@ export function CalendarSettings() {
                   setLogoIsDark(true)
                   await supabase.from('profiles').update({ logo_is_dark: true }).eq('id', user?.id)
                 }}
-                  className={`rounded-lg px-4 py-3 flex items-center justify-center bg-surface-700 transition-all ${logoIsDark ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-75'}`}>
+                  className={`rounded-lg px-4 py-3 flex items-center justify-center bg-[#f0f0f0] transition-all ${logoIsDark ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-75'}`}>
                   <img src={logoUrl} alt="" className="max-h-8 max-w-[100px] object-contain" />
                 </button>
                 <button onClick={async () => {
                   setLogoIsDark(false)
                   await supabase.from('profiles').update({ logo_is_dark: false }).eq('id', user?.id)
                 }}
-                  className={`rounded-lg px-4 py-3 flex items-center justify-center bg-transparent transition-all ${!logoIsDark ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-75'}`}>
+                  className={`rounded-lg px-4 py-3 flex items-center justify-center bg-[#1a1a1e] transition-all ${!logoIsDark ? 'ring-2 ring-accent' : 'opacity-50 hover:opacity-75'}`}>
                   <img src={logoUrl} alt="" className="max-h-8 max-w-[100px] object-contain" />
                 </button>
               </div>
@@ -403,9 +403,9 @@ export function CalendarSettings() {
               <div key={i} className="flex items-center h-10 gap-3 group/day">
                 <button onClick={() => toggleDay(i)}
                   className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
-                    isActive ? 'bg-accent' : 'bg-surface-700'
+                    isActive ? 'bg-accent' : 'bg-[#f0f0f0]'
                   }`}>
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-surface-700 transition-transform ${
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[#f0f0f0] transition-transform ${
                     isActive ? 'translate-x-4' : 'translate-x-0'
                   }`} />
                 </button>
@@ -449,9 +449,9 @@ export function CalendarSettings() {
           </div>
           <button onClick={() => setGuestCalendarEnabled(!guestCalendarEnabled)}
             className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
-              guestCalendarEnabled ? 'bg-accent' : 'bg-surface-700'
+              guestCalendarEnabled ? 'bg-accent' : 'bg-[#f0f0f0]'
             }`}>
-            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-surface-700 transition-transform ${
+            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-[#f0f0f0] transition-transform ${
               guestCalendarEnabled ? 'translate-x-[18px]' : 'translate-x-0.5'
             }`} />
           </button>
@@ -513,10 +513,10 @@ export function CalendarSettings() {
               <div key={key} className="flex items-center gap-2.5 py-1">
                 <input type="color" value={val.color}
                   onChange={e => updateSlotStateCustomization(key, { color: e.target.value })}
-                  className="w-5 h-5 rounded cursor-pointer bg-transparent border-0 flex-shrink-0" />
+                  className="w-5 h-5 rounded cursor-pointer bg-[#1a1a1e] border-0 flex-shrink-0" />
                 <input type="text" value={val.label}
                   onChange={e => updateSlotStateCustomization(key, { label: e.target.value })}
-                  className="flex-1 bg-transparent text-sm text-zinc-300 focus:outline-none focus:text-zinc-100 min-w-0 border-b border-transparent focus:border-surface-600 py-0.5" />
+                  className="flex-1 bg-[#1a1a1e] text-sm text-zinc-300 focus:outline-none focus:text-zinc-100 min-w-0 border-b border-transparent focus:border-surface-600 py-0.5" />
                 <span className="text-[10px] text-zinc-600 flex-shrink-0">{meaning}</span>
               </div>
             )
@@ -538,7 +538,7 @@ export function CalendarSettings() {
                 <select
                   value={assigningRoles[cal.googleCalendarId] ?? 'governs'}
                   onChange={e => setAssigningRoles(r => ({ ...r, [cal.googleCalendarId]: e.target.value }))}
-                  className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent">
+                  className="text-xs bg-[#f0f0f0] border border-surface-600 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent">
                   {ROLES.map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
                 </select>
                 <button onClick={() => setPendingCals(prev => prev.filter(c => c.googleCalendarId !== cal.googleCalendarId))}

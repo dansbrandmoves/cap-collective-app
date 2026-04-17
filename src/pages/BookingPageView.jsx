@@ -469,7 +469,7 @@ export function BookingPageView() {
           <div className="w-[280px] lg:w-[300px] flex-shrink-0 border-r border-surface-800 p-6 lg:p-8 flex flex-col">
             <div className="mb-5">
               {ownerLogo ? (
-                <div className={`rounded-lg px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-surface-700' : 'bg-transparent'}`}>
+                <div className={`rounded-lg px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
                   <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
                 </div>
               ) : (
@@ -541,7 +541,7 @@ export function BookingPageView() {
           <div className="px-5 pt-5 pb-4">
             <div className="mb-3">
               {ownerLogo ? (
-                <div className={`rounded-lg px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-surface-700' : 'bg-transparent'}`}>
+                <div className={`rounded-lg px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
                   <img src={ownerLogo} alt="" className="max-h-5 max-w-[80px] object-contain" />
                 </div>
               ) : (

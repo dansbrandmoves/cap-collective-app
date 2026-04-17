@@ -162,6 +162,7 @@ export function BookingPages() {
     startHour: '09:00',
     endHour: '17:00',
     days: [1, 2, 3, 4, 5],
+    requiredFields: { name: true, email: true, message: false },
   })
 
   function openNew() {
@@ -185,9 +186,10 @@ export function BookingPages() {
       durationMinutes: form.durationMinutes,
       availableHours: { start: form.startHour, end: form.endHour },
       availableDays: form.days,
+      requiredFields: form.requiredFields,
     })
     setShowModal(false)
-    setForm({ name: '', description: '', durationMinutes: 30, startHour: '09:00', endHour: '17:00', days: [1, 2, 3, 4, 5] })
+    setForm({ name: '', description: '', durationMinutes: 30, startHour: '09:00', endHour: '17:00', days: [1, 2, 3, 4, 5], requiredFields: { name: true, email: true, message: false } })
   }
 
   if (loading) {
@@ -335,6 +337,33 @@ export function BookingPages() {
                 >
                   {label}
                 </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-2">Required Fields</label>
+            <div className="space-y-2">
+              {[
+                { key: 'name', label: 'Name', locked: true },
+                { key: 'email', label: 'Email' },
+                { key: 'message', label: 'Message' },
+              ].map(({ key, label, locked }) => (
+                <label key={key} className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.requiredFields[key]}
+                    disabled={locked}
+                    onChange={() => !locked && setForm(f => ({
+                      ...f,
+                      requiredFields: { ...f.requiredFields, [key]: !f.requiredFields[key] },
+                    }))}
+                    className="w-3.5 h-3.5 rounded border-surface-600 bg-surface-700 text-accent focus:ring-accent/30 disabled:opacity-50"
+                  />
+                  <span className={`text-sm ${locked ? 'text-zinc-500' : 'text-zinc-300'}`}>
+                    {label}{locked ? ' (always required)' : ''}
+                  </span>
+                </label>
               ))}
             </div>
           </div>

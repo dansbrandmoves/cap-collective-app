@@ -684,7 +684,7 @@ export function AppProvider({ children }) {
     return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + nanoid(4)
   }
 
-  const createBookingPage = useCallback(async ({ name, description, durationMinutes, availableHours, availableDays }) => {
+  const createBookingPage = useCallback(async ({ name, description, durationMinutes, availableHours, availableDays, requiredFields }) => {
     const page = {
       id: `bp-${Date.now()}`,
       owner_id: user?.id,
@@ -694,6 +694,7 @@ export function AppProvider({ children }) {
       duration_minutes: durationMinutes || 30,
       available_hours: availableHours || { start: '09:00', end: '17:00' },
       available_days: availableDays || [1, 2, 3, 4, 5],
+      required_fields: requiredFields || { name: true, email: true, message: false },
       is_active: true,
       created_at: new Date().toISOString(),
     }

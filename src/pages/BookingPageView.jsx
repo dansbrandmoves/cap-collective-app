@@ -149,11 +149,19 @@ function TimeSlotPicker({ slots, takenSlots, ownerEvents, selectedDate, selected
 function ConfirmForm({ page, selectedDate, selectedSlot, onConfirm, submitting }) {
   const [form, setForm] = useState({ name: '', email: '', message: '' })
 
+  const rf = page.required_fields || { name: true, email: true, message: false }
+
   function handleSubmit(e) {
     e.preventDefault()
     if (!form.name.trim()) return
+    if (rf.email && !form.email.trim()) return
+    if (rf.message && !form.message.trim()) return
     onConfirm(form)
   }
+
+  const canSubmit = form.name.trim()
+    && (!rf.email || form.email.trim())
+    && (!rf.message || form.message.trim())
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -169,27 +177,23 @@ function ConfirmForm({ page, selectedDate, selectedSlot, onConfirm, submitting }
 
       <div>
         <label className="block text-xs font-medium text-zinc-500 mb-1.5">Name</label>
-        <div className="relative">
-          <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input type="text" placeholder="Your name" value={form.name}
-            onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full pl-10" autoFocus />
-        </div>
+        <input type="text" placeholder="Your name" value={form.name}
+          onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+          className="w-full bg-surface-800 border border-surface-700 rounded-lg px-3.5 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-accent" autoFocus />
       </div>
       <div>
-        <label className="block text-xs font-medium text-zinc-500 mb-1.5">Email <span className="text-zinc-700">(optional)</span></label>
-        <div className="relative">
-          <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input type="email" placeholder="your@email.com" value={form.email}
-            onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="w-full pl-10" />
-        </div>
+        <label className="block text-xs font-medium text-zinc-500 mb-1.5">Email {!page.required_fields?.email && <span className="text-zinc-700">(optional)</span>}</label>
+        <input type="email" placeholder="your@email.com" value={form.email}
+          onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+          className="w-full bg-surface-800 border border-surface-700 rounded-lg px-3.5 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-accent" />
       </div>
       <div>
-        <label className="block text-xs font-medium text-zinc-500 mb-1.5">Message <span className="text-zinc-700">(optional)</span></label>
+        <label className="block text-xs font-medium text-zinc-500 mb-1.5">Message {!page.required_fields?.message && <span className="text-zinc-700">(optional)</span>}</label>
         <textarea placeholder="Anything you'd like us to know..." value={form.message}
           onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={2}
           className="w-full bg-surface-800 border border-surface-700 rounded-lg px-3.5 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-accent resize-none" />
       </div>
-      <Button type="submit" size="lg" className="w-full justify-center" disabled={!form.name.trim() || submitting}>
+      <Button type="submit" size="lg" className="w-full justify-center" disabled={!canSubmit || submitting}>
         {submitting ? 'Confirming...' : 'Confirm Booking'}
       </Button>
     </form>

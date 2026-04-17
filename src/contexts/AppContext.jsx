@@ -196,13 +196,8 @@ export function AppProvider({ children }) {
       setUser(session?.user ?? null)
       fetchPlan(session?.user?.id ?? null)
       if (initialLoad) { initialLoad = false; clearTimeout(timeout); setAuthLoading(false) }
-      // Send welcome email on sign-in (fire-and-forget)
-      if (event === 'SIGNED_IN' && session?.user) {
-        const u = session.user
-        supabase.functions.invoke('send-welcome-email', {
-          body: { email: u.email, name: u.user_metadata?.full_name || u.email?.split('@')[0] || 'there' },
-        }).catch(err => console.error('Welcome email failed:', err))
-      }
+      // Welcome email disabled — edge function not deployed yet
+      // TODO: re-enable once send-welcome-email is deployed and tested
     })
     return () => { clearTimeout(timeout); subscription.unsubscribe() }
   }, [])

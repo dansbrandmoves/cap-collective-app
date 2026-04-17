@@ -220,7 +220,7 @@ export function AppProvider({ children }) {
       window.history.replaceState({}, '', window.location.pathname)
       // Exchange code via edge function
       supabase.functions.invoke('google-calendar-auth', {
-        body: { action: 'exchange', code: params.get('code'), redirectUri: window.location.origin },
+        body: { action: 'exchange', code: params.get('code'), redirectUri: window.location.origin, userId: user.id },
       }).then(({ data, error }) => {
         if (data?.access_token) {
           setGoogleAccessToken(data.access_token)

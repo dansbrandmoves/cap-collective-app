@@ -221,6 +221,40 @@ export function AppProvider({ children }) {
     }
   })
   const [guestCalendarEnabled, setGuestCalendarEnabled] = useState(() => stored?.guestCalendarEnabled ?? false)
+  const [availabilityMode, setAvailabilityMode] = useState(() => stored?.availabilityMode ?? 'blocks')
+  const [blockDuration, setBlockDuration] = useState(() => stored?.blockDuration ?? 30)
+
+  // Effective slots: auto-generated from business hours (blocks mode) or user-defined (slots mode)
+  const effectiveSlots = useMemo(() => {
+    if (availabilityMode === 'slots') return slots
+    const schedule = businessHours.schedule || {}
+    let earliest = '23:59', latest = '00:00'
+    for (const day of Object.values(schedule)) {
+      if (!day) continue
+      if (day.start < earliest) earliest = day.start
+      if (day.end > latest) latest = day.end
+    }
+    if (earliest >= latest) return slots // fallback
+    const generated = []
+    let [h, m] = earliest.split(':').map(Number)
+    const [eh, em] = latest.split(':').map(Number)
+    const endMins = eh * 60 + em
+    while (h * 60 + m + blockDuration <= endMins) {
+      const start = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      const totalEnd = h * 60 + m + blockDuration
+      const end = `${String(Math.floor(totalEnd / 60)).padStart(2, '0')}:${String(totalEnd % 60).padStart(2, '0')}`
+      const period = h >= 12 ? 'PM' : 'AM'
+      generated.push({
+        id: `block-${start}`,
+        name: `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`,
+        startTime: start, endTime: end,
+        color: '#22c55e', defaultState: 'available',
+      })
+      m += blockDuration
+      if (m >= 60) { h += Math.floor(m / 60); m = m % 60 }
+    }
+    return generated
+  }, [availabilityMode, slots, businessHours, blockDuration])
 
   // Derived: customized slot states
   const slotStates = useMemo(() => buildSlotStates(slotStateCustomizations), [slotStateCustomizations])
@@ -397,10 +431,11 @@ export function AppProvider({ children }) {
       slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced,
       theme, slotStateCustomizations, businessHours, guestCalendarEnabled,
+      availabilityMode, blockDuration,
     })
   }, [slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced, theme, slotStateCustomizations,
-      businessHours, guestCalendarEnabled])
+      businessHours, guestCalendarEnabled, availabilityMode, blockDuration])
 
   // --- Slots ---
   const createSlot = useCallback((data) => {
@@ -531,6 +566,7 @@ export function AppProvider({ children }) {
     if (updates.startDate !== undefined) dbUpdates.start_date = updates.startDate
     if (updates.endDate !== undefined) dbUpdates.end_date = updates.endDate
     if (updates.ownerNotes !== undefined) dbUpdates.owner_notes = updates.ownerNotes
+    if (updates.availability_config !== undefined) dbUpdates.availability_config = updates.availability_config
     if (Object.keys(dbUpdates).length > 0) {
       const { error } = await supabase.from('productions').update(dbUpdates).eq('id', productionId)
       if (error) console.error('updateProduction:', error)
@@ -839,7 +875,7 @@ export function AppProvider({ children }) {
       plan, isProPlan, canAddProject, canAddGroup, canAddBookingPage,
       FREE_PROJECT_LIMIT, FREE_GROUP_LIMIT, FREE_BOOKING_PAGE_LIMIT,
       // State
-      productions, slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
+      productions, slots, effectiveSlots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, setGoogleAccessToken,
       googleTokenExpiresAt, setGoogleTokenExpiresAt,
       calendarSyncing, setCalendarSyncing,
@@ -876,6 +912,8 @@ export function AppProvider({ children }) {
       // Business Hours & Guest Calendar
       businessHours, setBusinessHours,
       guestCalendarEnabled, setGuestCalendarEnabled,
+      // Availability Mode
+      availabilityMode, setAvailabilityMode, blockDuration, setBlockDuration,
       // Helpers
       getProduction, getGroup, getGroupByToken, getRoomLink, getMembersForGroup, resolveToken,
     }}>

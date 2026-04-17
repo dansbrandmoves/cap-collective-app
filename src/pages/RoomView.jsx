@@ -282,7 +282,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
 
 export function RoomView() {
   const { token } = useParams()
-  const { getProduction, getGroup, user, availabilityRules, slots, loading, refreshRoom, resolveToken, theme } = useApp()
+  const { getProduction, getGroup, user, availabilityRules, effectiveSlots: slots, loading, refreshRoom, resolveToken, theme } = useApp()
   const [activeTab, setActiveTab] = useState('Availability')
   const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)

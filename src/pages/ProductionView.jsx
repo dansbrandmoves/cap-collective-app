@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
@@ -7,12 +7,13 @@ import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { supabase } from '../utils/supabase'
-import { Lock } from 'lucide-react'
+import { Lock, Settings } from 'lucide-react'
+import { SlotEditor } from '../components/availability/SlotEditor'
 
 export function ProductionView() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getProduction, updateProduction, updateProductionNotes, deleteProduction, createGroup, updateGroupName, deleteGroup, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates, canAddGroup, isProPlan, FREE_GROUP_LIMIT, pendingRequestCounts } = useApp()
+  const { getProduction, updateProduction, updateProductionNotes, deleteProduction, createGroup, updateGroupName, deleteGroup, effectiveSlots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates, canAddGroup, isProPlan, FREE_GROUP_LIMIT, pendingRequestCounts } = useApp()
 
   const production = getProduction(id)
   const [activeGroupId, setActiveGroupId] = useState(null)
@@ -258,11 +259,11 @@ export function ProductionView() {
         ${mobileShowDetail ? 'flex' : 'hidden md:flex'}
       `}>
         {rightPanel === 'calendar' ? (
-          <ProjectCalendar onMobileBack={() => setMobileShowDetail(false)} groupIds={production.groups.map(g => g.id)} />
+          <ProjectCalendar onMobileBack={() => setMobileShowDetail(false)} groupIds={production.groups.map(g => g.id)} production={production} onUpdateProduction={updateProduction} />
         ) : activeGroup ? (
           <GroupOverview productionId={id} group={activeGroup} onMobileBack={() => setMobileShowDetail(false)} />
         ) : (
-          <ProjectCalendar onMobileBack={() => setMobileShowDetail(false)} groupIds={production.groups.map(g => g.id)} />
+          <ProjectCalendar onMobileBack={() => setMobileShowDetail(false)} groupIds={production.groups.map(g => g.id)} production={production} onUpdateProduction={updateProduction} />
         )}
       </div>
 
@@ -358,10 +359,41 @@ export function ProductionView() {
   )
 }
 
-function ProjectCalendar({ onMobileBack, groupIds }) {
-  const { slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates } = useApp()
+function ProjectCalendar({ onMobileBack, groupIds, production, onUpdateProduction }) {
+  const { effectiveSlots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates, availabilityMode, blockDuration, businessHours } = useApp()
   const [dateRequests, setDateRequests] = useState([])
   const [sharedAvailability, setSharedAvailability] = useState([])
+  const [showSettings, setShowSettings] = useState(false)
+
+  const config = production.availabilityConfig || production.availability_config
+  const isCustom = !!config
+  const projectSlots = useMemo(() => {
+    if (!config) return effectiveSlots
+    if (config.mode === 'slots') return config.customSlots || effectiveSlots
+    // Generate blocks from project business hours
+    const schedule = config.businessHours?.schedule || {}
+    let earliest = '23:59', latest = '00:00'
+    for (const day of Object.values(schedule)) {
+      if (!day) continue
+      if (day.start < earliest) earliest = day.start
+      if (day.end > latest) latest = day.end
+    }
+    if (earliest >= latest) return effectiveSlots
+    const dur = config.blockDuration || 30
+    const generated = []
+    let [h, m] = earliest.split(':').map(Number)
+    const endMins = latest.split(':').map(Number).reduce((a, b, i) => a + (i === 0 ? b * 60 : b), 0)
+    while (h * 60 + m + dur <= endMins) {
+      const start = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      const te = h * 60 + m + dur
+      const end = `${String(Math.floor(te / 60)).padStart(2, '0')}:${String(te % 60).padStart(2, '0')}`
+      const period = h >= 12 ? 'PM' : 'AM'
+      generated.push({ id: `block-${start}`, name: `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`, startTime: start, endTime: end, color: '#22c55e', defaultState: 'available' })
+      m += dur
+      if (m >= 60) { h += Math.floor(m / 60); m = m % 60 }
+    }
+    return generated
+  }, [config, effectiveSlots])
 
   useEffect(() => {
     if (!groupIds.length) return
@@ -371,17 +403,37 @@ function ProjectCalendar({ onMobileBack, groupIds }) {
       .then(({ data }) => setSharedAvailability(data || []))
   }, [groupIds])
 
+  function handleCustomize() {
+    onUpdateProduction(production.id, {
+      availability_config: { mode: availabilityMode, blockDuration, businessHours },
+    })
+    setShowSettings(false)
+  }
+
+  function handleResetToGlobal() {
+    onUpdateProduction(production.id, { availability_config: null })
+    setShowSettings(false)
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-5 sm:px-8 py-4 border-b border-surface-700 flex items-center gap-3">
-        <button onClick={onMobileBack} className="md:hidden text-xs text-zinc-500 hover:text-zinc-300 flex-shrink-0 transition-colors">
-          ← Back
+      <div className="px-5 sm:px-8 py-4 border-b border-surface-700 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button onClick={onMobileBack} className="md:hidden text-xs text-zinc-500 hover:text-zinc-300 flex-shrink-0 transition-colors">
+            ← Back
+          </button>
+          <h2 className="text-lg font-semibold text-zinc-100">Availability</h2>
+          {isCustom && <Badge variant="ghost" className="text-[10px]">Custom</Badge>}
+        </div>
+        <button onClick={() => setShowSettings(true)}
+          className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors"
+          title="Availability settings for this project">
+          <Settings size={15} strokeWidth={1.75} />
         </button>
-        <h2 className="text-lg font-semibold text-zinc-100">Availability</h2>
       </div>
       <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-5 sm:py-6">
         <AvailabilityCalendar
-          slots={slots}
+          slots={projectSlots}
           calendarEvents={calendarEvents}
           connectedCalendars={connectedCalendars}
           availabilityRules={availabilityRules}
@@ -392,6 +444,22 @@ function ProjectCalendar({ onMobileBack, groupIds }) {
           sharedAvailability={sharedAvailability}
         />
       </div>
+
+      <Modal isOpen={showSettings} onClose={() => setShowSettings(false)} title="Project Availability">
+        <div className="space-y-4">
+          {isCustom ? (
+            <>
+              <p className="text-sm text-zinc-400">This project uses custom availability settings.</p>
+              <Button variant="secondary" size="sm" onClick={handleResetToGlobal}>Reset to global defaults</Button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-zinc-400">This project uses your global availability settings. Customize to set different hours for this project.</p>
+              <Button size="sm" onClick={handleCustomize}>Customize for this project</Button>
+            </>
+          )}
+        </div>
+      </Modal>
     </div>
   )
 }

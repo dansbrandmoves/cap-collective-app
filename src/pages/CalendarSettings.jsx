@@ -73,6 +73,7 @@ export function CalendarSettings() {
     businessHours, setBusinessHours,
     guestCalendarEnabled, setGuestCalendarEnabled,
     theme, toggleTheme,
+    availabilityMode, setAvailabilityMode, blockDuration, setBlockDuration,
   } = useApp()
 
   const [gisReady, setGisReady] = useState(false)
@@ -327,60 +328,66 @@ export function CalendarSettings() {
         </div>
       )}
 
-      {/* ── Business Hours ── */}
+      {/* ── Availability ── */}
       <div className="py-5 border-b border-surface-800">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Business Hours</p>
-          <button onClick={() => setBusinessHours(prev => ({ ...prev, enabled: !prev.enabled }))}
-            className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
-              businessHours.enabled !== false ? 'bg-accent' : 'bg-surface-700'
-            }`}>
-            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-              businessHours.enabled !== false ? 'translate-x-4' : 'translate-x-0'
-            }`} />
-          </button>
+        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Availability</p>
+
+        {/* Mode + duration */}
+        <div className="flex items-center gap-3 mb-4">
+          <select value={availabilityMode} onChange={e => setAvailabilityMode(e.target.value)}
+            className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-400 focus:outline-none focus:border-accent">
+            <option value="blocks">Time blocks</option>
+            <option value="slots">Named slots</option>
+          </select>
+          {availabilityMode === 'blocks' && (
+            <select value={blockDuration} onChange={e => setBlockDuration(Number(e.target.value))}
+              className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-400 focus:outline-none focus:border-accent">
+              <option value={30}>30 min blocks</option>
+              <option value={60}>60 min blocks</option>
+            </select>
+          )}
         </div>
-        {businessHours.enabled !== false ? (
-          <>
-            <div className="space-y-0">
-              {DAY_NAMES.map((name, i) => {
-                const day = schedule[i]
-                const isActive = !!day
-                return (
-                  <div key={i} className="flex items-center h-10 gap-3 group/day">
-                    <button onClick={() => toggleDay(i)}
-                      className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
-                        isActive ? 'bg-accent' : 'bg-surface-700'
-                      }`}>
-                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                        isActive ? 'translate-x-4' : 'translate-x-0'
-                      }`} />
+
+        {/* Business hours per day */}
+        <div className="space-y-0 mb-3">
+          {DAY_NAMES.map((name, i) => {
+            const day = schedule[i]
+            const isActive = !!day
+            return (
+              <div key={i} className="flex items-center h-10 gap-3 group/day">
+                <button onClick={() => toggleDay(i)}
+                  className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
+                    isActive ? 'bg-accent' : 'bg-surface-700'
+                  }`}>
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                    isActive ? 'translate-x-4' : 'translate-x-0'
+                  }`} />
+                </button>
+                <span className={`w-10 text-sm font-medium ${isActive ? 'text-zinc-100' : 'text-zinc-600'}`}>
+                  {name.slice(0, 3)}
+                </span>
+                {isActive ? (
+                  <>
+                    <TimeSelect value={day.start} onChange={v => updateDayTime(i, 'start', v)} />
+                    <span className="text-xs text-zinc-600">–</span>
+                    <TimeSelect value={day.end} onChange={v => updateDayTime(i, 'end', v)} />
+                    <button onClick={() => applyToAll(i)}
+                      className="text-[10px] text-zinc-600 hover:text-accent transition-colors opacity-0 group-hover/day:opacity-100 ml-1">
+                      Apply to all
                     </button>
-                    <span className={`w-10 text-sm font-medium ${isActive ? 'text-zinc-100' : 'text-zinc-600'}`}>
-                      {name.slice(0, 3)}
-                    </span>
-                    {isActive ? (
-                      <>
-                        <TimeSelect value={day.start} onChange={v => updateDayTime(i, 'start', v)} />
-                        <span className="text-xs text-zinc-600">–</span>
-                        <TimeSelect value={day.end} onChange={v => updateDayTime(i, 'end', v)} />
-                        <button onClick={() => applyToAll(i)}
-                          className="text-[10px] text-zinc-600 hover:text-accent transition-colors opacity-0 group-hover/day:opacity-100 ml-1">
-                          Apply to all
-                        </button>
-                      </>
-                    ) : (
-                      <span className="text-xs text-zinc-600">Unavailable</span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <p className="text-xs text-zinc-600 mt-3">These hours apply to all booking pages and constrain calendar availability.</p>
-          </>
-        ) : (
-          <p className="text-xs text-zinc-500">Off — your calendar and per-page settings determine availability instead.</p>
-        )}
+                  </>
+                ) : (
+                  <span className="text-xs text-zinc-600">Unavailable</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <p className="text-xs text-zinc-600">
+          {availabilityMode === 'blocks'
+            ? `Generates ${blockDuration}-minute blocks within these hours. Manage custom slots on the Availability page.`
+            : 'These hours define your working days. Custom slots are managed on the Availability page.'}
+        </p>
       </div>
 
       {/* ── Guest Calendar Access ── */}

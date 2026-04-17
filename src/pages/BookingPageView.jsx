@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
-import { getMonthGrid, dateToStr } from '../utils/availability'
+import { getMonthGrid, dateToStr, eventOverlapsSlot } from '../utils/availability'
 import { supabase } from '../utils/supabase'
-import { ChevronLeft, ChevronRight, CheckCircle2, Clock, CalendarDays, User, Mail } from 'lucide-react'
+import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
+import { ChevronLeft, ChevronRight, CheckCircle2, Clock, CalendarDays, User, Mail, X } from 'lucide-react'
 
 function formatTime(timeStr) {
   const [h, m] = timeStr.split(':').map(Number)
@@ -104,8 +105,15 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate }) {
 }
 
 /* ── Time Slot Picker ── */
-function TimeSlotPicker({ slots, takenSlots, selectedSlot, onSelect }) {
-  const available = slots.filter(s => !takenSlots.some(t => t.start_time === s.startTime))
+function TimeSlotPicker({ slots, takenSlots, ownerEvents, selectedDate, selectedSlot, onSelect }) {
+  const date = selectedDate ? new Date(selectedDate + 'T00:00:00') : null
+  const available = slots.filter(s => {
+    if (takenSlots.some(t => t.start_time === s.startTime)) return false
+    if (date && ownerEvents.some(ev => eventOverlapsSlot(date, s, {
+      ...ev, end: ev.end_at, isAllDay: ev.is_all_day,
+    }))) return false
+    return true
+  })
 
   if (!available.length) {
     return (
@@ -182,6 +190,124 @@ function ConfirmForm({ page, selectedDate, selectedSlot, onConfirm, submitting }
   )
 }
 
+/* ── Guest Calendar Panel ── */
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+
+function GuestCalendarPanel({ bookingSlots }) {
+  const [gisReady, setGisReady] = useState(false)
+  const [guestEvents, setGuestEvents] = useState(null)
+  const [guestLoading, setGuestLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const tokenClientRef = useRef(null)
+  const configured = isConfigured()
+
+  useEffect(() => {
+    if (!configured) return
+    loadGoogleIdentityServices()
+      .then(() => {
+        tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/calendar.readonly',
+          callback: handleTokenResponse,
+        })
+        setGisReady(true)
+      })
+      .catch(() => setError('Could not load Google Calendar.'))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleTokenResponse(tokenResponse) {
+    if (tokenResponse.error) { setError('Sign-in failed.'); return }
+    setGuestLoading(true)
+    setError(null)
+    try {
+      const timeMin = new Date()
+      const timeMax = new Date()
+      timeMax.setDate(timeMax.getDate() + 60)
+      const events = await fetchCalendarEvents(tokenResponse.access_token, 'primary', timeMin, timeMax)
+      setGuestEvents(events)
+    } catch {
+      setError('Could not fetch calendar events.')
+    }
+    setGuestLoading(false)
+  }
+
+  const freeDates = useMemo(() => {
+    if (!guestEvents || !bookingSlots.length) return []
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const result = []
+    for (let i = 1; i < 60; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      const hasFreeSlot = bookingSlots.some(slot => {
+        return !guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
+      })
+      if (hasFreeSlot) result.push(date)
+    }
+    return result.slice(0, 30)
+  }, [guestEvents, bookingSlots])
+
+  if (!configured) return null
+
+  if (guestEvents === null) {
+    return (
+      <div className="border border-dashed border-surface-600 rounded-xl px-4 py-3 mt-4">
+        <div className="flex items-center gap-3">
+          <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-500 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-zinc-400">Check your availability</p>
+            <p className="text-[11px] text-zinc-600">Connect Google Calendar to see your free days.</p>
+          </div>
+        </div>
+        <button
+          onClick={() => tokenClientRef.current?.requestAccessToken()}
+          disabled={!gisReady || guestLoading}
+          className="mt-2 w-full text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+        >
+          Connect Calendar
+        </button>
+      </div>
+    )
+  }
+
+  if (guestLoading) {
+    return (
+      <div className="border border-surface-700 rounded-xl px-4 py-3 mt-4 text-xs text-zinc-500">
+        Loading your calendar...
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-surface-800/50 border border-surface-700 rounded-xl px-4 py-3 mt-4">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-medium text-zinc-300">Your free days</p>
+        <button onClick={() => setGuestEvents(null)} className="p-0.5 rounded text-zinc-600 hover:text-zinc-400 transition-colors">
+          <X size={12} strokeWidth={1.75} />
+        </button>
+      </div>
+      {error && <p className="text-[11px] text-red-400 mb-2">{error}</p>}
+      {freeDates.length === 0 ? (
+        <p className="text-xs text-zinc-500">No free days found in the next 60 days.</p>
+      ) : (
+        <div className="space-y-1 max-h-32 overflow-y-auto">
+          {freeDates.slice(0, 10).map(date => (
+            <div key={dateToStr(date)} className="flex items-center gap-1.5 text-xs">
+              <CheckCircle2 size={11} strokeWidth={1.75} className="text-green-500 flex-shrink-0" />
+              <span className="text-zinc-300">
+                {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+          ))}
+          {freeDates.length > 10 && (
+            <p className="text-[11px] text-zinc-600">+{freeDates.length - 10} more days</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ── Main Component ── */
 export function BookingPageView() {
   const { slug } = useParams()
@@ -192,6 +318,7 @@ export function BookingPageView() {
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [takenSlots, setTakenSlots] = useState([])
+  const [ownerEvents, setOwnerEvents] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -201,6 +328,15 @@ export function BookingPageView() {
   useEffect(() => {
     resolveBookingSlug(slug).then(data => { setPage(data); setLoading(false) }).catch(() => setLoading(false))
   }, [slug, resolveBookingSlug])
+
+  // Fetch owner's calendar events (synced to Supabase) so we can block busy slots
+  useEffect(() => {
+    if (!page?.owner_id) return
+    supabase.from('owner_calendar_events')
+      .select('*')
+      .eq('owner_id', page.owner_id)
+      .then(({ data }) => setOwnerEvents(data || []))
+  }, [page])
 
   useEffect(() => {
     if (!selectedDate || !page) return
@@ -324,9 +460,12 @@ export function BookingPageView() {
             </div>
             <h1 className="text-xl font-semibold text-zinc-100 leading-tight mb-2">{page.name}</h1>
             {page.description && <p className="text-sm text-zinc-500 leading-relaxed mb-4">{page.description}</p>}
-            <div className="flex items-center gap-1.5 text-xs text-zinc-500 mt-auto">
+            <div className="flex items-center gap-1.5 text-xs text-zinc-500">
               <Clock size={12} className="text-zinc-600" />
               <span>{page.duration_minutes} min</span>
+            </div>
+            <div className="mt-auto">
+              <GuestCalendarPanel bookingSlots={timeSlots} />
             </div>
           </div>
 
@@ -363,7 +502,7 @@ export function BookingPageView() {
                   {dateHeader.weekday}
                 </p>
                 <p className="text-lg font-semibold text-zinc-100 mb-4">{dateHeader.day}</p>
-                <TimeSlotPicker slots={timeSlots} takenSlots={takenSlots} selectedSlot={selectedSlot} onSelect={handleTimeSelect} />
+                <TimeSlotPicker slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect} />
               </div>
             )}
           </div>
@@ -384,6 +523,7 @@ export function BookingPageView() {
             <div className="flex items-center gap-1.5 mt-2 text-xs text-zinc-500">
               <Clock size={12} className="text-zinc-600" /> {page.duration_minutes} min
             </div>
+            <GuestCalendarPanel bookingSlots={timeSlots} />
           </div>
 
           <div className="border-t border-surface-800" />
@@ -411,7 +551,7 @@ export function BookingPageView() {
                     <p className="text-sm text-zinc-300 font-medium">{formatDateShort(selectedDate)}</p>
                   </div>
                 </div>
-                <TimeSlotPicker slots={timeSlots} takenSlots={takenSlots} selectedSlot={selectedSlot} onSelect={handleTimeSelect} />
+                <TimeSlotPicker slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect} />
               </div>
             )}
 

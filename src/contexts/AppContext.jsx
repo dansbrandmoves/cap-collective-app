@@ -442,10 +442,31 @@ export function AppProvider({ children }) {
     setCalendarEvents(prev => prev.filter(ev => ev.calendarId !== googleCalId))
   }, [])
 
-  const replaceCalendarEvents = useCallback((newEvents) => {
+  const replaceCalendarEvents = useCallback(async (newEvents) => {
     setCalendarEvents(newEvents)
     setLastSynced(new Date().toISOString())
-  }, [])
+
+    // Also store in Supabase so booking pages can read owner availability
+    if (user?.id) {
+      try {
+        await supabase.from('owner_calendar_events').delete().eq('owner_id', user.id)
+        if (newEvents.length > 0) {
+          await supabase.from('owner_calendar_events').insert(
+            newEvents.map(e => ({
+              owner_id: user.id,
+              calendar_id: e.calendarId,
+              title: e.title,
+              start: e.start,
+              end_at: e.end,
+              is_all_day: e.isAllDay || false,
+            }))
+          )
+        }
+      } catch (err) {
+        console.error('Failed to sync calendar events to Supabase:', err)
+      }
+    }
+  }, [user])
 
   // --- Productions ---
   const createProduction = useCallback(async (data) => {

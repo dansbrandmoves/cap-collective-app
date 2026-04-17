@@ -65,7 +65,7 @@ function normalizeEventRange(event) {
  * @param {{ startTime: string, endTime: string }} slot
  * @param {object} event
  */
-function eventOverlapsSlot(date, slot, event) {
+export function eventOverlapsSlot(date, slot, event) {
   const { start: evStart, end: evEnd } = normalizeEventRange(event)
 
   // Event must include this date

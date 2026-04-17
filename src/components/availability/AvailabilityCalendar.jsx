@@ -4,7 +4,7 @@ import { WeeklyView } from './WeeklyView'
 import { DailyView } from './DailyView'
 import { DateRequestModal } from './DateRequestModal'
 import { useApp } from '../../contexts/AppContext'
-import { getWeekStart, dateToStr } from '../../utils/availability'
+import { getWeekStart, dateToStr, deriveSlotState } from '../../utils/availability'
 import { Button } from '../ui/Button'
 
 const VIEWS = ['Monthly', 'Weekly', 'Daily']
@@ -15,7 +15,7 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
 export function AvailabilityCalendar({
   slots, calendarEvents, connectedCalendars, availabilityRules = [], prefixRules = [],
   isOwner = false, slotStates: slotStatesProp, groupId, guestName, onRequestSubmit,
-  dateRequests = [], sharedAvailability = [], businessHours = null,
+  dateRequests = [], sharedAvailability = [], businessHours = null, guestSlotSelection = false,
 }) {
   const { slotStates: contextSlotStates } = useApp()
   const slotStates = slotStatesProp || contextSlotStates
@@ -29,12 +29,20 @@ export function AvailabilityCalendar({
 
   // Date selection for guests
   const [selectedDates, setSelectedDates] = useState([])
+  const [selectedSlotMap, setSelectedSlotMap] = useState({}) // { [dateStr]: [slotId, ...] } for slot-level
+  const [slotPickerDate, setSlotPickerDate] = useState(null) // date string showing slot picker
   const [showRequestModal, setShowRequestModal] = useState(false)
   const isSelectionMode = !isOwner && !!groupId
 
   function handleDayClick(date) {
     if (isSelectionMode) {
-      toggleDate(dateToStr(date))
+      const ds = dateToStr(date)
+      if (guestSlotSelection) {
+        // Toggle slot picker for this date
+        setSlotPickerDate(prev => prev === ds ? null : ds)
+      } else {
+        toggleDate(ds)
+      }
     } else {
       setSelectedDay(date)
       setView('Daily')
@@ -45,6 +53,24 @@ export function AvailabilityCalendar({
     setSelectedDates(prev =>
       prev.includes(ds) ? prev.filter(d => d !== ds) : [...prev, ds]
     )
+  }
+
+  function toggleSlotForDate(ds, slotId) {
+    setSelectedSlotMap(prev => {
+      const current = prev[ds] || []
+      const updated = current.includes(slotId)
+        ? current.filter(id => id !== slotId)
+        : [...current, slotId]
+      if (updated.length === 0) {
+        const { [ds]: _, ...rest } = prev
+        // Also remove from selectedDates
+        setSelectedDates(d => d.filter(x => x !== ds))
+        return rest
+      }
+      // Also add to selectedDates if not already there
+      setSelectedDates(d => d.includes(ds) ? d : [...d, ds])
+      return { ...prev, [ds]: updated }
+    })
   }
 
   function clearSelection() { setSelectedDates([]) }
@@ -169,15 +195,64 @@ export function AvailabilityCalendar({
         />
       )}
 
+      {/* Slot picker for granular selection */}
+      {isSelectionMode && guestSlotSelection && slotPickerDate && (
+        <div className="mt-3 bg-surface-800 border border-surface-700 rounded-xl p-4 animate-fadeIn">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-medium text-zinc-300">
+              {new Date(slotPickerDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+            </p>
+            <button onClick={() => setSlotPickerDate(null)} className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">Close</button>
+          </div>
+          <div className="space-y-1.5">
+            {slots.map(slot => {
+              const isChecked = (selectedSlotMap[slotPickerDate] || []).includes(slot.id)
+              const derived = deriveSlotState(new Date(slotPickerDate + 'T00:00:00'), slot, calendarEvents, connectedCalendars, prefixRules, businessHours)
+              const stateColor = slotStates[derived.state]?.color || '#22c55e'
+              return (
+                <label key={slot.id}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                    isChecked ? 'bg-accent/10 border border-accent/20' : 'hover:bg-surface-700 border border-transparent'
+                  }`}>
+                  <input type="checkbox" checked={isChecked}
+                    onChange={() => toggleSlotForDate(slotPickerDate, slot.id)}
+                    className="w-3.5 h-3.5 rounded border-surface-600 bg-surface-700 text-accent focus:ring-accent/30 cursor-pointer" />
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: stateColor }} />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-zinc-200">{slot.name}</span>
+                    <span className="text-xs text-zinc-500 ml-2">{slot.startTime} – {slot.endTime}</span>
+                  </div>
+                  <span className="text-[10px] text-zinc-600">{slotStates[derived.state]?.label}</span>
+                </label>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Selection bar for guests */}
       {isSelectionMode && selectedDates.length > 0 && (
-        <div className="sticky bottom-0 mt-4 bg-surface-900 border border-surface-700 rounded-xl px-5 py-3 flex items-center justify-between gap-3 safe-bottom-sm">
-          <span className="text-sm text-zinc-300">
-            {selectedDates.length} date{selectedDates.length !== 1 ? 's' : ''} selected
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={clearSelection}>Clear</Button>
-            <Button size="sm" onClick={() => setShowRequestModal(true)}>Request These Dates</Button>
+        <div className="sticky bottom-0 mt-4 bg-surface-900 border border-accent/20 rounded-xl px-5 py-4 shadow-lg shadow-black/20 safe-bottom-sm animate-fadeIn">
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {[...selectedDates].sort().map(ds => {
+              const d = new Date(ds + 'T00:00:00')
+              return (
+                <button key={ds} onClick={() => toggleDate(ds)}
+                  className="flex items-center gap-1 bg-accent/15 text-accent text-xs font-medium pl-2.5 pr-1.5 py-1 rounded-full hover:bg-accent/25 transition-colors">
+                  {d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  <span className="text-accent/60 hover:text-accent ml-0.5">×</span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-zinc-500">
+              {selectedDates.length} date{selectedDates.length !== 1 ? 's' : ''} selected
+            </span>
+            <div className="flex items-center gap-2">
+              <button onClick={clearSelection} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Clear all</button>
+              <Button size="sm" onClick={() => setShowRequestModal(true)}>Send Request →</Button>
+            </div>
           </div>
         </div>
       )}

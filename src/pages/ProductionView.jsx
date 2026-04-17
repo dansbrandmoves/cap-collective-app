@@ -375,6 +375,7 @@ const HOUR_OPTIONS = (() => {
 function ProjectAvailabilityEditor({ config, onSave, onReset, onClose }) {
   const [mode, setMode] = useState(config.mode || 'blocks')
   const [dur, setDur] = useState(config.blockDuration || 30)
+  const [slotSelection, setSlotSelection] = useState(config.guestSlotSelection || false)
   const [schedule, setSchedule] = useState(config.businessHours?.schedule || {
     0: null, 1: { start: '09:00', end: '17:00' }, 2: { start: '09:00', end: '17:00' },
     3: { start: '09:00', end: '17:00' }, 4: { start: '09:00', end: '17:00' },
@@ -429,11 +430,23 @@ function ProjectAvailabilityEditor({ config, onSave, onReset, onClose }) {
         })}
       </div>
 
+      {/* Guest selection granularity */}
+      <div className="flex items-center justify-between py-2 border-t border-surface-700">
+        <div>
+          <p className="text-xs text-zinc-300">Guests select specific time slots</p>
+          <p className="text-[10px] text-zinc-600">Off = guests pick whole days. On = guests pick individual slots.</p>
+        </div>
+        <button onClick={() => setSlotSelection(!slotSelection)}
+          className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${slotSelection ? 'bg-accent' : 'bg-surface-700'}`}>
+          <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${slotSelection ? 'translate-x-4' : 'translate-x-0'}`} />
+        </button>
+      </div>
+
       <div className="flex items-center justify-between pt-2 border-t border-surface-700">
         <button onClick={onReset} className="text-xs text-zinc-600 hover:text-red-400 transition-colors">Reset to global</button>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" onClick={() => onSave({ mode, blockDuration: dur, businessHours: { schedule } })}>Save</Button>
+          <Button size="sm" onClick={() => onSave({ mode, blockDuration: dur, businessHours: { schedule }, guestSlotSelection: slotSelection })}>Save</Button>
         </div>
       </div>
     </div>

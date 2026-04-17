@@ -260,14 +260,16 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp }) {
   )
 }
 
-function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots, projectBusinessHours }) {
+function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots, projectBusinessHours, guestSlotSelection }) {
   const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, guestCalendarEnabled, businessHours } = useApp()
   return (
     <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
         <>
           {guestCalendarEnabled && <GuestCalendarPanel slots={slots} groupId={groupId} guestName={guestName} />}
-          <p className="text-sm text-zinc-400 mb-4">Tap dates to select them, then send a request.</p>
+          <p className="text-sm text-zinc-400 mb-4">
+            {guestSlotSelection ? 'Tap a date to pick which time slots work for you.' : 'Tap dates to select them, then send a request.'}
+          </p>
         </>
       )}
       <AvailabilityCalendar
@@ -279,6 +281,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
         isOwner={isOwner}
         slotStates={slotStates}
         businessHours={projectBusinessHours || businessHours}
+        guestSlotSelection={guestSlotSelection}
         groupId={groupId}
         guestName={guestName}
         onRequestSubmit={createDateRequest}
@@ -447,6 +450,7 @@ export function RoomView() {
           guestName={guestName}
           slots={slots}
           projectBusinessHours={production?.availability_config?.businessHours}
+          guestSlotSelection={production?.availability_config?.guestSlotSelection || false}
         />
       )}
 

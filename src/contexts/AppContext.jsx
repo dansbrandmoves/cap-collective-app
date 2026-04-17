@@ -315,6 +315,12 @@ export function AppProvider({ children }) {
     if (authLoading) return
     const ownerId = user?.id ?? null
 
+    // Safety timeout — never stay stuck on loading
+    const loadTimeout = setTimeout(() => {
+      console.warn('Data load timed out — proceeding with empty state')
+      setLoading(false)
+    }, 8000)
+
     fetchAll(ownerId)
       .then(async ({ prods, grps, notes, msgs, members }) => {
         if (!prods?.length && ownerId) {
@@ -340,7 +346,7 @@ export function AppProvider({ children }) {
         console.error('Supabase load failed, using localStorage:', err)
         setProductions(stored?.productions ?? SEED_DATA.productions)
       })
-      .finally(() => setLoading(false))
+      .finally(() => { clearTimeout(loadTimeout); setLoading(false) })
   }, [authLoading, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

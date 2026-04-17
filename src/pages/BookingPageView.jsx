@@ -349,7 +349,7 @@ export function BookingPageView() {
       .eq('owner_id', page.owner_id)
       .then(({ data }) => setOwnerEvents(data || []))
     supabase.from('profiles')
-      .select('logo_url')
+      .select('logo_url, logo_is_dark')
       .eq('id', page.owner_id)
       .single()
       .then(({ data }) => { setOwnerLogo(data?.logo_url || null); setOwnerLogoDark(data?.logo_is_dark ?? true) })

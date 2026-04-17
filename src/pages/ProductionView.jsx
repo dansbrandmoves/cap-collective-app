@@ -4,12 +4,13 @@ import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
+import { UpgradeModal } from '../components/ui/UpgradeModal'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 
 export function ProductionView() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getProduction, updateProduction, updateProductionNotes, deleteProduction, createGroup, updateGroupName, deleteGroup, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates } = useApp()
+  const { getProduction, updateProduction, updateProductionNotes, deleteProduction, createGroup, updateGroupName, deleteGroup, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates, canAddGroup, isProPlan, FREE_GROUP_LIMIT } = useApp()
 
   const production = getProduction(id)
   const [activeGroupId, setActiveGroupId] = useState(null)
@@ -25,6 +26,7 @@ export function ProductionView() {
   const [editingGroupId, setEditingGroupId] = useState(null)
   const [editGroupName, setEditGroupName] = useState('')
   const [deletingGroupId, setDeletingGroupId] = useState(null)
+  const [showUpgrade, setShowUpgrade] = useState(false)
 
   if (!production) {
     return (
@@ -36,6 +38,11 @@ export function ProductionView() {
   }
 
   const activeGroup = production.groups.find(g => g.id === activeGroupId) ?? null
+
+  function openAddGroup() {
+    if (!canAddGroup(id)) { setShowUpgrade(true); return }
+    setShowNewGroup(true)
+  }
 
   function handleCreateGroup(e) {
     e.preventDefault()
@@ -143,13 +150,13 @@ export function ProductionView() {
 
           <div className="flex items-center justify-between px-2 mb-2">
             <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Groups</p>
-            <button onClick={() => setShowNewGroup(true)} className="text-xs text-zinc-500 hover:text-accent transition-colors">+ Add</button>
+            <button onClick={openAddGroup} className="text-xs text-zinc-500 hover:text-accent transition-colors">+ Add</button>
           </div>
 
           {production.groups.length === 0 && (
             <div className="px-2 py-4 text-center">
               <p className="text-xs text-zinc-600 mb-3">No groups yet.</p>
-              <Button size="sm" variant="secondary" onClick={() => setShowNewGroup(true)}>Add first group</Button>
+              <Button size="sm" variant="secondary" onClick={openAddGroup}>Add first group</Button>
             </div>
           )}
 
@@ -321,6 +328,13 @@ export function ProductionView() {
           </div>
         </div>
       </Modal>
+
+      {showUpgrade && (
+        <UpgradeModal
+          onClose={() => setShowUpgrade(false)}
+          reason={`Free plan includes ${FREE_GROUP_LIMIT} groups per project. Upgrade to Pro for unlimited groups.`}
+        />
+      )}
     </div>
   )
 }

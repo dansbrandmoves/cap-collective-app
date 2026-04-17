@@ -111,14 +111,26 @@ export function AppProvider({ children }) {
   // --- Auth ---
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [plan, setPlan] = useState('free') // 'free' | 'pro'
+
+  const FREE_PROJECT_LIMIT = 1
+  const FREE_GROUP_LIMIT = 2
+
+  async function fetchPlan(userId) {
+    if (!userId) { setPlan('free'); return }
+    const { data } = await supabase.from('profiles').select('plan').eq('id', userId).single()
+    setPlan(data?.plan ?? 'free')
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
+      fetchPlan(session?.user?.id ?? null)
       setAuthLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null)
+      fetchPlan(session?.user?.id ?? null)
       // Send welcome email on sign-in
       if (event === 'SIGNED_IN' && session?.user) {
         const u = session.user
@@ -133,8 +145,23 @@ export function AppProvider({ children }) {
   }, [])
 
   const isOwner = !!user
+  const isProPlan = plan === 'pro'
+
+  const canAddProject = useCallback(() => {
+    if (isProPlan) return true
+    return productions.length < FREE_PROJECT_LIMIT
+  }, [isProPlan, productions])
+
+  const canAddGroup = useCallback((productionId) => {
+    if (isProPlan) return true
+    const prod = productions.find(p => p.id === productionId)
+    if (!prod) return true
+    return prod.groups.length < FREE_GROUP_LIMIT
+  }, [isProPlan, productions])
+
   const signOut = useCallback(() => {
     setUser(null) // clear immediately so UI redirects right away
+    setPlan('free')
     supabase.auth.signOut().catch(err => console.error('signOut error:', err))
   }, [])
 
@@ -636,6 +663,9 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       // Auth
       user, authLoading, isOwner, signOut,
+      // Plan
+      plan, isProPlan, canAddProject, canAddGroup,
+      FREE_PROJECT_LIMIT, FREE_GROUP_LIMIT,
       // State
       productions, slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, setGoogleAccessToken,

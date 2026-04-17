@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { NotificationsDropdown } from '../ui/NotificationsDropdown'
-import { LayoutGrid, Inbox, CalendarDays, Settings, Sun, Moon, LogOut } from 'lucide-react'
+import { LayoutGrid, Inbox, CalendarDays, Settings, Sun, Moon, LogOut, Zap, CreditCard } from 'lucide-react'
 
 const NAV = [
   { to: '/', label: 'Projects', icon: LayoutGrid, showBadge: false },
@@ -11,7 +11,7 @@ const NAV = [
 ]
 
 export function Sidebar({ mobileOpen = false, onMobileClose }) {
-  const { productions, user, signOut, theme, toggleTheme, getTotalPendingRequests, getPendingRequestCount } = useApp()
+  const { productions, user, signOut, theme, toggleTheme, getTotalPendingRequests, getPendingRequestCount, isProPlan } = useApp()
 
   const totalPending = getTotalPendingRequests()
 
@@ -90,8 +90,37 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
             </div>
           )}
 
-          {/* Sign out — inside the scrollable area so it's never cut off */}
-          <div className="pt-4 border-t border-surface-800 mt-4">
+          {/* Bottom controls — inside scrollable area so they're never cut off */}
+          <div className="pt-4 border-t border-surface-800 mt-4 space-y-0.5">
+            {/* Upgrade CTA for free users */}
+            {!isProPlan && (
+              <NavLink
+                to="/billing"
+                onClick={onMobileClose}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-accent hover:bg-accent/10 transition-colors"
+              >
+                <Zap size={16} strokeWidth={1.75} className="flex-shrink-0" />
+                <span className="flex-1">Upgrade to Pro</span>
+                <span className="text-[10px] font-bold bg-accent/15 border border-accent/25 text-accent px-1.5 py-0.5 rounded-full">$10/mo</span>
+              </NavLink>
+            )}
+
+            {/* Billing link for pro users */}
+            {isProPlan && (
+              <NavLink
+                to="/billing"
+                onClick={onMobileClose}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    isActive ? 'bg-surface-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
+                  }`
+                }
+              >
+                <CreditCard size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
+                <span>Billing</span>
+              </NavLink>
+            )}
+
             <button
               onClick={toggleTheme}
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors"

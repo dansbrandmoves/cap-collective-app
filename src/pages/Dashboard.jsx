@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
+import { UpgradeModal } from '../components/ui/UpgradeModal'
 import { FolderOpen, Plus } from 'lucide-react'
 
 function formatDateRange(start, end) {
@@ -62,10 +63,16 @@ function ProjectCard({ production }) {
 }
 
 export function Dashboard() {
-  const { productions, createProduction, loading } = useApp()
+  const { productions, createProduction, loading, canAddProject, isProPlan, FREE_PROJECT_LIMIT } = useApp()
   const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
+  const [showUpgrade, setShowUpgrade] = useState(false)
   const [form, setForm] = useState({ name: '', description: '', startDate: '', endDate: '' })
+
+  function openNewProject() {
+    if (!canAddProject()) { setShowUpgrade(true); return }
+    setShowModal(true)
+  }
 
   async function handleCreate(e) {
     e.preventDefault()
@@ -90,11 +97,26 @@ export function Dashboard() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-100">Projects</h1>
         </div>
-        <Button onClick={() => setShowModal(true)}>
+        <Button onClick={openNewProject}>
           <Plus size={14} strokeWidth={2} className="mr-1.5" />
           New Project
         </Button>
       </div>
+
+      {/* Free tier limit notice */}
+      {!isProPlan && productions.length >= FREE_PROJECT_LIMIT && (
+        <div className="mb-6 flex items-center justify-between gap-4 bg-accent/8 border border-accent/20 rounded-xl px-4 py-3">
+          <p className="text-sm text-zinc-400">
+            Free plan includes <span className="text-zinc-200 font-medium">{FREE_PROJECT_LIMIT} project</span>. Upgrade to add more.
+          </p>
+          <button
+            onClick={() => setShowUpgrade(true)}
+            className="flex-shrink-0 text-xs font-semibold text-accent hover:text-amber-400 transition-colors"
+          >
+            Upgrade →
+          </button>
+        </div>
+      )}
 
       {productions.length === 0 ? (
         <div className="border border-dashed border-surface-600 rounded-2xl p-12 sm:p-16 text-center">
@@ -103,7 +125,7 @@ export function Dashboard() {
           </div>
           <p className="text-sm font-medium text-zinc-300 mb-1">No projects yet</p>
           <p className="text-sm text-zinc-600 mb-6">Create your first project to get started.</p>
-          <Button onClick={() => setShowModal(true)}>
+          <Button onClick={openNewProject}>
             <Plus size={14} strokeWidth={2} className="mr-1.5" />
             Create project
           </Button>
@@ -114,6 +136,13 @@ export function Dashboard() {
             <ProjectCard key={p.id} production={p} />
           ))}
         </div>
+      )}
+
+      {showUpgrade && (
+        <UpgradeModal
+          onClose={() => setShowUpgrade(false)}
+          reason={`Free plan includes ${FREE_PROJECT_LIMIT} project. Upgrade to Pro to create unlimited projects.`}
+        />
       )}
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="New Project">

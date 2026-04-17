@@ -734,6 +734,12 @@ export function AppProvider({ children }) {
     return !error
   }, [])
 
+  const deleteBooking = useCallback(async (id) => {
+    const { error } = await supabase.from('bookings').delete().eq('id', id)
+    if (error) console.error('deleteBooking:', error)
+    return !error
+  }, [])
+
   // --- Date Requests ---
   const createDateRequest = useCallback(async (groupId, { requesterName, requesterEmail, dates, message }) => {
     const request = {
@@ -836,7 +842,7 @@ export function AppProvider({ children }) {
       updateSharedNotes, refreshRoom,
       // Booking Pages
       bookingPages, createBookingPage, updateBookingPage, deleteBookingPage,
-      resolveBookingSlug, fetchBookingsForPage, createBooking, updateBookingStatus,
+      resolveBookingSlug, fetchBookingsForPage, createBooking, updateBookingStatus, deleteBooking,
       // Date Requests
       createDateRequest, fetchDateRequests, updateDateRequestStatus,
       // Notifications

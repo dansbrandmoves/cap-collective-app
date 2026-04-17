@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { NotificationsDropdown } from '../ui/NotificationsDropdown'
-import { LayoutGrid, Inbox, CalendarCheck, CalendarDays, Settings, Sun, Moon, LogOut, Zap, CreditCard } from 'lucide-react'
+import { LayoutGrid, Inbox, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditCard } from 'lucide-react'
 
 const NAV = [
   { to: '/', label: 'Projects', icon: LayoutGrid, showBadge: false },
@@ -12,7 +12,7 @@ const NAV = [
 ]
 
 export function Sidebar({ mobileOpen = false, onMobileClose }) {
-  const { productions, user, signOut, theme, toggleTheme, getTotalPendingRequests, getPendingRequestCount, isProPlan } = useApp()
+  const { productions, user, signOut, theme, getTotalPendingRequests, getPendingRequestCount, isProPlan } = useApp()
 
   const totalPending = getTotalPendingRequests()
 
@@ -125,17 +125,6 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 <span>Billing</span>
               </NavLink>
             )}
-
-            <button
-              onClick={toggleTheme}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors"
-            >
-              {theme === 'dark'
-                ? <Sun size={16} strokeWidth={1.75} className="flex-shrink-0" />
-                : <Moon size={16} strokeWidth={1.75} className="flex-shrink-0" />
-              }
-              <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
-            </button>
 
             {user && (
               <button

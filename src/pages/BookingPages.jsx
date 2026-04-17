@@ -9,7 +9,7 @@ import { CalendarCheck, Plus, Copy, Check, Trash2, ChevronDown, ChevronUp, Exter
 const DURATIONS = [15, 30, 45, 60]
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-function BookingPageCard({ page, onToggle, onDelete, onFetchBookings }) {
+function BookingPageCard({ page, onToggle, onDelete, onFetchBookings, onUpdateBookingStatus, onDeleteBooking }) {
   const [copied, setCopied] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [bookings, setBookings] = useState(null)
@@ -109,19 +109,31 @@ function BookingPageCard({ page, onToggle, onDelete, onFetchBookings }) {
           ) : (
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {bookings.map(b => (
-                <div key={b.id} className="flex items-center justify-between text-sm py-1.5">
-                  <div>
+                <div key={b.id} className="flex items-center justify-between text-sm py-1.5 group/booking">
+                  <div className="min-w-0">
                     <span className="text-zinc-200">{b.guest_name}</span>
                     {b.guest_email && <span className="text-zinc-600 ml-2 text-xs">{b.guest_email}</span>}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-xs text-zinc-500">
                       {new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                     <span className="text-xs text-zinc-500">{formatTime(b.start_time)} – {formatTime(b.end_time)}</span>
-                    <Badge variant={b.status === 'confirmed' ? 'green' : 'red'} className="text-[10px]">
+                    <Badge variant={b.status === 'confirmed' ? 'green' : b.status === 'cancelled' ? 'red' : 'ghost'} className="text-[10px]">
                       {b.status}
                     </Badge>
+                    <div className="hidden group-hover/booking:flex items-center gap-1">
+                      {b.status === 'confirmed' && (
+                        <button onClick={async () => {
+                          await onUpdateBookingStatus(b.id, 'cancelled')
+                          setBookings(prev => prev.map(x => x.id === b.id ? { ...x, status: 'cancelled' } : x))
+                        }} className="text-[10px] text-zinc-600 hover:text-amber-400 transition-colors px-1">Cancel</button>
+                      )}
+                      <button onClick={async () => {
+                        await onDeleteBooking(b.id)
+                        setBookings(prev => prev.filter(x => x.id !== b.id))
+                      }} className="text-[10px] text-zinc-600 hover:text-red-400 transition-colors px-1">Delete</button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -136,7 +148,8 @@ function BookingPageCard({ page, onToggle, onDelete, onFetchBookings }) {
 export function BookingPages() {
   const {
     bookingPages, createBookingPage, updateBookingPage, deleteBookingPage,
-    fetchBookingsForPage, loading, canAddBookingPage, isProPlan, FREE_BOOKING_PAGE_LIMIT,
+    fetchBookingsForPage, updateBookingStatus, deleteBooking,
+    loading, canAddBookingPage, isProPlan, FREE_BOOKING_PAGE_LIMIT,
   } = useApp()
 
   const [showModal, setShowModal] = useState(false)
@@ -225,6 +238,8 @@ export function BookingPages() {
               onToggle={(id, active) => updateBookingPage(id, { is_active: active })}
               onDelete={deleteBookingPage}
               onFetchBookings={fetchBookingsForPage}
+              onUpdateBookingStatus={updateBookingStatus}
+              onDeleteBooking={deleteBooking}
             />
           ))}
         </div>

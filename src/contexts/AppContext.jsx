@@ -498,7 +498,7 @@ export function AppProvider({ children }) {
   const createProduction = useCallback(async (data) => {
     const ownerId = user?.id ?? null
     const production = {
-      id: `prod-${Date.now()}`,
+      id: data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + nanoid(6),
       name: data.name,
       description: data.description ?? '',
       startDate: data.startDate || '',

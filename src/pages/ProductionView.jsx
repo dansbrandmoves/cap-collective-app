@@ -41,9 +41,11 @@ export function ProductionView() {
 
   if (!production) {
     return (
-      <div className="flex items-center justify-center h-64 text-zinc-500">
-        Project not found.{' '}
-        <Link to="/" className="ml-2 text-accent underline">Back to dashboard</Link>
+      <div className="flex items-center justify-center h-screen bg-surface-950">
+        <div className="text-center">
+          <p className="text-zinc-400 mb-2">Project not found</p>
+          <Link to="/" className="text-sm text-accent hover:underline">Back to projects</Link>
+        </div>
       </div>
     )
   }

@@ -337,25 +337,22 @@ export function CalendarSettings() {
                 const day = schedule[i]
                 const isActive = !!day
                 return (
-                  <div key={i} className="flex items-center h-9 gap-2.5 group/day">
+                  <div key={i} className="flex items-center h-10 gap-3 group/day">
                     <button onClick={() => toggleDay(i)}
-                      className={`relative w-7 h-4 rounded-full transition-colors flex-shrink-0 ${
+                      className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
                         isActive ? 'bg-accent' : 'bg-surface-700'
                       }`}>
-                      <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
-                        isActive ? 'translate-x-3' : 'translate-x-0'
+                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                        isActive ? 'translate-x-4' : 'translate-x-0'
                       }`} />
                     </button>
-                    <button onClick={() => toggleDay(i)}
-                      className={`w-10 text-left text-xs font-medium transition-colors ${
-                        isActive ? 'text-zinc-200' : 'text-zinc-600'
-                      }`}>
+                    <span className={`w-10 text-sm font-medium ${isActive ? 'text-zinc-100' : 'text-zinc-600'}`}>
                       {name.slice(0, 3)}
-                    </button>
+                    </span>
                     {isActive ? (
                       <>
                         <TimeSelect value={day.start} onChange={v => updateDayTime(i, 'start', v)} />
-                        <span className="text-[10px] text-zinc-600">–</span>
+                        <span className="text-xs text-zinc-600">–</span>
                         <TimeSelect value={day.end} onChange={v => updateDayTime(i, 'end', v)} />
                         <button onClick={() => applyToAll(i)}
                           className="text-[10px] text-zinc-600 hover:text-accent transition-colors opacity-0 group-hover/day:opacity-100 ml-1">
@@ -363,7 +360,7 @@ export function CalendarSettings() {
                         </button>
                       </>
                     ) : (
-                      <span className="text-[10px] text-zinc-600 italic">Unavailable</span>
+                      <span className="text-xs text-zinc-600">Unavailable</span>
                     )}
                   </div>
                 )

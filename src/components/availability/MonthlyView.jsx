@@ -7,6 +7,7 @@ export function MonthlyView({
   year, month, slots, calendarEvents, connectedCalendars, prefixRules = [],
   onDayClick, isOwner, slotStates = DEFAULT_SLOT_STATES,
   selectedDates = [], isSelectionMode = false,
+  dateRequests = [], sharedAvailability = [],
 }) {
   const grid = useMemo(() => getMonthGrid(year, month), [year, month])
   const dates = useMemo(() => grid.map(d => d.date), [grid])
@@ -65,6 +66,28 @@ export function MonthlyView({
                       />
                     )
                   })}
+                  {/* Overlay: date requests + shared availability */}
+                  {(() => {
+                    const reqCount = dateRequests.filter(r => r.dates?.includes(ds) && r.status !== 'declined').length
+                    const availForDay = sharedAvailability.filter(a => a.date === ds && a.is_available)
+                    const totalGuests = new Set(sharedAvailability.filter(a => a.date === ds).map(a => a.guest_name)).size
+                    const freeCount = new Set(availForDay.map(a => a.guest_name)).size
+                    return (reqCount > 0 || freeCount > 0) ? (
+                      <div className="flex items-center gap-1 mt-auto pt-0.5">
+                        {reqCount > 0 && (
+                          <span className="text-[8px] sm:text-[9px] font-medium text-amber-400" title={`${reqCount} date request${reqCount !== 1 ? 's' : ''}`}>
+                            {reqCount} req
+                          </span>
+                        )}
+                        {freeCount > 0 && (
+                          <span className={`text-[8px] sm:text-[9px] font-medium ${freeCount === totalGuests ? 'text-green-400' : 'text-zinc-500'}`}
+                            title={`${freeCount} of ${totalGuests} people are free`}>
+                            {freeCount}/{totalGuests}
+                          </span>
+                        )}
+                      </div>
+                    ) : null
+                  })()}
                 </div>
               )}
             </button>

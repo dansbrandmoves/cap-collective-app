@@ -7,7 +7,7 @@ import { AvailabilityCalendar } from '../components/availability/AvailabilityCal
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
 import { deriveSlotState, dateToStr } from '../utils/availability'
-import { CalendarDays, X, CheckCircle2, CircleDot } from 'lucide-react'
+import { CalendarDays, X, CheckCircle2, CircleDot, Share2 } from 'lucide-react'
 
 const TABS = ['Availability', 'Notes']
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -90,11 +90,13 @@ function NotesTab({ productionId, group, guestName }) {
 }
 
 // Guest calendar panel — lets guest connect their Google Calendar and see their free dates
-function GuestCalendarPanel({ slots, groupId }) {
+function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp }) {
   const [gisReady, setGisReady] = useState(false)
   const [guestEvents, setGuestEvents] = useState(null) // null = not connected yet
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [shared, setShared] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const tokenClientRef = useRef(null)
   const configured = isConfigured()
 
@@ -218,7 +220,36 @@ function GuestCalendarPanel({ slots, groupId }) {
           ))}
         </div>
       )}
-      <p className="text-xs text-zinc-600 mt-3">Based on your Google primary calendar. Tap a date above to include it in your request.</p>
+      {freeDates.length > 0 && !shared && (
+        <button onClick={async () => {
+          if (!guestNameProp || !groupId) return
+          setSharing(true)
+          try {
+            const rows = freeDates.map(d => ({
+              group_id: groupId,
+              guest_name: guestNameProp,
+              date: dateToStr(d),
+              is_available: true,
+            }))
+            await supabase.from('shared_availability').delete()
+              .eq('group_id', groupId).eq('guest_name', guestNameProp)
+            await supabase.from('shared_availability').insert(rows)
+            setShared(true)
+          } catch { /* ignore */ }
+          setSharing(false)
+        }} disabled={sharing}
+          className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs font-medium text-accent hover:text-amber-400 bg-accent/10 hover:bg-accent/15 border border-accent/20 rounded-lg px-3 py-2 transition-colors disabled:opacity-50">
+          <Share2 size={12} strokeWidth={1.75} />
+          {sharing ? 'Sharing...' : 'Share availability with this project'}
+        </button>
+      )}
+      {shared && (
+        <p className="mt-3 text-xs text-green-400 flex items-center gap-1.5">
+          <CheckCircle2 size={12} strokeWidth={1.75} />
+          Your availability has been shared with the project manager.
+        </p>
+      )}
+      <p className="text-xs text-zinc-600 mt-2">Based on your Google primary calendar.</p>
     </div>
   )
 }
@@ -229,7 +260,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
     <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
         <>
-          {guestCalendarEnabled && <GuestCalendarPanel slots={slots} groupId={groupId} />}
+          {guestCalendarEnabled && <GuestCalendarPanel slots={slots} groupId={groupId} guestName={guestName} />}
           <p className="text-sm text-zinc-400 mb-4">Tap dates to select them, then send a request.</p>
         </>
       )}

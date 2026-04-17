@@ -255,11 +255,11 @@ export function ProductionView() {
         ${mobileShowDetail ? 'flex' : 'hidden md:flex'}
       `}>
         {rightPanel === 'calendar' ? (
-          <ProjectCalendar onMobileBack={() => setMobileShowDetail(false)} />
+          <ProjectCalendar onMobileBack={() => setMobileShowDetail(false)} groupIds={production.groups.map(g => g.id)} />
         ) : activeGroup ? (
           <GroupOverview productionId={id} group={activeGroup} onMobileBack={() => setMobileShowDetail(false)} />
         ) : (
-          <ProjectCalendar onMobileBack={() => setMobileShowDetail(false)} />
+          <ProjectCalendar onMobileBack={() => setMobileShowDetail(false)} groupIds={production.groups.map(g => g.id)} />
         )}
       </div>
 
@@ -355,8 +355,18 @@ export function ProductionView() {
   )
 }
 
-function ProjectCalendar({ onMobileBack }) {
+function ProjectCalendar({ onMobileBack, groupIds }) {
   const { slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates } = useApp()
+  const [dateRequests, setDateRequests] = useState([])
+  const [sharedAvailability, setSharedAvailability] = useState([])
+
+  useEffect(() => {
+    if (!groupIds.length) return
+    supabase.from('date_requests').select('*').in('group_id', groupIds)
+      .then(({ data }) => setDateRequests(data || []))
+    supabase.from('shared_availability').select('*').in('group_id', groupIds)
+      .then(({ data }) => setSharedAvailability(data || []))
+  }, [groupIds])
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -375,6 +385,8 @@ function ProjectCalendar({ onMobileBack }) {
           prefixRules={prefixRules}
           isOwner={true}
           slotStates={slotStates}
+          dateRequests={dateRequests}
+          sharedAvailability={sharedAvailability}
         />
       </div>
     </div>
@@ -530,45 +542,39 @@ function GroupOverview({ productionId, group, onMobileBack }) {
           </div>
         </div>
 
-        {/* Date Requests */}
+        {/* Date Requests — summary + link to inbox */}
         <div>
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Date Requests</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Date Requests</p>
+            <button onClick={() => navigate('/inbox')} className="text-xs text-accent hover:underline transition-colors">
+              View in Inbox →
+            </button>
+          </div>
           {loadingRequests ? (
             <p className="text-sm text-zinc-600">Loading...</p>
           ) : dateRequests.length === 0 ? (
-            <p className="text-sm text-zinc-600">No date requests yet.</p>
+            <p className="text-sm text-zinc-600">No date requests yet. Requests show on the project calendar too.</p>
           ) : (
-            <div className="space-y-3">
-              {dateRequests.map(req => (
-                <div key={req.id} className="bg-surface-900 border border-surface-700 rounded-xl px-5 sm:px-6 py-4 sm:py-5 shadow-sm shadow-black/10">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-200">{req.requester_name}</p>
-                      {req.requester_email && <p className="text-xs text-zinc-500">{req.requester_email}</p>}
+            <div className="space-y-1.5">
+              {dateRequests.slice(0, 5).map(req => (
+                <div key={req.id} className="flex items-center justify-between bg-surface-800 rounded-lg px-4 py-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-5 h-5 rounded-full bg-surface-700 flex items-center justify-center text-[10px] font-semibold text-zinc-300 flex-shrink-0">
+                      {req.requester_name?.[0]?.toUpperCase()}
                     </div>
-                    <Badge variant={req.status === 'pending' ? 'yellow' : req.status === 'approved' ? 'green' : 'red'}>
-                      {req.status}
-                    </Badge>
+                    <span className="text-sm text-zinc-200 truncate">{req.requester_name}</span>
+                    <span className="text-xs text-zinc-600">{formatRequestDates(req.dates)}</span>
                   </div>
-                  <p className="text-xs text-zinc-400 mb-1">
-                    <span className="text-zinc-500">Dates:</span> {formatRequestDates(req.dates)}
-                  </p>
-                  {req.message && (
-                    <p className="text-xs text-zinc-500 italic mt-1">"{req.message}"</p>
-                  )}
-                  <div className="flex gap-2 mt-3">
-                    {req.status !== 'approved' && (
-                      <Button size="sm" onClick={() => handleRequestAction(req.id, 'approved')}>Approve</Button>
-                    )}
-                    {req.status !== 'pending' && (
-                      <Button size="sm" variant="secondary" onClick={() => handleRequestAction(req.id, 'pending')}>Reopen</Button>
-                    )}
-                    {req.status !== 'declined' && (
-                      <Button size="sm" variant="ghost" onClick={() => handleRequestAction(req.id, 'declined')}>Decline</Button>
-                    )}
-                  </div>
+                  <Badge variant={req.status === 'pending' ? 'yellow' : req.status === 'approved' ? 'green' : 'red'} className="text-[10px]">
+                    {req.status}
+                  </Badge>
                 </div>
               ))}
+              {dateRequests.length > 5 && (
+                <button onClick={() => navigate('/inbox')} className="text-xs text-zinc-500 hover:text-accent transition-colors">
+                  +{dateRequests.length - 5} more in Inbox
+                </button>
+              )}
             </div>
           )}
         </div>

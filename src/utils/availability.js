@@ -11,11 +11,16 @@
  * All-day events use Google's exclusive-end convention — subtract 1 day before comparing.
  */
 
+// Fixed internal semantics (users can override labels/colors in Settings):
+// available = open for booking, no conflicts
+// hold      = tentatively held, may change
+// booked    = occupied by a calendar event
+// blocked   = hard block, not available under any circumstances
 export const DEFAULT_SLOT_STATES = {
-  available: { label: 'Available',               color: '#d1d5db', bg: 'bg-zinc-300',   text: 'text-zinc-400',   dot: 'bg-zinc-400',   ring: 'ring-zinc-300' },
-  hold:      { label: 'Penciled',                color: '#f97316', bg: 'bg-orange-500', text: 'text-orange-400', dot: 'bg-orange-400', ring: 'ring-orange-500' },
-  booked:    { label: 'Not Typically Considered', color: '#3f3f46', bg: 'bg-zinc-700',   text: 'text-zinc-500',   dot: 'bg-zinc-600',   ring: 'ring-zinc-700' },
-  blocked:   { label: 'Not Available',           color: '#ef4444', bg: 'bg-red-500',    text: 'text-red-400',    dot: 'bg-red-400',    ring: 'ring-red-500' },
+  available: { label: 'Available', color: '#22c55e', bg: 'bg-green-500', text: 'text-green-400', dot: 'bg-green-400', ring: 'ring-green-500' },
+  hold:      { label: 'Hold',      color: '#f97316', bg: 'bg-orange-500', text: 'text-orange-400', dot: 'bg-orange-400', ring: 'ring-orange-500' },
+  booked:    { label: 'Busy',      color: '#3f3f46', bg: 'bg-zinc-700',   text: 'text-zinc-500',   dot: 'bg-zinc-600',   ring: 'ring-zinc-700' },
+  blocked:   { label: 'Blocked',   color: '#ef4444', bg: 'bg-red-500',    text: 'text-red-400',    dot: 'bg-red-400',    ring: 'ring-red-500' },
 }
 
 // Keep a backwards-compatible reference
@@ -104,7 +109,24 @@ export function eventOverlapsSlot(date, slot, event) {
  * @param {Array} connectedCalendars — [{ id, role }]
  * @returns {{ state: string, drivingEvent: object|null }}
  */
-export function deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules = []) {
+export function deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules = [], businessHours = null) {
+  // Business hours check: if this day is off or slot is outside hours, force blocked
+  if (businessHours && businessHours.enabled !== false && businessHours.schedule) {
+    const dayOfWeek = date.getDay()
+    const dayConfig = businessHours.schedule[dayOfWeek]
+    if (!dayConfig) {
+      return { state: 'blocked', drivingEvent: null } // day is off
+    }
+    // Check if slot falls outside this day's hours
+    const slotStart = timeToMinutes(slot.startTime)
+    const slotEnd = timeToMinutes(slot.endTime)
+    const dayStart = timeToMinutes(dayConfig.start)
+    const dayEnd = timeToMinutes(dayConfig.end)
+    if (slotEnd <= dayStart || slotStart >= dayEnd) {
+      return { state: 'blocked', drivingEvent: null } // outside hours
+    }
+  }
+
   let bestState = slot.defaultState || 'available'
   let drivingEvent = null
 
@@ -146,13 +168,13 @@ export function deriveSlotState(date, slot, calendarEvents, connectedCalendars, 
  * Derive availability for a range of dates across all slots.
  * Returns: { [dateStr]: { [slotId]: { state, drivingEvent } } }
  */
-export function deriveAvailabilityMatrix(dates, slots, calendarEvents, connectedCalendars, prefixRules = []) {
+export function deriveAvailabilityMatrix(dates, slots, calendarEvents, connectedCalendars, prefixRules = [], businessHours = null) {
   const matrix = {}
   for (const date of dates) {
     const key = dateToStr(date)
     matrix[key] = {}
     for (const slot of slots) {
-      matrix[key][slot.id] = deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules)
+      matrix[key][slot.id] = deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules, businessHours)
     }
   }
   return matrix

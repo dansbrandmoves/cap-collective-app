@@ -13,11 +13,11 @@ function formatDate(date) {
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-export function DailyView({ date, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules = [], isOwner, slotStates = DEFAULT_SLOT_STATES, dateRequests = [], sharedAvailability = [] }) {
+export function DailyView({ date, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules = [], isOwner, slotStates = DEFAULT_SLOT_STATES, dateRequests = [], sharedAvailability = [], businessHours = null }) {
   const slotResults = useMemo(() =>
     slots.map(slot => ({
       slot,
-      ...deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules),
+      ...deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules, businessHours),
     })),
     [date, slots, calendarEvents, connectedCalendars, prefixRules]
   )

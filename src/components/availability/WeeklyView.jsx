@@ -6,12 +6,12 @@ const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 export function WeeklyView({
   weekStart, slots, calendarEvents, connectedCalendars, prefixRules = [],
   onDayClick, isOwner, slotStates = DEFAULT_SLOT_STATES,
-  selectedDates = [], isSelectionMode = false,
+  selectedDates = [], isSelectionMode = false, businessHours = null,
 }) {
   const days = useMemo(() => getWeekDays(weekStart), [weekStart])
   const matrix = useMemo(
-    () => deriveAvailabilityMatrix(days, slots, calendarEvents, connectedCalendars, prefixRules),
-    [days, slots, calendarEvents, connectedCalendars, prefixRules]
+    () => deriveAvailabilityMatrix(days, slots, calendarEvents, connectedCalendars, prefixRules, businessHours),
+    [days, slots, calendarEvents, connectedCalendars, prefixRules, businessHours]
   )
 
   const todayStr = dateToStr(new Date())

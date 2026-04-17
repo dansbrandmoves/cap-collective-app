@@ -3,7 +3,7 @@ import { SlotEditor } from '../components/availability/SlotEditor'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 
 export function AvailabilityRules() {
-  const { availabilityRules, effectiveSlots, calendarEvents, connectedCalendars, prefixRules, slotStates, availabilityMode } = useApp()
+  const { availabilityRules, effectiveSlots, calendarEvents, connectedCalendars, prefixRules, slotStates, availabilityMode, businessHours } = useApp()
 
   return (
     <div className="px-5 sm:px-8 lg:px-16 py-6 sm:py-10">
@@ -27,6 +27,7 @@ export function AvailabilityRules() {
           prefixRules={prefixRules}
           isOwner={true}
           slotStates={slotStates}
+          businessHours={businessHours}
         />
       </div>
 

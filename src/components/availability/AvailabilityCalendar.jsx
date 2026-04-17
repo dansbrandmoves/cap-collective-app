@@ -15,7 +15,7 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
 export function AvailabilityCalendar({
   slots, calendarEvents, connectedCalendars, availabilityRules = [], prefixRules = [],
   isOwner = false, slotStates: slotStatesProp, groupId, guestName, onRequestSubmit,
-  dateRequests = [], sharedAvailability = [],
+  dateRequests = [], sharedAvailability = [], businessHours = null,
 }) {
   const { slotStates: contextSlotStates } = useApp()
   const slotStates = slotStatesProp || contextSlotStates
@@ -143,7 +143,7 @@ export function AvailabilityCalendar({
           year={currentYear} month={currentMonth}
           slots={slots} calendarEvents={calendarEvents} connectedCalendars={connectedCalendars}
           prefixRules={prefixRules} onDayClick={handleDayClick} isOwner={isOwner}
-          slotStates={slotStates}
+          slotStates={slotStates} businessHours={businessHours}
           selectedDates={selectedDates} isSelectionMode={isSelectionMode}
           dateRequests={dateRequests} sharedAvailability={sharedAvailability}
         />
@@ -154,7 +154,7 @@ export function AvailabilityCalendar({
           weekStart={weekStart}
           slots={slots} calendarEvents={calendarEvents} connectedCalendars={connectedCalendars}
           prefixRules={prefixRules} onDayClick={handleDayClick} isOwner={isOwner}
-          slotStates={slotStates}
+          slotStates={slotStates} businessHours={businessHours}
           selectedDates={selectedDates} isSelectionMode={isSelectionMode}
         />
       )}
@@ -164,7 +164,7 @@ export function AvailabilityCalendar({
           date={selectedDay}
           slots={slots} calendarEvents={calendarEvents} connectedCalendars={connectedCalendars}
           availabilityRules={availabilityRules} prefixRules={prefixRules} isOwner={isOwner}
-          slotStates={slotStates}
+          slotStates={slotStates} businessHours={businessHours}
           dateRequests={dateRequests} sharedAvailability={sharedAvailability}
         />
       )}

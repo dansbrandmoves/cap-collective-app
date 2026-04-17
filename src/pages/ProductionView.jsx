@@ -359,6 +359,87 @@ export function ProductionView() {
   )
 }
 
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const HOUR_OPTIONS = (() => {
+  const opts = []
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      const period = h >= 12 ? 'PM' : 'AM'
+      opts.push({ val, label: `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}` })
+    }
+  }
+  return opts
+})()
+
+function ProjectAvailabilityEditor({ config, onSave, onReset, onClose }) {
+  const [mode, setMode] = useState(config.mode || 'blocks')
+  const [dur, setDur] = useState(config.blockDuration || 30)
+  const [schedule, setSchedule] = useState(config.businessHours?.schedule || {
+    0: null, 1: { start: '09:00', end: '17:00' }, 2: { start: '09:00', end: '17:00' },
+    3: { start: '09:00', end: '17:00' }, 4: { start: '09:00', end: '17:00' },
+    5: { start: '09:00', end: '17:00' }, 6: null,
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <select value={mode} onChange={e => setMode(e.target.value)}
+          className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent">
+          <option value="blocks">Time blocks</option>
+          <option value="slots">Named slots</option>
+        </select>
+        {mode === 'blocks' && (
+          <select value={dur} onChange={e => setDur(Number(e.target.value))}
+            className="text-xs bg-surface-700 border border-surface-600 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent">
+            <option value={30}>30 min</option>
+            <option value={60}>60 min</option>
+          </select>
+        )}
+      </div>
+
+      <div className="space-y-0">
+        {DAY_NAMES.map((name, i) => {
+          const day = schedule[i]
+          const isActive = !!day
+          return (
+            <div key={i} className="flex items-center h-9 gap-2.5">
+              <button onClick={() => setSchedule(s => ({ ...s, [i]: s[i] ? null : { start: '09:00', end: '17:00' } }))}
+                className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${isActive ? 'bg-accent' : 'bg-surface-700'}`}>
+                <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${isActive ? 'translate-x-4' : 'translate-x-0'}`} />
+              </button>
+              <span className={`w-8 text-xs font-medium ${isActive ? 'text-zinc-200' : 'text-zinc-600'}`}>{name.slice(0, 3)}</span>
+              {isActive ? (
+                <>
+                  <select value={day.start} onChange={e => setSchedule(s => ({ ...s, [i]: { ...s[i], start: e.target.value } }))}
+                    className="text-[11px] bg-surface-700 border border-surface-600 rounded px-1.5 py-0.5 text-zinc-300 focus:outline-none focus:border-accent">
+                    {HOUR_OPTIONS.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
+                  </select>
+                  <span className="text-[10px] text-zinc-600">–</span>
+                  <select value={day.end} onChange={e => setSchedule(s => ({ ...s, [i]: { ...s[i], end: e.target.value } }))}
+                    className="text-[11px] bg-surface-700 border border-surface-600 rounded px-1.5 py-0.5 text-zinc-300 focus:outline-none focus:border-accent">
+                    {HOUR_OPTIONS.map(o => <option key={o.val} value={o.val}>{o.label}</option>)}
+                  </select>
+                </>
+              ) : (
+                <span className="text-[11px] text-zinc-600">Off</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="flex items-center justify-between pt-2 border-t border-surface-700">
+        <button onClick={onReset} className="text-xs text-zinc-600 hover:text-red-400 transition-colors">Reset to global</button>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" onClick={() => onSave({ mode, blockDuration: dur, businessHours: { schedule } })}>Save</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ProjectCalendar({ onMobileBack, groupIds, production, onUpdateProduction }) {
   const { effectiveSlots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates, availabilityMode, blockDuration, businessHours } = useApp()
   const [dateRequests, setDateRequests] = useState([])
@@ -442,23 +523,27 @@ function ProjectCalendar({ onMobileBack, groupIds, production, onUpdateProductio
           slotStates={slotStates}
           dateRequests={dateRequests}
           sharedAvailability={sharedAvailability}
+          businessHours={isCustom ? config.businessHours : businessHours}
         />
       </div>
 
       <Modal isOpen={showSettings} onClose={() => setShowSettings(false)} title="Project Availability">
-        <div className="space-y-4">
-          {isCustom ? (
-            <>
-              <p className="text-sm text-zinc-400">This project uses custom availability settings.</p>
-              <Button variant="secondary" size="sm" onClick={handleResetToGlobal}>Reset to global defaults</Button>
-            </>
-          ) : (
-            <>
-              <p className="text-sm text-zinc-400">This project uses your global availability settings. Customize to set different hours for this project.</p>
-              <Button size="sm" onClick={handleCustomize}>Customize for this project</Button>
-            </>
-          )}
-        </div>
+        {isCustom ? (
+          <ProjectAvailabilityEditor
+            config={config}
+            onSave={(updated) => {
+              onUpdateProduction(production.id, { availability_config: updated })
+              setShowSettings(false)
+            }}
+            onReset={() => { handleResetToGlobal() }}
+            onClose={() => setShowSettings(false)}
+          />
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-400">This project uses your global availability settings. Customize to set different hours for this project.</p>
+            <Button size="sm" onClick={handleCustomize}>Customize for this project</Button>
+          </div>
+        )}
       </Modal>
     </div>
   )

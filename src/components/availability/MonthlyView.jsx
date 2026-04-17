@@ -7,13 +7,13 @@ export function MonthlyView({
   year, month, slots, calendarEvents, connectedCalendars, prefixRules = [],
   onDayClick, isOwner, slotStates = DEFAULT_SLOT_STATES,
   selectedDates = [], isSelectionMode = false,
-  dateRequests = [], sharedAvailability = [],
+  dateRequests = [], sharedAvailability = [], businessHours = null,
 }) {
   const grid = useMemo(() => getMonthGrid(year, month), [year, month])
   const dates = useMemo(() => grid.map(d => d.date), [grid])
   const matrix = useMemo(
-    () => deriveAvailabilityMatrix(dates, slots, calendarEvents, connectedCalendars, prefixRules),
-    [dates, slots, calendarEvents, connectedCalendars, prefixRules]
+    () => deriveAvailabilityMatrix(dates, slots, calendarEvents, connectedCalendars, prefixRules, businessHours),
+    [dates, slots, calendarEvents, connectedCalendars, prefixRules, businessHours]
   )
 
   const todayStr = dateToStr(new Date())

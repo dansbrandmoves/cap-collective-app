@@ -461,16 +461,20 @@ export function CalendarSettings() {
           <button onClick={resetSlotStateCustomizations} className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">Reset</button>
         </div>
         <div className="space-y-1.5">
-          {Object.entries(slotStates).map(([key, val]) => (
-            <div key={key} className="flex items-center gap-2.5 py-1">
-              <input type="color" value={val.color}
-                onChange={e => updateSlotStateCustomization(key, { color: e.target.value })}
-                className="w-5 h-5 rounded cursor-pointer bg-transparent border-0 flex-shrink-0" />
-              <input type="text" value={val.label}
-                onChange={e => updateSlotStateCustomization(key, { label: e.target.value })}
-                className="flex-1 bg-transparent text-sm text-zinc-300 focus:outline-none focus:text-zinc-100 min-w-0 border-b border-transparent focus:border-surface-600 py-0.5" />
-            </div>
-          ))}
+          {Object.entries(slotStates).map(([key, val]) => {
+            const meaning = { available: 'Open', hold: 'Tentative', booked: 'Calendar event', blocked: 'Hard block' }[key]
+            return (
+              <div key={key} className="flex items-center gap-2.5 py-1">
+                <input type="color" value={val.color}
+                  onChange={e => updateSlotStateCustomization(key, { color: e.target.value })}
+                  className="w-5 h-5 rounded cursor-pointer bg-transparent border-0 flex-shrink-0" />
+                <input type="text" value={val.label}
+                  onChange={e => updateSlotStateCustomization(key, { label: e.target.value })}
+                  className="flex-1 bg-transparent text-sm text-zinc-300 focus:outline-none focus:text-zinc-100 min-w-0 border-b border-transparent focus:border-surface-600 py-0.5" />
+                <span className="text-[10px] text-zinc-600 flex-shrink-0">{meaning}</span>
+              </div>
+            )
+          })}
         </div>
       </div>
 

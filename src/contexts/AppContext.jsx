@@ -185,7 +185,9 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     let initialLoad = true
-    // Safety timeout — 2s is plenty for auth
+    // Longer timeout if OAuth redirect is in progress (has ?code= in URL)
+    const hasAuthCode = window.location.search.includes('code=') || window.location.hash.includes('access_token')
+    const timeoutMs = hasAuthCode ? 10000 : 3000
     const timeout = setTimeout(() => {
       if (initialLoad) {
         console.warn('Auth timed out — clearing stale session')
@@ -194,7 +196,7 @@ export function AppProvider({ children }) {
         setAuthLoading(false)
         initialLoad = false
       }
-    }, 2000)
+    }, timeoutMs)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       // Set user FIRST, then resolve authLoading — prevents race where
       // data fetch sees authLoading=false but user is still null

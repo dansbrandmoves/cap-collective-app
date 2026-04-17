@@ -1,0 +1,17 @@
+{
+  "name": "Coordie",
+  "short_name": "Coordie",
+  "description": "Coordinate your projects, beautifully.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0c0e",
+  "theme_color": "#0c0c0e",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

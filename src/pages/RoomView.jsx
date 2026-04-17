@@ -260,8 +260,8 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp }) {
   )
 }
 
-function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots }) {
-  const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, guestCalendarEnabled } = useApp()
+function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots, projectBusinessHours }) {
+  const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, guestCalendarEnabled, businessHours } = useApp()
   return (
     <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
@@ -278,7 +278,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
         prefixRules={prefixRules}
         isOwner={isOwner}
         slotStates={slotStates}
-        businessHours={production?.availability_config?.businessHours || businessHours}
+        businessHours={projectBusinessHours || businessHours}
         groupId={groupId}
         guestName={guestName}
         onRequestSubmit={createDateRequest}
@@ -446,6 +446,7 @@ export function RoomView() {
           groupId={groupId}
           guestName={guestName}
           slots={slots}
+          projectBusinessHours={production?.availability_config?.businessHours}
         />
       )}
 

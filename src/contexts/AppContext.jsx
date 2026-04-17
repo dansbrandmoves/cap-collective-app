@@ -127,7 +127,12 @@ export function AppProvider({ children }) {
       setUser(session?.user ?? null)
       fetchPlan(session?.user?.id ?? null)
       setAuthLoading(false)
+    }).catch(err => {
+      console.error('getSession failed:', err)
+      setAuthLoading(false)
     })
+    // Safety net: never stay stuck on loading
+    const timeout = setTimeout(() => setAuthLoading(false), 5000)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null)
       fetchPlan(session?.user?.id ?? null)
@@ -141,7 +146,7 @@ export function AppProvider({ children }) {
         } catch (err) { console.error('Welcome email failed:', err) }
       }
     })
-    return () => subscription.unsubscribe()
+    return () => { clearTimeout(timeout); subscription.unsubscribe() }
   }, [])
 
   const isOwner = !!user

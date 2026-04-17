@@ -26,7 +26,7 @@ function NamePrompt({ token, onConfirm, ownerLogo }) {
       <div className="bg-surface-900 border border-surface-700 rounded-2xl px-8 py-8 w-full max-w-sm">
         <div className="flex items-center gap-3 mb-6">
           {ownerLogo ? (
-            <div className="bg-white rounded-lg px-2.5 py-1.5 inline-flex">
+            <div className={`rounded-lg px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-white' : 'bg-zinc-900'}`}>
               <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
             </div>
           ) : (
@@ -294,6 +294,7 @@ export function RoomView() {
   const [resolving, setResolving] = useState(true)
   const [guestName, setGuestName] = useState(null)
   const [ownerLogo, setOwnerLogo] = useState(null)
+  const [ownerLogoDark, setOwnerLogoDark] = useState(true)
 
   useEffect(() => {
     if (loading) return
@@ -308,8 +309,8 @@ export function RoomView() {
 
   useEffect(() => {
     if (!production?.ownerId || isOwner) return
-    supabase.from('profiles').select('logo_url').eq('id', production.ownerId).single()
-      .then(({ data }) => setOwnerLogo(data?.logo_url || null))
+    supabase.from('profiles').select('logo_url, logo_is_dark').eq('id', production.ownerId).single()
+      .then(({ data }) => { setOwnerLogo(data?.logo_url || null); setOwnerLogoDark(data?.logo_is_dark ?? true) })
   }, [production?.ownerId, isOwner])
 
   useEffect(() => {
@@ -371,7 +372,7 @@ export function RoomView() {
           {!isOwner && (
             <div className="flex items-center gap-2 flex-shrink-0">
               {ownerLogo ? (
-                <div className="bg-white rounded-md px-2 py-1 inline-flex">
+                <div className={`rounded-md px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-white' : 'bg-zinc-900'}`}>
                   <img src={ownerLogo} alt="" className="max-h-4 max-w-[80px] object-contain" />
                 </div>
               ) : (

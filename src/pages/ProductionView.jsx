@@ -10,7 +10,7 @@ import { AvailabilityCalendar } from '../components/availability/AvailabilityCal
 export function ProductionView() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getProduction, updateProduction, updateProductionNotes, deleteProduction, createGroup, updateGroupName, deleteGroup, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates, canAddGroup, isProPlan, FREE_GROUP_LIMIT } = useApp()
+  const { getProduction, updateProduction, updateProductionNotes, deleteProduction, createGroup, updateGroupName, deleteGroup, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates, canAddGroup, isProPlan, FREE_GROUP_LIMIT, pendingRequestCounts } = useApp()
 
   const production = getProduction(id)
   const [activeGroupId, setActiveGroupId] = useState(null)
@@ -27,6 +27,16 @@ export function ProductionView() {
   const [editGroupName, setEditGroupName] = useState('')
   const [deletingGroupId, setDeletingGroupId] = useState(null)
   const [showUpgrade, setShowUpgrade] = useState(false)
+
+  // Auto-select group with pending requests on first load
+  useEffect(() => {
+    if (!production || activeGroupId) return
+    const groupWithPending = production.groups.find(g => (pendingRequestCounts[g.id] || 0) > 0)
+    if (groupWithPending) {
+      setActiveGroupId(groupWithPending.id)
+      setRightPanel('group')
+    }
+  }, [production, pendingRequestCounts]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!production) {
     return (
@@ -199,6 +209,11 @@ export function ProductionView() {
                 >
                   {group.name}
                 </button>
+                {(pendingRequestCounts[group.id] || 0) > 0 && (
+                  <span className="bg-accent text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mr-1">
+                    {pendingRequestCounts[group.id]}
+                  </span>
+                )}
                 <div className="hidden group-hover/item:flex items-center gap-0.5 pr-2">
                   <button onClick={() => { setEditingGroupId(group.id); setEditGroupName(group.name) }} className="text-xs text-zinc-600 hover:text-zinc-300 px-1 py-1 transition-colors">Edit</button>
                   <button onClick={() => setDeletingGroupId(group.id)} className="text-xs text-red-700 hover:text-red-400 px-1 py-1 transition-colors">Del</button>

@@ -39,7 +39,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
               end={to === '/'}
               onClick={onMobileClose}
               className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 ${
+                `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 ${
                   isActive
                     ? 'bg-accent/10 text-zinc-100 border border-accent/15'
                     : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 border border-transparent'
@@ -98,7 +98,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
               <NavLink
                 to="/billing"
                 onClick={onMobileClose}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-accent hover:bg-accent/10 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-accent hover:bg-accent/10 transition-colors"
               >
                 <Zap size={16} strokeWidth={1.75} className="flex-shrink-0" />
                 <span className="flex-1">Upgrade to Pro</span>
@@ -112,7 +112,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 to="/billing"
                 onClick={onMobileClose}
                 className={({ isActive }) =>
-                  `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                     isActive ? 'bg-surface-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
                   }`
                 }
@@ -125,7 +125,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
             {user && (
               <button
                 onClick={signOut}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
               >
                 <LogOut size={16} strokeWidth={1.75} className="flex-shrink-0" />
                 Sign out

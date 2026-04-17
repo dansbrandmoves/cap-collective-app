@@ -465,7 +465,7 @@ export function RoomView() {
       {!isOwner && (
         <div className="px-5 py-3 border-t border-surface-800 flex items-center justify-center">
           <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-[10px] text-zinc-700 hover:text-zinc-500 transition-colors">
+            className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
             <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
             Powered by Coordie
           </a>

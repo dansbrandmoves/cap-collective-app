@@ -208,7 +208,7 @@ export function ProductionView() {
               >
                 <button
                   onClick={() => handleSelectGroup(group.id)}
-                  className={`flex-1 text-left px-3 py-2.5 text-sm transition-colors truncate ${
+                  className={`flex-1 text-left px-3 py-3 text-sm transition-colors truncate ${
                     isActive ? 'text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >

@@ -27,6 +27,9 @@ function snapMinutes(mins) {
 
 export function SlotTimeline({ slots, businessHours, interactive = true, slotStates = null }) {
   // slotStates: optional { [slotId]: { state, drivingEvent } } for coloring by derived state
+  // Disable drag interactions on touch devices — view-only on mobile
+  const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+  const canDrag = interactive && !isTouchDevice
   const { updateSlot, createSlot } = useApp()
   const containerRef = useRef(null)
   const [dragState, setDragState] = useState(null) // { slotId, handle: 'left'|'right'|'move', startX, origStart, origEnd }
@@ -158,7 +161,7 @@ export function SlotTimeline({ slots, businessHours, interactive = true, slotSta
 
   // Click empty space to add
   function handleBarClick(e) {
-    if (!interactive || dragState) return
+    if (!canDrag || dragState) return
     // Don't create if we clicked on a slot
     if (e.target !== containerRef.current && !e.target.classList.contains('timeline-bg')) return
 
@@ -185,7 +188,7 @@ export function SlotTimeline({ slots, businessHours, interactive = true, slotSta
 
   // Hover time indicator
   function handleMouseMoveBar(e) {
-    if (dragState || !interactive) { setHoverTime(null); return }
+    if (dragState || !canDrag) { setHoverTime(null); return }
     const mins = snapMinutes(clientXToMinutes(e.clientX))
     setHoverTime(mins)
   }
@@ -217,7 +220,7 @@ export function SlotTimeline({ slots, businessHours, interactive = true, slotSta
         onMouseMove={handleMouseMoveBar}
         onMouseLeave={() => setHoverTime(null)}
         className={`relative bg-surface-800 border border-surface-700 rounded-lg overflow-hidden timeline-bg ${
-          interactive ? 'cursor-crosshair' : ''
+          canDrag ? 'cursor-crosshair' : ''
         } ${dragState ? 'select-none' : ''}`}
         style={{ height: `${barHeight}px` }}
       >
@@ -251,7 +254,7 @@ export function SlotTimeline({ slots, businessHours, interactive = true, slotSta
                 key={slot.id}
                 className={`absolute rounded-md flex items-center overflow-hidden transition-shadow group/block ${
                   isDragging ? 'shadow-lg shadow-black/30 z-20' : 'z-10'
-                } ${interactive ? '' : 'pointer-events-none'}`}
+                } ${canDrag ? '' : 'pointer-events-none'}`}
                 style={{
                   left: `${left}%`,
                   width: `${width}%`,
@@ -262,7 +265,7 @@ export function SlotTimeline({ slots, businessHours, interactive = true, slotSta
                 }}
               >
                 {/* Left resize handle */}
-                {interactive && (
+                {canDrag && (
                   <div
                     onMouseDown={e => handleMouseDown(e, slot.id, 'left')}
                     className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize z-20 hover:bg-white/10"
@@ -271,8 +274,8 @@ export function SlotTimeline({ slots, businessHours, interactive = true, slotSta
 
                 {/* Move handle (center) */}
                 <div
-                  onMouseDown={interactive ? e => handleMouseDown(e, slot.id, 'move') : undefined}
-                  className={`flex-1 flex items-center justify-center min-w-0 h-full ${interactive ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                  onMouseDown={canDrag ? e => handleMouseDown(e, slot.id, 'move') : undefined}
+                  className={`flex-1 flex items-center justify-center min-w-0 h-full ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
                   <span className="text-[10px] font-medium text-zinc-200 truncate px-2 select-none">
                     {slot.name}
@@ -280,7 +283,7 @@ export function SlotTimeline({ slots, businessHours, interactive = true, slotSta
                 </div>
 
                 {/* Right resize handle */}
-                {interactive && (
+                {canDrag && (
                   <div
                     onMouseDown={e => handleMouseDown(e, slot.id, 'right')}
                     className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize z-20 hover:bg-white/10"
@@ -292,7 +295,7 @@ export function SlotTimeline({ slots, businessHours, interactive = true, slotSta
         )}
 
         {/* Empty state */}
-        {slots.length === 0 && interactive && (
+        {slots.length === 0 && canDrag && (
           <div className="absolute inset-0 flex items-center justify-center text-xs text-zinc-600 pointer-events-none">
             Click anywhere to add a time slot
           </div>

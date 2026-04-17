@@ -41,7 +41,7 @@ export function MonthlyView({
               key={i}
               onClick={() => onDayClick(date)}
               disabled={!inMonth}
-              className={`min-h-[48px] sm:min-h-[72px] rounded-lg p-1 sm:p-1.5 text-left transition-all flex flex-col
+              className={`min-h-[56px] sm:min-h-[72px] rounded-lg p-1.5 sm:p-2 text-left transition-all flex flex-col
                 ${inMonth ? 'hover:ring-1 hover:ring-zinc-500 cursor-pointer' : 'opacity-20 cursor-default'}
                 ${isToday ? 'ring-1 ring-accent' : 'bg-surface-800'}
                 ${isSelected ? 'ring-2 ring-accent bg-accent/10' : ''}

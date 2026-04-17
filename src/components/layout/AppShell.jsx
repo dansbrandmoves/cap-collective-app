@@ -15,14 +15,14 @@ export function AppShell() {
       )}
       <main className="flex-1 min-w-0 flex flex-col">
         {isOwner && (
-          <div className="md:hidden flex items-center justify-between px-4 py-3 bg-surface-900 border-b border-surface-700 sticky top-0 z-30 safe-top">
+          <div className="md:hidden flex items-center justify-between px-4 py-4 bg-surface-900 border-b border-surface-700 sticky top-0 z-30 safe-top">
             <div className="flex items-center gap-2">
               <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
             </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 transition-colors"
+                className="w-10 h-10 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 transition-colors"
                 aria-label="Open menu"
               >
                 <Menu size={18} strokeWidth={1.75} />

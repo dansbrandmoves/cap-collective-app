@@ -573,7 +573,7 @@ export function BookingPageView() {
               <div className="animate-fadeIn">
                 <div className="flex items-center gap-2 mb-4">
                   <button onClick={() => setMobileStep(1)}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors">
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors">
                     <ChevronLeft size={15} />
                   </button>
                   <div>
@@ -590,7 +590,7 @@ export function BookingPageView() {
               <div className="animate-fadeIn">
                 <div className="flex items-center gap-2 mb-4">
                   <button onClick={() => { setSelectedSlot(null); setMobileStep(2) }}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors">
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors">
                     <ChevronLeft size={15} />
                   </button>
                   <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Your details</p>

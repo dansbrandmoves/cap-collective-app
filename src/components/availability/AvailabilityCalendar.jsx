@@ -156,9 +156,9 @@ export function AvailabilityCalendar({
             Today
           </button>
           <div className="flex items-center gap-1 flex-1 sm:flex-none">
-            <button onClick={handlePrev} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-surface-700 text-zinc-400 hover:text-zinc-200 transition-colors text-sm">‹</button>
+            <button onClick={handlePrev} className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-surface-700 text-zinc-400 hover:text-zinc-200 transition-colors text-sm">‹</button>
             <span className="text-sm font-medium text-zinc-300 flex-1 sm:min-w-[160px] text-center">{getNavLabel()}</span>
-            <button onClick={handleNext} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-surface-700 text-zinc-400 hover:text-zinc-200 transition-colors text-sm">›</button>
+            <button onClick={handleNext} className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-surface-700 text-zinc-400 hover:text-zinc-200 transition-colors text-sm">›</button>
           </div>
         </div>
       </div>

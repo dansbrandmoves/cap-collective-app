@@ -152,9 +152,11 @@ export function AppProvider({ children }) {
   const FREE_GROUP_LIMIT = 2
   const FREE_BOOKING_PAGE_LIMIT = 1
 
+  const [profileLoaded, setProfileLoaded] = useState(false)
+
   async function fetchPlan(userId) {
-    if (!userId) { setPlan('free'); setLogoUrl(null); return }
-    const { data } = await supabase.from('profiles').select('plan, logo_url, logo_is_dark, connected_calendars').eq('id', userId).single()
+    if (!userId) { setPlan('free'); setLogoUrl(null); setProfileLoaded(true); return }
+    const { data } = await supabase.from('profiles').select('plan, logo_url, logo_is_dark, connected_calendars, google_refresh_token').eq('id', userId).single()
     setPlan(data?.plan ?? 'free')
     setLogoUrl(data?.logo_url ?? null)
     setLogoIsDark(data?.logo_is_dark ?? true)
@@ -162,6 +164,33 @@ export function AppProvider({ children }) {
     if (data?.connected_calendars?.length) {
       setConnectedCalendars(data.connected_calendars)
     }
+    // If we have a refresh token, auto-sync calendar events
+    if (data?.google_refresh_token && data?.connected_calendars?.length) {
+      try {
+        const { getValidAccessToken, fetchAllGoverningEvents } = await import('../utils/googleCalendar.js')
+        const accessToken = await getValidAccessToken()
+        if (accessToken) {
+          setGoogleAccessToken(accessToken)
+          const timeMin = new Date(); timeMin.setMonth(timeMin.getMonth() - 1)
+          const timeMax = new Date(); timeMax.setMonth(timeMax.getMonth() + 3)
+          const events = await fetchAllGoverningEvents(accessToken, data.connected_calendars, timeMin, timeMax)
+          setCalendarEvents(events)
+          setLastSynced(new Date().toISOString())
+          // Also sync to Supabase for booking pages
+          if (userId) {
+            await supabase.from('owner_calendar_events').delete().eq('owner_id', userId)
+            if (events.length > 0) {
+              await supabase.from('owner_calendar_events').insert(
+                events.map(e => ({ owner_id: userId, calendar_id: e.calendarId, title: e.title, start: e.start, end_at: e.end, is_all_day: e.isAllDay || false }))
+              )
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Auto-sync calendar on login:', err)
+      }
+    }
+    setProfileLoaded(true)
   }
 
   const uploadLogo = useCallback(async (file) => {
@@ -626,11 +655,12 @@ export function AppProvider({ children }) {
   }, [])
 
   // Sync connected calendars to Supabase for cross-device persistence
+  // Only sync AFTER profile has loaded to avoid overwriting with empty localStorage data
   useEffect(() => {
-    if (!user?.id || !connectedCalendars.length) return
+    if (!user?.id || !profileLoaded || !connectedCalendars.length) return
     supabase.from('profiles').update({ connected_calendars: connectedCalendars }).eq('id', user.id)
       .then(({ error }) => { if (error) console.error('Sync calendars:', error) })
-  }, [connectedCalendars, user?.id])
+  }, [connectedCalendars, user?.id, profileLoaded])
 
   const replaceCalendarEvents = useCallback(async (newEvents) => {
     setCalendarEvents(newEvents)

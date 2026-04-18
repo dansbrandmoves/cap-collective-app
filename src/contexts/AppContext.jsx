@@ -154,10 +154,14 @@ export function AppProvider({ children }) {
 
   async function fetchPlan(userId) {
     if (!userId) { setPlan('free'); setLogoUrl(null); return }
-    const { data } = await supabase.from('profiles').select('plan, logo_url, logo_is_dark').eq('id', userId).single()
+    const { data } = await supabase.from('profiles').select('plan, logo_url, logo_is_dark, connected_calendars').eq('id', userId).single()
     setPlan(data?.plan ?? 'free')
     setLogoUrl(data?.logo_url ?? null)
     setLogoIsDark(data?.logo_is_dark ?? true)
+    // Restore connected calendars from Supabase (cross-device sync)
+    if (data?.connected_calendars?.length) {
+      setConnectedCalendars(data.connected_calendars)
+    }
   }
 
   const uploadLogo = useCallback(async (file) => {
@@ -620,6 +624,13 @@ export function AppProvider({ children }) {
     setConnectedCalendars(prev => prev.filter(c => c.googleCalendarId !== googleCalId))
     setCalendarEvents(prev => prev.filter(ev => ev.calendarId !== googleCalId))
   }, [])
+
+  // Sync connected calendars to Supabase for cross-device persistence
+  useEffect(() => {
+    if (!user?.id || !connectedCalendars.length) return
+    supabase.from('profiles').update({ connected_calendars: connectedCalendars }).eq('id', user.id)
+      .then(({ error }) => { if (error) console.error('Sync calendars:', error) })
+  }, [connectedCalendars, user?.id])
 
   const replaceCalendarEvents = useCallback(async (newEvents) => {
     setCalendarEvents(newEvents)

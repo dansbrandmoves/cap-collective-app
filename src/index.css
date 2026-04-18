@@ -22,7 +22,11 @@ html.light {
   html {
     @apply bg-surface-950 antialiased;
     color: #f4f4f5;
+    color-scheme: dark;
     scroll-behavior: smooth;
+  }
+  html.light {
+    color-scheme: light;
   }
 
   * {
@@ -42,9 +46,16 @@ html.light {
   }
 
   /* Fix select dropdown options in dark mode */
+  select {
+    color-scheme: dark;
+  }
+  html.light select {
+    color-scheme: light;
+  }
   select option {
     background-color: #1c1c20;
     color: #e4e4e7;
+    padding: 8px;
   }
   html.light select option {
     background-color: #ffffff;

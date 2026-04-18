@@ -15,7 +15,7 @@ export function AppShell() {
       )}
       <main className="flex-1 min-w-0 flex flex-col">
         {isOwner && (
-          <div className="md:hidden flex items-center justify-between px-4 py-4 bg-surface-900 border-b border-surface-700 sticky top-0 z-30 safe-top">
+          <div className="md:hidden flex items-center justify-between px-4 py-4 bg-surface-900/80 backdrop-blur-xl border-b border-surface-700/50 sticky top-0 z-30 safe-top">
             <div className="flex items-center gap-2">
               <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
             </div>

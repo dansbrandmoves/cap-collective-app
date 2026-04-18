@@ -41,6 +41,16 @@ html.light {
     @apply transition-all duration-150;
   }
 
+  /* Fix select dropdown options in dark mode */
+  select option {
+    background-color: #1c1c20;
+    color: #e4e4e7;
+  }
+  html.light select option {
+    background-color: #ffffff;
+    color: #18181b;
+  }
+
   /* Fix native time/date input icons in dark mode */
   input[type="time"]::-webkit-calendar-picker-indicator,
   input[type="date"]::-webkit-calendar-picker-indicator {

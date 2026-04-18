@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useApp } from '../contexts/AppContext'
 import { CalendarDays, Users, Link2, CheckCircle2, ArrowRight, Inbox, LayoutGrid, Zap } from 'lucide-react'
 
@@ -41,6 +42,48 @@ const HOW_IT_WORKS = [
   { step: '04', title: 'Coordinate together', desc: 'Guests view availability, request dates, and message you — all without creating an account.' },
 ]
 
+const BOOKING_TIMES = ['9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '1:00 PM', '2:00 PM']
+
+function BookingMockup() {
+  const selected = useAutoSelect(BOOKING_TIMES, 1800)
+
+  return (
+    <div className="bg-surface-900 border border-surface-700 rounded-2xl p-5 sm:p-6">
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">Booking Page</p>
+        <h3 className="text-lg font-semibold text-zinc-100 mb-1">30-Minute Meeting</h3>
+        <p className="text-sm text-zinc-500">Pick a time that works for you.</p>
+      </div>
+      <div className="space-y-2 mb-4">
+        <p className="text-xs text-zinc-500 font-medium">Thursday, April 17</p>
+        {BOOKING_TIMES.map((t, i) => (
+          <div key={t} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
+            i === selected
+              ? 'bg-accent text-white shadow-sm shadow-accent/30'
+              : 'border border-surface-600 text-zinc-300'
+          }`}>
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-300 ${i === selected ? 'bg-white' : 'bg-green-400'}`} />
+            {t}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5 text-[10px] text-zinc-600">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+        Synced with your Google Calendar
+      </div>
+    </div>
+  )
+}
+
+function useAutoSelect(items, interval = 2000) {
+  const [index, setIndex] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => setIndex(i => (i + 1) % items.length), interval)
+    return () => clearInterval(timer)
+  }, [items.length, interval])
+  return index
+}
+
 export function HomePage() {
   const { theme } = useApp()
   const logoFilter = theme === 'dark' ? 'invert(1)' : 'none'
@@ -48,7 +91,7 @@ export function HomePage() {
   return (
     <div className="min-h-screen bg-surface-950 flex flex-col">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-5 sm:px-8 py-5 border-b border-surface-800/60 sticky top-0 bg-surface-950/90 backdrop-blur-sm z-40">
+      <nav className="flex items-center justify-between px-5 sm:px-8 py-5 border-b border-white/5 sticky top-0 bg-surface-950/80 backdrop-blur-xl z-40">
         <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: logoFilter }} />
         <div className="flex items-center gap-6">
           <a href="#features" className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors hidden sm:inline">Features</a>
@@ -96,6 +139,61 @@ export function HomePage() {
         </div>
 
         <p className="text-xs text-zinc-600 mt-5">No credit card required. Room links work without an account.</p>
+      </section>
+
+      {/* Product Preview */}
+      <section className="px-5 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Calendar mockup */}
+          <div className="bg-surface-900 border border-surface-700 rounded-2xl p-5 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Availability Calendar</p>
+              <div className="flex items-center gap-1 bg-surface-800 rounded-md px-2 py-1">
+                <span className="text-[10px] text-zinc-400 font-medium">Monthly</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {['S','M','T','W','T','F','S'].map((d,i) => (
+                <div key={i} className="text-center text-[10px] text-zinc-600 py-1">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({length: 35}, (_, i) => {
+                const day = i - 2
+                const inMonth = day >= 1 && day <= 30
+                const isToday = day === 17
+                const slots = inMonth ? [
+                  day % 7 === 0 || day % 7 === 6 ? '#52525b' : '#22c55e',
+                  day % 3 === 0 ? '#52525b' : day % 5 === 0 ? '#f97316' : '#22c55e',
+                ] : []
+                return (
+                  <div key={i} className={`min-h-[32px] sm:min-h-[40px] rounded-md p-1 flex flex-col ${
+                    !inMonth ? 'opacity-10' : isToday ? 'ring-1 ring-accent' : 'bg-surface-800'
+                  }`}>
+                    {inMonth && (
+                      <>
+                        <span className={`text-[9px] mb-0.5 ${isToday ? 'text-accent' : 'text-zinc-400'}`}>{day}</span>
+                        <div className="flex flex-col gap-0.5 flex-1">
+                          {slots.map((c, si) => (
+                            <div key={si} className="h-1.5 sm:h-2 rounded-sm flex-shrink-0 opacity-80" style={{backgroundColor: c}} />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex items-center gap-3 mt-4 pt-3 border-t border-surface-800">
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500" /><span className="text-[10px] text-zinc-500">Available</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-orange-500" /><span className="text-[10px] text-zinc-500">Hold</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-zinc-600" /><span className="text-[10px] text-zinc-500">Blocked</span></div>
+            </div>
+          </div>
+
+          {/* Booking mockup — auto-animating */}
+          <BookingMockup />
+        </div>
       </section>
 
       {/* Divider */}

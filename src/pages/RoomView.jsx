@@ -22,19 +22,19 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
     onConfirm(name.trim())
   }
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-      <div className="bg-surface-900 border border-surface-700 rounded-2xl px-8 py-8 w-full max-w-sm">
-        <div className="flex items-center gap-3 mb-6">
+    <div className="fixed inset-0 bg-surface-950 ambient-glow flex items-center justify-center z-50 px-6">
+      <div className="bg-surface-900/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl px-8 py-10 w-full max-w-sm shadow-lift">
+        <div className="flex items-center gap-3 mb-8">
           {ownerLogo ? (
-            <div className={`rounded-lg px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
-              <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
+            <div className={`rounded-xl px-3 py-2 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
+              <img src={ownerLogo} alt="" className="max-h-7 max-w-[120px] object-contain" />
             </div>
           ) : (
-            <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
+            <img src="/coordie-logo.svg" alt="Coordie" className="h-6" style={{ filter: 'invert(1)' }} />
           )}
         </div>
-        <h2 className="text-lg font-semibold text-zinc-100 mb-1">What's your name?</h2>
-        <p className="text-sm text-zinc-500 mb-6">So the team knows who they're talking to.</p>
+        <h2 className="text-[24px] font-semibold text-zinc-50 tracking-tight leading-tight mb-2">What's your name?</h2>
+        <p className="text-[15px] text-zinc-400 leading-relaxed mb-7">So the team knows who they're talking to.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
@@ -42,7 +42,7 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
             onChange={e => setName(e.target.value)}
             placeholder="Your name"
             autoFocus
-            className="w-full bg-surface-800 border border-surface-600 rounded-lg px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent"
+            className="w-full bg-surface-800/70 border border-white/[0.06] rounded-xl px-4 py-3 text-[15px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all duration-200"
           />
           <Button type="submit" disabled={!name.trim()} className="w-full">Enter Room →</Button>
         </form>
@@ -403,17 +403,17 @@ export function RoomView() {
   return (
     <div className="flex flex-col h-screen bg-surface-950">
       {/* Room header */}
-      <div className="flex items-center justify-between px-5 sm:px-8 py-3 sm:py-4 border-b border-surface-700 bg-surface-900">
+      <div className="flex items-center justify-between px-5 sm:px-8 py-3.5 sm:py-4 border-b border-white/[0.06] bg-surface-900/80 backdrop-blur-xl safe-top">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           {isOwner && (
-            <Link to={`/project/${productionId}`} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex-shrink-0">
-              ← <span className="hidden sm:inline">{production.name}</span><span className="sm:hidden">Back</span>
+            <Link to={`/project/${productionId}`} className="text-[13px] text-zinc-500 hover:text-zinc-200 transition-colors flex-shrink-0 flex items-center gap-1">
+              <span>←</span> <span className="hidden sm:inline">{production.name}</span><span className="sm:hidden">Back</span>
             </Link>
           )}
           {!isOwner && (
             <div className="flex items-center gap-2 flex-shrink-0">
               {ownerLogo ? (
-                <div className={`rounded-md px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
+                <div className={`rounded-lg px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
                   <img src={ownerLogo} alt="" className="max-h-4 max-w-[80px] object-contain" />
                 </div>
               ) : (
@@ -421,24 +421,26 @@ export function RoomView() {
               )}
             </div>
           )}
-          <div className="h-4 w-px bg-surface-700 flex-shrink-0" />
+          <div className="h-4 w-px bg-white/10 flex-shrink-0" />
           <div className="min-w-0">
-            <span className="text-sm font-semibold text-zinc-100 truncate">{group.name}</span>
+            <span className="text-[15px] font-semibold text-zinc-100 truncate tracking-tight">{group.name}</span>
             <span className="text-zinc-600 mx-1.5 text-sm hidden sm:inline">·</span>
-            <span className="text-sm text-zinc-500 hidden sm:inline truncate">{production.name}</span>
+            <span className="text-[13px] text-zinc-500 hidden sm:inline truncate">{production.name}</span>
           </div>
         </div>
-        {isOwner && <Badge variant="ghost" className="flex-shrink-0">Owner</Badge>}
+        {isOwner && (
+          <span className="flex-shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full bg-accent/10 text-accent border border-accent/20">Owner</span>
+        )}
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-0 px-5 sm:px-8 border-b border-surface-700 bg-surface-900">
+      <div className="flex items-center gap-0 px-5 sm:px-8 border-b border-white/[0.06] bg-surface-900/60 backdrop-blur-sm">
         {TABS.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-              activeTab === tab ? 'border-accent text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            className={`min-h-touch px-4 py-3 text-[13px] font-medium transition-colors border-b-2 tracking-tight ${
+              activeTab === tab ? 'border-accent text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-200'
             }`}
           >
             {tab}
@@ -463,9 +465,9 @@ export function RoomView() {
 
       {/* Footer */}
       {!isOwner && (
-        <div className="px-5 py-3 border-t border-surface-800 flex items-center justify-center">
+        <div className="px-5 py-3 border-t border-white/[0.05] flex items-center justify-center safe-bottom-sm">
           <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
+            className="flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
             <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
             Powered by Coordie
           </a>

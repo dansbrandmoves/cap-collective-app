@@ -125,28 +125,28 @@ export function ProductionView() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Left panel */}
-      <div className={`flex-shrink-0 bg-surface-900 border-r border-surface-700 flex-col
+      <div className={`flex-shrink-0 bg-surface-900 border-r border-white/[0.06] flex-col
         w-full md:w-72
         ${mobileShowDetail ? 'hidden md:flex' : 'flex'}
       `}>
-        <div className="px-5 py-5 border-b border-surface-700">
-          <button onClick={() => navigate('/')} className="text-xs text-zinc-500 hover:text-zinc-300 mb-3 flex items-center gap-1 transition-colors">
+        <div className="px-5 py-5 border-b border-white/[0.05]">
+          <button onClick={() => navigate('/')} className="text-[12px] text-zinc-500 hover:text-zinc-200 mb-3 flex items-center gap-1 transition-colors">
             ← Projects
           </button>
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h2 className="text-sm font-semibold text-zinc-100 leading-snug">{production.name}</h2>
+              <h2 className="text-[15px] font-semibold text-zinc-50 leading-snug tracking-tight">{production.name}</h2>
               {(production.startDate || production.endDate) && (
-                <p className="text-xs text-zinc-500 mt-0.5">
+                <p className="text-xs text-zinc-500 mt-1">
                   {production.startDate && production.endDate
                     ? `${production.startDate} → ${production.endDate}`
                     : production.startDate || production.endDate}
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button onClick={openEditProject} className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors px-1.5 py-1">Edit</button>
-              <button onClick={() => setShowDeleteConfirm(true)} className="text-xs text-red-600 hover:text-red-400 transition-colors px-1.5 py-1">Delete</button>
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <button onClick={openEditProject} className="text-[11px] text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded px-2 py-1 transition-colors">Edit</button>
+              <button onClick={() => setShowDeleteConfirm(true)} className="text-[11px] text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded px-2 py-1 transition-colors">Delete</button>
             </div>
           </div>
         </div>
@@ -155,8 +155,8 @@ export function ProductionView() {
           {/* Calendar nav item */}
           <button
             onClick={handleShowCalendar}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-left transition-colors mb-2 ${
-              rightPanel === 'calendar' && !activeGroupId ? 'bg-surface-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] text-left transition-colors mb-2 ${
+              rightPanel === 'calendar' && !activeGroupId ? 'bg-white/[0.06] text-zinc-100' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04]'
             }`}
           >
             <span className="text-base opacity-70">◷</span>
@@ -202,14 +202,14 @@ export function ProductionView() {
             return (
               <div
                 key={group.id}
-                className={`flex items-center gap-1 rounded-lg mb-0.5 group/item ${
-                  isActive ? 'bg-surface-700' : 'hover:bg-surface-800'
+                className={`flex items-center gap-1 rounded-lg mb-0.5 group/item transition-colors ${
+                  isActive ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
                 }`}
               >
                 <button
                   onClick={() => handleSelectGroup(group.id)}
-                  className={`flex-1 text-left px-3 py-3 text-sm transition-colors truncate ${
-                    isActive ? 'text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                  className={`flex-1 text-left px-3 py-2.5 text-[13px] transition-colors truncate ${
+                    isActive ? 'text-zinc-100 font-medium' : 'text-zinc-400 hover:text-zinc-100'
                   }`}
                 >
                   {group.name}
@@ -229,7 +229,7 @@ export function ProductionView() {
         </div>
 
         {/* Private notes */}
-        <div className="border-t border-surface-700 bg-surface-950 px-5 py-4">
+        <div className="border-t border-white/[0.05] bg-surface-950 px-5 py-4">
           <div className="flex items-center gap-2 mb-2">
             <Lock size={12} strokeWidth={1.75} className="text-zinc-600" />
             <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Private Notes</p>
@@ -532,21 +532,23 @@ function ProjectCalendar({ onMobileBack, groupIds, production, onUpdateProductio
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-5 sm:px-8 py-4 border-b border-surface-700 flex items-center justify-between gap-3">
+      <div className="px-5 sm:px-8 py-5 border-b border-white/[0.05] flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <button onClick={onMobileBack} className="md:hidden text-xs text-zinc-500 hover:text-zinc-300 flex-shrink-0 transition-colors">
+          <button onClick={onMobileBack} className="md:hidden text-[12px] text-zinc-500 hover:text-zinc-200 flex-shrink-0 transition-colors">
             ← Back
           </button>
-          <h2 className="text-lg font-semibold text-zinc-100">Availability</h2>
-          {isCustom && <Badge variant="ghost" className="text-[10px]">Custom</Badge>}
+          <h2 className="text-[20px] font-semibold text-zinc-50 tracking-tight">Availability</h2>
+          {isCustom && (
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">Custom</span>
+          )}
         </div>
         <button onClick={() => setShowSettings(true)}
-          className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-100 hover:bg-white/5 transition-colors"
           title="Availability settings for this project">
           <Settings size={15} strokeWidth={1.75} />
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-5 sm:py-6">
+      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 sm:py-8">
         <AvailabilityCalendar
           slots={projectSlots}
           calendarEvents={calendarEvents}
@@ -637,25 +639,27 @@ function GroupOverview({ productionId, group, onMobileBack }) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-5 sm:px-8 py-4 border-b border-surface-700 flex items-center justify-between gap-3">
+      <div className="px-5 sm:px-8 py-5 border-b border-white/[0.05] flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={onMobileBack} className="md:hidden text-xs text-zinc-500 hover:text-zinc-300 flex-shrink-0 transition-colors">
+          <button onClick={onMobileBack} className="md:hidden text-[12px] text-zinc-500 hover:text-zinc-200 flex-shrink-0 transition-colors">
             ← Back
           </button>
-          <h2 className="text-lg font-semibold text-zinc-100 truncate">{group.name}</h2>
+          <h2 className="text-[20px] font-semibold text-zinc-50 truncate tracking-tight">{group.name}</h2>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          {pendingCount > 0 && <Badge variant="accent">{pendingCount} pending</Badge>}
+          {pendingCount > 0 && (
+            <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-accent/10 text-accent border border-accent/20">{pendingCount} pending</span>
+          )}
           <Button size="sm" onClick={() => navigate(`/room/${openToken}`)}>Open →</Button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-5 sm:py-6 space-y-6 sm:space-y-8">
+      <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 sm:py-8 space-y-8 sm:space-y-10">
 
         {/* Access mode + link sharing */}
         <div>
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Sharing</p>
-          <div className="bg-surface-900 border border-surface-700 rounded-xl p-5">
+          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-3">Sharing</p>
+          <div className="bg-surface-900 border border-white/[0.06] rounded-2xl p-5 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <button
                 onClick={() => updateGroupAccessMode(group.id, 'open_link')}

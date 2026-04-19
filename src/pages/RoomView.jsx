@@ -152,8 +152,8 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
                 <CalendarDays size={15} strokeWidth={1.75} className="text-accent" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-zinc-100 mb-0.5 tracking-tight">See overlap instantly</p>
-                <p className="text-xs text-zinc-400 leading-relaxed">Connect your calendar to highlight days that work for both of you. Only free/busy is read &mdash; never event details.</p>
+                <p className="text-sm font-semibold text-zinc-100 mb-0.5 tracking-tight">Spot your free time at a glance</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">We'll dim slots where you're already busy so you can pick dates and times that actually work. Only free/busy is read &mdash; never event details, and nothing leaves your browser.</p>
               </div>
             </div>
             <Button

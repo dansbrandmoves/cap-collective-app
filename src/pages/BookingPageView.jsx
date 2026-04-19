@@ -299,8 +299,8 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
         <div className="flex items-center gap-3">
           <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-500 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-zinc-300">See your free slots</p>
-            <p className="text-[11px] text-zinc-500 leading-relaxed">Connect to highlight times that work for you.</p>
+            <p className="text-xs font-medium text-zinc-300">Spot your free time at a glance</p>
+            <p className="text-[11px] text-zinc-500 leading-relaxed">We'll dim slots where you're already busy. Free/busy only — never event details, nothing leaves your browser.</p>
           </div>
         </div>
         <button

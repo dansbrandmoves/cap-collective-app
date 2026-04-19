@@ -99,7 +99,9 @@ function NotesTab({ productionId, group, guestName }) {
 // Guest calendar panel — lets guest connect their Google Calendar and see their free dates
 function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId }) {
   const [gisReady, setGisReady] = useState(false)
-  const [guestEvents, setGuestEvents] = useState(null) // null = not connected yet
+  const [guestEvents, setGuestEvents] = useState(() => {
+    try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [shared, setShared] = useState(false)
@@ -132,7 +134,8 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId 
       timeMax.setDate(timeMax.getDate() + 60)
       const events = await fetchCalendarEvents(tokenResponse.access_token, 'primary', timeMin, timeMax)
       setGuestEvents(events)
-    } catch {
+      try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch (e) { /* full */ }
+    } catch (e) {
       setError('Could not fetch calendar events.')
     }
     setLoading(false)
@@ -214,7 +217,7 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId 
           <p className="text-sm font-medium text-zinc-200">Your free days (next 60 days)</p>
         </div>
         <button
-          onClick={() => setGuestEvents(null)}
+          onClick={() => { setGuestEvents(null); try { sessionStorage.removeItem('coordie-gcal') } catch (e) { /* */ } }}
           className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
         >
           Disconnect

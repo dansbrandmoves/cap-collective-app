@@ -327,7 +327,18 @@ export function BookingPageView() {
   const [ownerLogo, setOwnerLogo] = useState(null)
   const [ownerLogoDark, setOwnerLogoDark] = useState(true)
   const [ownerGuestCalendarEnabled, setOwnerGuestCalendarEnabled] = useState(true)
-  const [guestEvents, setGuestEvents] = useState(null)
+  const [guestEvents, setGuestEvents] = useState(() => {
+    try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
+  })
+
+  function connectGuestCalendar(events) {
+    setGuestEvents(events)
+    try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch (e) { /* full */ }
+  }
+  function disconnectGuestCalendar() {
+    setGuestEvents(null)
+    try { sessionStorage.removeItem('coordie-gcal') } catch (e) { /* */ }
+  }
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -524,7 +535,7 @@ export function BookingPageView() {
           </div>
 
           <div className="space-y-6 pt-10">
-            {ownerGuestCalendarEnabled && <GuestCalendarPanel guestEvents={guestEvents} onConnect={setGuestEvents} onDisconnect={() => setGuestEvents(null)} />}
+            {ownerGuestCalendarEnabled && <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />}
             <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
               <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
@@ -638,7 +649,7 @@ export function BookingPageView() {
             <Clock size={11} strokeWidth={1.75} className="text-zinc-500" />
             {page.duration_minutes} minutes
           </div>
-          {ownerGuestCalendarEnabled && <GuestCalendarPanel guestEvents={guestEvents} onConnect={setGuestEvents} onDisconnect={() => setGuestEvents(null)} />}
+          {ownerGuestCalendarEnabled && <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />}
         </header>
 
         <div className="border-t border-white/[0.05] mx-6" />

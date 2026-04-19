@@ -94,7 +94,7 @@ export function WeeklyView({
                     </div>
                     {/* Fixed-height badge row — always reserves space so all columns stay the same height */}
                     <div className="h-[18px] mt-1 flex items-center justify-center">
-                      {overlapCount > 0 && !hasSlotData && (
+                      {overlapCount > 0 && (
                         <div
                           className={`flex items-center justify-center rounded-full font-semibold shadow-[0_2px_8px_-2px_rgba(139,92,246,0.6)] ${
                             overlapCount >= 2

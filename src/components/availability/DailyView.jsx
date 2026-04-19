@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { deriveSlotState, dateToStr, DEFAULT_SLOT_STATES } from '../../utils/availability'
+import { deriveSlotState, dateToStr, DEFAULT_SLOT_STATES, eventOverlapsSlot } from '../../utils/availability'
 import { Badge } from '../ui/Badge'
 import { Check } from 'lucide-react'
 
@@ -19,6 +19,7 @@ export function DailyView({
   isOwner, slotStates = DEFAULT_SLOT_STATES, dateRequests = [], sharedAvailability = [],
   businessHours = null,
   isSelectionMode = false, guestSlotSelection = false, selectedSlotMap = {}, toggleSlotForDate = null,
+  guestEvents = null,
 }) {
   const ds = dateToStr(date)
   const isToday = ds === dateToStr(new Date())
@@ -94,6 +95,8 @@ export function DailyView({
           const freeGuests = isOwner ? getFreeForSlot(slot.id) : []
           const MAX_SHOWN = 5
           const isChecked = isSlotSelectMode && (selectedSlotMap[ds] || []).includes(slot.id)
+          const isGuestBusy = guestEvents !== null &&
+            guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
 
           const cardStyle = isChecked
             ? { borderLeftColor: '#8b5cf6', borderLeftWidth: '3px', backgroundColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.3)' }
@@ -107,7 +110,7 @@ export function DailyView({
               onClick={isSlotSelectMode ? () => toggleSlotForDate(ds, slot.id) : undefined}
               className={`w-full text-left bg-surface-800 border border-surface-700 rounded-xl px-5 py-4 transition-all duration-150 ${
                 isSlotSelectMode ? 'hover:border-accent/40 cursor-pointer active:scale-[0.99]' : ''
-              } ${isChecked ? 'border-accent/30' : ''}`}
+              } ${isChecked ? 'border-accent/30' : ''} ${isGuestBusy && !isChecked ? 'opacity-40' : ''}`}
               style={cardStyle}
             >
               <div className="flex items-start justify-between gap-3">
@@ -115,7 +118,12 @@ export function DailyView({
                   <p className={`text-sm font-semibold ${isChecked ? 'text-zinc-50' : 'text-zinc-100'}`}>{slot.name}</p>
                   <p className="text-xs text-zinc-500 mt-0.5">{slot.startTime} – {slot.endTime}</p>
                 </div>
-                {isSlotSelectMode ? (
+                {isGuestBusy && !isChecked ? (
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-500 self-center">
+                    <span className="w-1 h-1 rounded-full bg-zinc-500" />
+                    you're busy
+                  </span>
+                ) : isSlotSelectMode ? (
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
                     isChecked
                       ? 'bg-accent text-white'

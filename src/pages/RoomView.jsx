@@ -97,11 +97,8 @@ function NotesTab({ productionId, group, guestName }) {
 }
 
 // Guest calendar panel — lets guest connect their Google Calendar and see their free dates
-function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId }) {
+function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId, guestEvents, onConnect, onDisconnect }) {
   const [gisReady, setGisReady] = useState(false)
-  const [guestEvents, setGuestEvents] = useState(() => {
-    try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
-  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [shared, setShared] = useState(false)
@@ -133,8 +130,7 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId 
       const timeMax = new Date()
       timeMax.setDate(timeMax.getDate() + 60)
       const events = await fetchCalendarEvents(tokenResponse.access_token, 'primary', timeMin, timeMax)
-      setGuestEvents(events)
-      try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch (e) { /* full */ }
+      onConnect(events)
     } catch (e) {
       setError('Could not fetch calendar events.')
     }
@@ -209,72 +205,51 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId 
     )
   }
 
+  async function handleShare() {
+    if (!guestNameProp || !groupId || !freeDates.length) return
+    setSharing(true)
+    try {
+      const rows = freeDates.map(d => ({
+        group_id: groupId, guest_name: guestNameProp,
+        date: dateToStr(d), is_available: true,
+      }))
+      await supabase.from('shared_availability').delete()
+        .eq('group_id', groupId).eq('guest_name', guestNameProp)
+      await supabase.from('shared_availability').insert(rows)
+      setShared(true)
+      if (ownerId) {
+        supabase.functions.invoke('notify-shared-availability', {
+          body: { guestName: guestNameProp, ownerId, groupId, dates: rows.map(r => r.date) },
+        }).catch(() => {})
+      }
+    } catch (e) { /* ignore */ }
+    setSharing(false)
+  }
+
   return (
-    <div className="bg-surface-900 border border-surface-700 rounded-xl px-5 py-4 mb-5">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-400" />
-          <p className="text-sm font-medium text-zinc-200">Your free days (next 60 days)</p>
-        </div>
-        <button
-          onClick={() => { setGuestEvents(null); try { sessionStorage.removeItem('coordie-gcal') } catch (e) { /* */ } }}
-          className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
-        >
-          Disconnect
-        </button>
+    <div className="flex flex-wrap items-center gap-2 mb-5">
+      <div className="flex items-center gap-1.5 text-[11px] text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5">
+        <CheckCircle2 size={11} strokeWidth={2} />
+        Your calendar connected — busy times dimmed below
       </div>
-
-      {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
-
-      {freeDates.length === 0 ? (
-        <p className="text-sm text-zinc-500">No free days found in the next 60 days based on your primary calendar.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
-          {freeDates.map(date => (
-            <div key={dateToStr(date)} className="flex items-center gap-2 text-sm">
-              <CheckCircle2 size={13} strokeWidth={1.75} className="text-green-500 flex-shrink-0" />
-              <span className="text-zinc-300">
-                {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-      {freeDates.length > 0 && !shared && (
-        <button onClick={async () => {
-          if (!guestNameProp || !groupId) return
-          setSharing(true)
-          try {
-            const rows = freeDates.map(d => ({
-              group_id: groupId,
-              guest_name: guestNameProp,
-              date: dateToStr(d),
-              is_available: true,
-            }))
-            await supabase.from('shared_availability').delete()
-              .eq('group_id', groupId).eq('guest_name', guestNameProp)
-            await supabase.from('shared_availability').insert(rows)
-            setShared(true)
-            if (ownerId) {
-              supabase.functions.invoke('notify-shared-availability', {
-                body: { guestName: guestNameProp, ownerId, groupId, dates: rows.map(r => r.date) },
-              }).catch(() => {})
-            }
-          } catch (e) { /* ignore */ }
-          setSharing(false)
-        }} disabled={sharing}
-          className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs font-medium text-accent hover:text-amber-400 bg-accent/10 hover:bg-accent/15 border border-accent/20 rounded-lg px-3 py-2 transition-colors disabled:opacity-50">
-          <Share2 size={12} strokeWidth={1.75} />
-          {sharing ? 'Sharing...' : 'Share availability with this project'}
+      {!shared && freeDates.length > 0 && guestNameProp && (
+        <button onClick={handleShare} disabled={sharing}
+          className="flex items-center gap-1.5 text-[11px] font-medium text-accent hover:text-zinc-100 bg-accent/10 hover:bg-accent border border-accent/20 hover:border-accent rounded-full px-3 py-1.5 transition-all disabled:opacity-50">
+          <Share2 size={11} strokeWidth={2} />
+          {sharing ? 'Sharing...' : 'Share with team'}
         </button>
       )}
       {shared && (
-        <p className="mt-3 text-xs text-green-400 flex items-center gap-1.5">
-          <CheckCircle2 size={12} strokeWidth={1.75} />
-          Your availability has been shared with the project manager.
-        </p>
+        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+          <CheckCircle2 size={11} strokeWidth={2} className="text-green-500" />
+          Shared with team
+        </span>
       )}
-      <p className="text-xs text-zinc-600 mt-2">Based on your Google primary calendar.</p>
+      <button onClick={onDisconnect}
+        className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors ml-auto">
+        Disconnect
+      </button>
+      {error && <p className="w-full text-xs text-red-400">{error}</p>}
     </div>
   )
 }
@@ -285,6 +260,19 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
   const effectiveConnectedCalendars = isOwner ? connectedCalendars : ownerConnectedCalendars
   const [dateRequests, setDateRequests] = useState([])
   const [sharedAvailability, setSharedAvailability] = useState([])
+
+  // Lifted guest calendar state — survives view switches and remounts
+  const [guestEvents, setGuestEvents] = useState(() => {
+    try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
+  })
+  function connectGuestCalendar(events) {
+    setGuestEvents(events)
+    try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch (e) { /* */ }
+  }
+  function disconnectGuestCalendar() {
+    setGuestEvents(null)
+    try { sessionStorage.removeItem('coordie-gcal') } catch (e) { /* */ }
+  }
 
   // Fetch overlap data so the calendar can show who's free at a glance
   useEffect(() => {
@@ -313,7 +301,14 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
     <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
         <>
-          {guestCalendarEnabled && <GuestCalendarPanel slots={slots} groupId={groupId} guestName={guestName} ownerId={ownerId} />}
+          {guestCalendarEnabled && (
+            <GuestCalendarPanel
+              slots={slots} groupId={groupId} guestName={guestName} ownerId={ownerId}
+              guestEvents={guestEvents}
+              onConnect={connectGuestCalendar}
+              onDisconnect={disconnectGuestCalendar}
+            />
+          )}
           <p className="text-sm text-zinc-400 mb-4">
             {guestSlotSelection ? 'Tap a date to pick which time slots work for you.' : 'Tap dates to select them, then send a request.'}
           </p>
@@ -334,6 +329,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
         onRequestSubmit={(gId, data) => createDateRequest(gId, { ...data, ownerId })}
         dateRequests={dateRequests}
         sharedAvailability={sharedAvailability}
+        guestEvents={guestEvents}
       />
     </div>
   )

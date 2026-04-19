@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { deriveAvailabilityMatrix, getMonthGrid, dateToStr, DEFAULT_SLOT_STATES } from '../../utils/availability'
+import { deriveAvailabilityMatrix, getMonthGrid, dateToStr, DEFAULT_SLOT_STATES, eventOverlapsSlot } from '../../utils/availability'
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -8,6 +8,7 @@ export function MonthlyView({
   onDayClick, isOwner, slotStates = DEFAULT_SLOT_STATES,
   selectedDates = [], isSelectionMode = false,
   dateRequests = [], sharedAvailability = [], businessHours = null,
+  guestEvents = null,
 }) {
   const grid = useMemo(() => getMonthGrid(year, month), [year, month])
   const dates = useMemo(() => grid.map(d => d.date), [grid])
@@ -15,6 +16,19 @@ export function MonthlyView({
     () => deriveAvailabilityMatrix(dates, slots, calendarEvents, connectedCalendars, prefixRules, businessHours),
     [dates, slots, calendarEvents, connectedCalendars, prefixRules, businessHours]
   )
+
+  // Days where the guest has at least one slot that's free in their personal calendar
+  const guestFreeDays = useMemo(() => {
+    if (!guestEvents) return null
+    const out = new Set()
+    for (const date of dates) {
+      const free = slots.some(s =>
+        !guestEvents.some(ev => eventOverlapsSlot(date, s, { ...ev, calendarId: 'primary' }))
+      )
+      if (free) out.add(dateToStr(date))
+    }
+    return out
+  }, [guestEvents, dates, slots])
 
   const todayStr = dateToStr(new Date())
 
@@ -82,7 +96,7 @@ export function MonthlyView({
                 </div>
               )}
 
-              <span className={`text-xs font-medium mb-1 ${
+              <span className={`text-xs font-medium mb-1 flex items-center gap-1 ${
                 isSelected ? 'text-white' :
                 overlapCount > 0 ? 'text-zinc-50 font-semibold' :
                 isToday ? 'text-accent' :
@@ -90,6 +104,9 @@ export function MonthlyView({
                 'text-zinc-600'
               }`}>
                 {date.getDate()}
+                {inMonth && guestFreeDays?.has(ds) && !isSelected && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400" title="You have free time this day" />
+                )}
               </span>
 
               {inMonth && (

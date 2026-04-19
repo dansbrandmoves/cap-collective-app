@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { deriveAvailabilityMatrix, getWeekDays, dateToStr, DEFAULT_SLOT_STATES } from '../../utils/availability'
+import { deriveAvailabilityMatrix, getWeekDays, dateToStr, DEFAULT_SLOT_STATES, eventOverlapsSlot } from '../../utils/availability'
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -9,6 +9,7 @@ export function WeeklyView({
   selectedDates = [], isSelectionMode = false, businessHours = null,
   dateRequests = [], sharedAvailability = [],
   guestSlotSelection = false, selectedSlotMap = {}, toggleSlotForDate = null,
+  guestEvents = null,
 }) {
   const days = useMemo(() => getWeekDays(weekStart), [weekStart])
   const matrix = useMemo(
@@ -133,6 +134,10 @@ export function WeeklyView({
                 const slotGuests = isOwner ? getSlotOverlap(ds, slot.id) : null
                 const slotCount = slotGuests?.size ?? 0
 
+                // Guest: is THIS user busy in their personal calendar during this slot?
+                const isGuestBusy = guestEvents !== null &&
+                  guestEvents.some(ev => eventOverlapsSlot(day, slot, { ...ev, calendarId: 'primary' }))
+
                 return (
                   <td key={i} className="py-1 sm:py-1.5 px-0.5 sm:px-1">
                     <button
@@ -144,6 +149,7 @@ export function WeeklyView({
                         }
                       }}
                       title={
+                        isGuestBusy ? `You're busy: ${meta.label}` :
                         isOwner && slotCount > 0
                           ? `${slotCount} free: ${[...slotGuests].join(', ')}`
                           : meta.label
@@ -152,6 +158,7 @@ export function WeeklyView({
                         hover:opacity-90
                         ${isToday ? 'ring-1 ring-accent' : ''}
                         ${isChecked ? 'ring-2 ring-accent' : ''}
+                        ${isGuestBusy && !isChecked ? 'opacity-30' : ''}
                       `}
                       style={{
                         backgroundColor: isChecked ? '#8b5cf633' : meta.color + '22',

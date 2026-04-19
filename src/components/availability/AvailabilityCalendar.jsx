@@ -17,6 +17,7 @@ export function AvailabilityCalendar({
   slots, calendarEvents, connectedCalendars, availabilityRules = [], prefixRules = [],
   isOwner = false, slotStates: slotStatesProp, groupId, guestName, onRequestSubmit,
   dateRequests = [], sharedAvailability = [], businessHours = null, guestSlotSelection = false,
+  guestEvents = null,
 }) {
   const { slotStates: contextSlotStates } = useApp()
   const slotStates = slotStatesProp || contextSlotStates
@@ -187,6 +188,7 @@ export function AvailabilityCalendar({
           slotStates={slotStates} businessHours={businessHours}
           selectedDates={selectedDates} isSelectionMode={isSelectionMode}
           dateRequests={dateRequests} sharedAvailability={sharedAvailability}
+          guestEvents={guestEvents}
         />
       )}
 
@@ -201,6 +203,7 @@ export function AvailabilityCalendar({
           guestSlotSelection={guestSlotSelection}
           selectedSlotMap={selectedSlotMap}
           toggleSlotForDate={toggleSlotForDate}
+          guestEvents={guestEvents}
         />
       )}
 
@@ -215,6 +218,7 @@ export function AvailabilityCalendar({
           guestSlotSelection={guestSlotSelection}
           selectedSlotMap={selectedSlotMap}
           toggleSlotForDate={toggleSlotForDate}
+          guestEvents={guestEvents}
         />
       )}
 

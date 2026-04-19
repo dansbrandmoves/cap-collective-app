@@ -116,12 +116,14 @@ export function MonthlyView({
                     slots.map(slot => {
                       const state = dayMatrix[slot.id]?.state ?? slot.defaultState
                       const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
+                      const slotGuestBusy = guestEvents !== null &&
+                        guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
                       return (
                         <div
                           key={slot.id}
-                          className="h-3 sm:h-4 rounded-sm flex-shrink-0 opacity-80"
+                          className={`h-3 sm:h-4 rounded-sm flex-shrink-0 ${slotGuestBusy ? 'opacity-20' : 'opacity-80'}`}
                           style={{ backgroundColor: meta.color }}
-                          title={`${slot.name}: ${meta.label}`}
+                          title={slotGuestBusy ? `${slot.name}: you're busy` : `${slot.name}: ${meta.label}`}
                         />
                       )
                     })
@@ -131,10 +133,12 @@ export function MonthlyView({
                       {slots.map(slot => {
                         const state = dayMatrix[slot.id]?.state ?? slot.defaultState
                         const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
+                        const slotGuestBusy = guestEvents !== null &&
+                          guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
                         return (
-                          <div key={slot.id} className="flex-1 min-h-0"
+                          <div key={slot.id} className={`flex-1 min-h-0 ${slotGuestBusy ? 'opacity-20' : ''}`}
                             style={{ backgroundColor: meta.color }}
-                            title={`${slot.name}: ${meta.label}`} />
+                            title={slotGuestBusy ? `${slot.name}: you're busy` : `${slot.name}: ${meta.label}`} />
                         )
                       })}
                     </div>

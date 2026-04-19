@@ -158,13 +158,16 @@ export function WeeklyView({
                         hover:opacity-90
                         ${isToday ? 'ring-1 ring-accent' : ''}
                         ${isChecked ? 'ring-2 ring-accent' : ''}
-                        ${isGuestBusy && !isChecked ? 'opacity-30' : ''}
+                        ${isGuestBusy && !isChecked ? 'grayscale opacity-50' : ''}
                       `}
                       style={{
                         backgroundColor: isChecked ? '#8b5cf633' : meta.color + '22',
                         border: isChecked ? '1px solid #8b5cf660' : `1px solid ${meta.color}44`,
                       }}
                     >
+                      {isGuestBusy && !isChecked && (
+                        <span className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-zinc-400" title="You're busy" />
+                      )}
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: isChecked ? '#8b5cf6' : meta.color }} />
                       <span className="text-xs font-medium hidden sm:inline" style={{ color: isChecked ? '#8b5cf6' : meta.color }}>
                         {isChecked ? '✓' : meta.label}

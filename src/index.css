@@ -104,11 +104,38 @@ html.light {
   }
   .animate-pulse-ring { animation: pulse-ring 1.3s ease-out infinite; }
 
-  @keyframes cursor-bob {
-    0%, 100% { transform: translateY(0)   scale(1);    opacity: 1; }
-    45%       { transform: translateY(3px) scale(0.82); opacity: 0.9; }
+  /* Cursor flies in from bottom-right corner, lands on target, clicks */
+  @keyframes cursor-fly-click {
+    0%   { transform: translate(55px, 55px) scale(1);    opacity: 0; }
+    28%  { transform: translate(0,    0)    scale(1);    opacity: 1; }
+    62%  { transform: translate(0,    0)    scale(1);    opacity: 1; }
+    73%  { transform: translate(2px,  4px)  scale(0.78); opacity: 1; }
+    86%  { transform: translate(0,    0)    scale(1);    opacity: 1; }
+    100% { transform: translate(0,    0)    scale(1);    opacity: 1; }
   }
-  .animate-cursor-bob { animation: cursor-bob 0.75s ease-in-out infinite; }
+  .animate-cursor-fly-click {
+    animation: cursor-fly-click 2.6s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+
+  /* Cursor continues downward from "Advanced" position to "Go to" link */
+  @keyframes cursor-fly-click-down {
+    0%   { transform: translate(-20px, -44px) scale(1);    opacity: 0.5; }
+    28%  { transform: translate(0,     0)     scale(1);    opacity: 1; }
+    62%  { transform: translate(0,     0)     scale(1);    opacity: 1; }
+    73%  { transform: translate(2px,   4px)   scale(0.78); opacity: 1; }
+    86%  { transform: translate(0,     0)     scale(1);    opacity: 1; }
+    100% { transform: translate(0,     0)     scale(1);    opacity: 1; }
+  }
+  .animate-cursor-fly-click-down {
+    animation: cursor-fly-click-down 2.6s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+
+  /* Element flashes on "click" */
+  @keyframes click-flash {
+    0%,55%,100% { background: rgba(139,92,246,0.06); }
+    73%         { background: rgba(139,92,246,0.30); }
+  }
+  .animate-click-flash { animation: click-flash 2.6s forwards; }
 
   @keyframes progress-fill {
     from { width: 0%; }

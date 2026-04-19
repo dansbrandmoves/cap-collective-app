@@ -31,19 +31,32 @@ function AuthGate() {
   return <AppShell />
 }
 
+// Root: marketing for visitors, dashboard for signed-in users
+function RootRoute() {
+  const { isOwner, authLoading } = useApp()
+  if (authLoading) return <LoadingScreen />
+  if (!isOwner) return <HomePage />
+  return <AppShell />
+}
+
 function AppRoutes() {
   return (
     <Routes>
       {/* Public pages — render immediately, no auth wait */}
-      <Route path="/home" element={<HomePage />} />
+      <Route path="/signin" element={<AuthPage />} />
+      <Route path="/home" element={<Navigate to="/" replace />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/room/:token" element={<RoomView />} />
       <Route path="/book/:slug" element={<BookingPageView />} />
 
+      {/* Root: marketing or dashboard based on auth */}
+      <Route element={<RootRoute />}>
+        <Route path="/" element={<Dashboard />} />
+      </Route>
+
       {/* Auth-gated routes with AppShell layout */}
       <Route element={<AuthGate />}>
-        <Route path="/" element={<Dashboard />} />
         <Route path="/project/:id" element={<ProductionView />} />
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/availability" element={<AvailabilityRules />} />

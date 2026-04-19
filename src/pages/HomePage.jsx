@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useApp } from '../contexts/AppContext'
-import { CalendarDays, Users, Link2, CheckCircle2, ArrowRight, Inbox, LayoutGrid, Zap } from 'lucide-react'
+import { CalendarDays, Users, Link2, CheckCircle2, ArrowRight, Inbox, LayoutGrid, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const FEATURES = [
   {
@@ -42,46 +42,121 @@ const HOW_IT_WORKS = [
   { step: '04', title: 'Coordinate together', desc: 'Guests view availability, request dates, and message you — all without creating an account.' },
 ]
 
-const BOOKING_TIMES = ['9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '1:00 PM', '2:00 PM']
+// busy=true means guest's calendar shows them busy — slot dims
+const HERO_SLOTS = [
+  { time: '9:00 AM',  busy: false },
+  { time: '9:30 AM',  busy: true  },
+  { time: '10:00 AM', busy: true  },
+  { time: '10:30 AM', busy: false },
+  { time: '11:00 AM', busy: false },
+  { time: '1:00 PM',  busy: false },
+  { time: '1:30 PM',  busy: true  },
+  { time: '2:00 PM',  busy: false },
+]
 
-function BookingMockup() {
-  const selected = useAutoSelect(BOOKING_TIMES, 1800)
+const HERO_FREE_INDICES = HERO_SLOTS
+  .map((s, i) => s.busy ? -1 : i)
+  .filter(i => i >= 0)
+
+function HeroBookingMockup() {
+  // Cycle hover/selection through only the free slots — never highlight a busy one
+  const [step, setStep] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setStep(s => (s + 1) % HERO_FREE_INDICES.length), 1600)
+    return () => clearInterval(t)
+  }, [])
+  const selected = HERO_FREE_INDICES[step]
 
   return (
-    <div className="bg-surface-900 border border-surface-700 rounded-2xl p-5 sm:p-6">
-      <div className="mb-4">
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">Booking Page</p>
-        <h3 className="text-lg font-semibold text-zinc-100 mb-1">30-Minute Meeting</h3>
-        <p className="text-sm text-zinc-500">Pick a time that works for you.</p>
-      </div>
-      <div className="space-y-2 mb-4">
-        <p className="text-xs text-zinc-500 font-medium">Thursday, April 17</p>
-        {BOOKING_TIMES.map((t, i) => (
-          <div key={t} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 ${
-            i === selected
-              ? 'bg-accent text-white shadow-sm shadow-accent/30'
-              : 'border border-surface-600 text-zinc-300'
-          }`}>
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-300 ${i === selected ? 'bg-white' : 'bg-green-400'}`} />
-            {t}
+    <div className="relative">
+      {/* Ambient purple glow behind the card */}
+      <div className="absolute -inset-8 sm:-inset-16 pointer-events-none opacity-60"
+        style={{ background: 'radial-gradient(ellipse at center, rgb(139 92 246 / 0.18), transparent 70%)' }} />
+
+      <div className="relative bg-surface-900 border border-white/[0.08] rounded-3xl shadow-[0_24px_80px_-24px_rgba(0,0,0,0.6)] overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-[1.15fr_1fr]">
+
+          {/* LEFT — month calendar */}
+          <div className="px-6 sm:px-8 py-7 sm:py-9 border-b md:border-b-0 md:border-r border-white/[0.06]">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-semibold text-zinc-50 tracking-tight">April 2026</h3>
+              <div className="flex items-center gap-1 text-zinc-600">
+                <ChevronLeft size={14} strokeWidth={1.75} />
+                <ChevronRight size={14} strokeWidth={1.75} />
+              </div>
+            </div>
+            <div className="grid grid-cols-7 mb-2">
+              {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+                <div key={d} className="text-center text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em] py-1">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-0.5">
+              {Array.from({ length: 35 }, (_, i) => {
+                const day = i - 2
+                const inMonth = day >= 1 && day <= 30
+                const isSelected = day === 17
+                const isToday = day === 12
+                // Days the guest has free time (sample: weekdays not heavily booked)
+                const hasFree = inMonth && [2,3,8,9,10,15,16,17,21,22,23,24,28,29,30].includes(day)
+                return (
+                  <div key={i} className={`relative aspect-square flex items-center justify-center text-[12px] rounded-full font-medium transition-colors
+                    ${!inMonth ? 'text-transparent' :
+                      isSelected ? 'bg-accent text-white shadow-[0_4px_16px_-4px_rgb(139_92_246/0.5)]' :
+                      'text-zinc-200'}`}>
+                    {inMonth && <span>{day}</span>}
+                    {isToday && !isSelected && (
+                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent" />
+                    )}
+                    {hasFree && !isSelected && !isToday && (
+                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-green-400/80" />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-1.5 text-[10px] text-zinc-600">
-        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-        Synced with your Google Calendar
+
+          {/* RIGHT — time slots with personal calendar overlay */}
+          <div className="px-6 sm:px-8 py-7 sm:py-9 flex flex-col">
+            <div className="mb-4">
+              <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Friday</p>
+              <p className="text-2xl font-semibold text-zinc-100 tracking-tight leading-none mt-0.5">17</p>
+            </div>
+
+            {/* The killer chip — calendar connected, busy slots dimmed */}
+            <div className="inline-flex items-center gap-1.5 self-start text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-2.5 py-1 mb-4">
+              <CheckCircle2 size={10} strokeWidth={2.25} />
+              Your calendar connected
+            </div>
+
+            <div className="space-y-1.5 flex-1">
+              {HERO_SLOTS.map((slot, i) => {
+                const isSelected = i === selected
+                return (
+                  <div key={slot.time}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-300 ease-ios ${
+                      isSelected
+                        ? 'bg-accent text-white shadow-[0_8px_24px_-8px_rgb(139_92_246/0.5)]'
+                        : slot.busy
+                        ? 'border border-white/[0.04] text-zinc-600'
+                        : 'border border-white/10 text-zinc-200'
+                    }`}>
+                    <span>{slot.time}</span>
+                    {slot.busy && !isSelected && (
+                      <span className="flex items-center gap-1 text-[9px] text-zinc-700">
+                        <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                        busy
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
-}
-
-function useAutoSelect(items, interval = 2000) {
-  const [index, setIndex] = useState(0)
-  useEffect(() => {
-    const timer = setInterval(() => setIndex(i => (i + 1) % items.length), interval)
-    return () => clearInterval(timer)
-  }, [items.length, interval])
-  return index
 }
 
 export function HomePage() {
@@ -97,7 +172,7 @@ export function HomePage() {
           <a href="#features" className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors hidden sm:inline">Features</a>
           <a href="#how-it-works" className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors hidden sm:inline">How it works</a>
           <a
-            href="/"
+            href="/signin"
             className="text-sm font-medium text-zinc-300 hover:text-white bg-surface-800 hover:bg-surface-700 border border-surface-600 px-4 py-1.5 rounded-lg transition-colors"
           >
             Sign in
@@ -124,7 +199,7 @@ export function HomePage() {
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <a
-            href="/"
+            href="/signin"
             className="inline-flex items-center gap-2 bg-accent hover:bg-accent-hover text-white font-semibold text-sm px-6 py-3 rounded-xl transition-colors shadow-lg shadow-accent/20"
           >
             Get started free
@@ -141,59 +216,18 @@ export function HomePage() {
         <p className="text-xs text-zinc-600 mt-5">No credit card required. Room links work without an account.</p>
       </section>
 
-      {/* Product Preview */}
-      <section className="px-5 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Calendar mockup */}
-          <div className="bg-surface-900 border border-surface-700 rounded-2xl p-5 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Availability Calendar</p>
-              <div className="flex items-center gap-1 bg-surface-800 rounded-md px-2 py-1">
-                <span className="text-[10px] text-zinc-400 font-medium">Monthly</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {['S','M','T','W','T','F','S'].map((d,i) => (
-                <div key={i} className="text-center text-[10px] text-zinc-600 py-1">{d}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {Array.from({length: 35}, (_, i) => {
-                const day = i - 2
-                const inMonth = day >= 1 && day <= 30
-                const isToday = day === 17
-                const slots = inMonth ? [
-                  day % 7 === 0 || day % 7 === 6 ? '#52525b' : '#22c55e',
-                  day % 3 === 0 ? '#52525b' : day % 5 === 0 ? '#f97316' : '#22c55e',
-                ] : []
-                return (
-                  <div key={i} className={`min-h-[32px] sm:min-h-[40px] rounded-md p-1 flex flex-col ${
-                    !inMonth ? 'opacity-10' : isToday ? 'ring-1 ring-accent' : 'bg-surface-800'
-                  }`}>
-                    {inMonth && (
-                      <>
-                        <span className={`text-[9px] mb-0.5 ${isToday ? 'text-accent' : 'text-zinc-400'}`}>{day}</span>
-                        <div className="flex flex-col gap-0.5 flex-1">
-                          {slots.map((c, si) => (
-                            <div key={si} className="h-1.5 sm:h-2 rounded-sm flex-shrink-0 opacity-80" style={{backgroundColor: c}} />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <div className="flex items-center gap-3 mt-4 pt-3 border-t border-surface-800">
-              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500" /><span className="text-[10px] text-zinc-500">Available</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-orange-500" /><span className="text-[10px] text-zinc-500">Hold</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-zinc-600" /><span className="text-[10px] text-zinc-500">Blocked</span></div>
-            </div>
-          </div>
-
-          {/* Booking mockup — auto-animating */}
-          <BookingMockup />
+      {/* Product Preview — single hero mockup */}
+      <section className="px-5 sm:px-8 py-16 sm:py-24 max-w-5xl mx-auto w-full">
+        <div className="text-center mb-10 sm:mb-14">
+          <p className="text-xs font-semibold text-accent uppercase tracking-widest mb-3">The magic</p>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 max-w-2xl mx-auto leading-tight tracking-tight">
+            Guests connect their calendar — and instantly see which times actually work.
+          </h2>
+          <p className="text-zinc-500 text-base mt-4 max-w-lg mx-auto">
+            No more "let me check and get back to you." The slots they're already busy in dim out automatically.
+          </p>
         </div>
+        <HeroBookingMockup />
       </section>
 
       {/* Divider */}
@@ -261,7 +295,7 @@ export function HomePage() {
           Sign in with Google and have your first project set up in under five minutes.
         </p>
         <a
-          href="/"
+          href="/signin"
           className="inline-flex items-center gap-2 bg-accent hover:bg-accent-hover text-white font-semibold text-sm px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-accent/20"
         >
           Get started free
@@ -287,7 +321,7 @@ export function HomePage() {
           <div className="flex items-center gap-5 text-xs text-zinc-600">
             <a href="/privacy" className="hover:text-zinc-400 transition-colors">Privacy Policy</a>
             <a href="/terms" className="hover:text-zinc-400 transition-colors">Terms of Service</a>
-            <a href="/" className="hover:text-zinc-400 transition-colors">Sign in</a>
+            <a href="/signin" className="hover:text-zinc-400 transition-colors">Sign in</a>
           </div>
         </div>
       </footer>

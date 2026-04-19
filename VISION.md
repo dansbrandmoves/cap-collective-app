@@ -92,6 +92,20 @@ It's the layer between your calendar and everyone else — thin, fast, invisible
 
 ---
 
+**Overlap is the product** *(2026-04-19)*
+
+The real insight: overlap isn't a feature inside rooms — it's the core utility of the entire brand promise. Every surface Coordie offers should express it.
+
+Right now booking pages show *your* availability. But if a visitor could connect their calendar and see mutual overlap instantly — picking from windows that actually work for both sides — that's a fundamentally different product than Calendly. Nobody does that well.
+
+Rooms already do overlap for groups. The engine is the same. The visual language (monthly/weekly/daily views, color system, "here's where we align") should be consistent across both surfaces.
+
+Tighter brand story: **Coordie shows you the overlap.** Booking page, room, doesn't matter. One thing, done well, everywhere.
+
+This also reframes the booking vs. rooms question — they're not separate features competing for positioning. They're the same idea at different scales: 1:1 and many:many. Bundle them, lead with the overlap story.
+
+---
+
 **Who exactly is this for?** *(2026-04-19)*
 
 Leaning more niche. The production/creative workflow roots (bucket mode, Cap Collective) point toward a specific person: creative freelancers, photographers, producers, consultants who coordinate multiple parties per project. That person has a sharper pain point and would pay faster than "small business founders" broadly. Not decided yet — sitting with it.

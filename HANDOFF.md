@@ -2,7 +2,17 @@
 
 **Last session ended:** 2026-04-19 (evening)
 **Last commit on `master` (pushed):** `c540597` — "Daily view: direct slot toggle for guests + owner per-slot guest chips"
-**Live at:** https://www.coordie.com (Vercel auto-deploys on push)
+**Branch with pending work:** `claude/handoff-files-preserve-work-HXVRU` — email redesign, NOT yet merged to master
+**Live at:** https://www.coordie.com (Vercel auto-deploys on push to `master`)
+
+---
+
+## ⚠️ Pending before next session starts
+
+1. **Merge branch → master** (or cherry-pick): `claude/handoff-files-preserve-work-HXVRU` has the email redesign commits (`4a73af8`, `58f4d8d`)
+2. **Deploy 2 edge functions from desktop** (Supabase MCP tool):
+   - `notify-booking`
+   - `notify-date-request`
 
 ---
 
@@ -18,7 +28,15 @@
 
 ---
 
-## ✅ Shipped this session
+## ✅ Shipped this session (web — pending merge + deploy)
+
+| SHA | Summary |
+|---|---|
+| `4a73af8` | Emails: remove grey panels → purple tint event card + purple left-border quotes; adapts to light/dark |
+
+---
+
+## ✅ Shipped previous session (desktop — on master)
 
 | SHA | Summary |
 |---|---|

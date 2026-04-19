@@ -72,7 +72,7 @@ function buildEmailHtml(opts: {
     ? `
     <tr>
       <td style="padding:0 0 28px 0;">
-        <p class="message-card" style="margin:0;padding:14px 16px;background:#fafafa;border:1px solid #e4e4e7;border-radius:12px;color:#3f3f46;font-size:14px;font-style:italic;line-height:1.55;">&ldquo;${escapeHtml(message)}&rdquo;</p>
+        <p class="message-card" style="margin:0;border-left:3px solid #8b5cf6;padding:2px 0 2px 12px;color:#52525b;font-size:14px;font-style:italic;line-height:1.55;">&ldquo;${escapeHtml(message)}&rdquo;</p>
       </td>
     </tr>`
     : "";
@@ -96,7 +96,7 @@ function buildEmailHtml(opts: {
       .text-primary{color:#f4f4f5!important;}
       .text-secondary{color:#a1a1aa!important;}
       .text-muted{color:#71717a!important;}
-      .message-card{background:#1c1c20!important;border-color:rgba(255,255,255,0.06)!important;color:#d4d4d8!important;}
+      .message-card{color:#a1a1aa!important;}
       .ghost-cta{color:#a1a1aa!important;}
       .divider{background:rgba(255,255,255,0.08)!important;}
       .footer-border{border-color:rgba(255,255,255,0.08)!important;}

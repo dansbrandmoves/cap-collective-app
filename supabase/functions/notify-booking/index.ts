@@ -76,7 +76,7 @@ function buildEmailHtml(opts: {
         }
         ${
           guestMessage
-            ? `<p style="margin:10px 0 0 0;padding:14px 16px;background:#fafafa;border:1px solid #e4e4e7;border-radius:12px;color:#3f3f46;font-size:14px;font-style:italic;line-height:1.55;">&ldquo;${escapeHtml(
+            ? `<p style="margin:10px 0 0 0;border-left:3px solid #8b5cf6;padding:2px 0 2px 12px;color:#52525b;font-size:14px;font-style:italic;line-height:1.55;">&ldquo;${escapeHtml(
                 guestMessage,
               )}&rdquo;</p>`
             : ""
@@ -116,8 +116,8 @@ function buildEmailHtml(opts: {
       .text-primary { color: #f4f4f5 !important; }
       .text-secondary { color: #a1a1aa !important; }
       .text-muted { color: #71717a !important; }
-      .event-card { background: #1c1c20 !important; border-color: rgba(255,255,255,0.06) !important; }
-      .message-card { background: #1c1c20 !important; border-color: rgba(255,255,255,0.06) !important; color: #d4d4d8 !important; }
+      .event-card { background: rgba(139,92,246,0.1) !important; border-color: rgba(139,92,246,0.25) !important; }
+      .message-card { color: #a1a1aa !important; }
       .ghost-cta { color: #a1a1aa !important; }
       .divider { background: rgba(255,255,255,0.08) !important; }
       .footer-border { border-color: rgba(255,255,255,0.08) !important; }
@@ -165,7 +165,7 @@ function buildEmailHtml(opts: {
           <!-- Event card -->
           <tr>
             <td style="padding:0 0 28px 0;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="event-card" style="background:#fafafa;border:1px solid #e4e4e7;border-radius:14px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="event-card" style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.18);border-radius:14px;">
                 <tr>
                   <td style="padding:18px 22px;">
                     <p class="text-primary" style="margin:0 0 6px 0;color:#18181b;font-size:17px;font-weight:600;letter-spacing:-0.01em;line-height:1.3;">

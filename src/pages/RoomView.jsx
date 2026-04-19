@@ -6,8 +6,7 @@ import { Badge } from '../components/ui/Badge'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
-import { deriveSlotState, dateToStr } from '../utils/availability'
-import { CalendarDays, X, CheckCircle2, CircleDot, Share2 } from 'lucide-react'
+import { CalendarDays, CheckCircle2 } from 'lucide-react'
 import { GoogleOAuthGuide } from '../components/ui/GoogleOAuthGuide'
 
 const TABS = ['Availability', 'Notes']
@@ -96,13 +95,11 @@ function NotesTab({ productionId, group, guestName }) {
   )
 }
 
-// Guest calendar panel — lets guest connect their Google Calendar and see their free dates
-function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId, guestEvents, onConnect, onDisconnect }) {
+// Guest calendar panel — connects guest's Google Calendar so they can see their busy/free overlay in the views
+function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
   const [gisReady, setGisReady] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [shared, setShared] = useState(false)
-  const [sharing, setSharing] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const tokenClientRef = useRef(null)
   const configured = isConfigured()
@@ -136,28 +133,6 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId,
     }
     setLoading(false)
   }
-
-  // Find dates in the next 60 days where the guest has no events during slot hours
-  const freeDates = useMemo(() => {
-    if (!guestEvents || !slots.length) return []
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const result = []
-    const guestCals = [{ googleCalendarId: 'primary', role: 'governs', defaultState: 'booked' }]
-    const guestEventsTagged = guestEvents.map(e => ({ ...e, calendarId: 'primary' }))
-
-    for (let i = 1; i < 60; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
-      // Guest is free if they have no conflicting events in ANY of the slots
-      const hasFreeSlot = slots.some(slot => {
-        const { state } = deriveSlotState(date, slot, guestEventsTagged, guestCals, [])
-        return state === 'available'
-      })
-      if (hasFreeSlot) result.push(date)
-    }
-    return result.slice(0, 30)
-  }, [guestEvents, slots])
 
   if (!configured) return null
 
@@ -205,46 +180,12 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId,
     )
   }
 
-  async function handleShare() {
-    if (!guestNameProp || !groupId || !freeDates.length) return
-    setSharing(true)
-    try {
-      const rows = freeDates.map(d => ({
-        group_id: groupId, guest_name: guestNameProp,
-        date: dateToStr(d), is_available: true,
-      }))
-      await supabase.from('shared_availability').delete()
-        .eq('group_id', groupId).eq('guest_name', guestNameProp)
-      await supabase.from('shared_availability').insert(rows)
-      setShared(true)
-      if (ownerId) {
-        supabase.functions.invoke('notify-shared-availability', {
-          body: { guestName: guestNameProp, ownerId, groupId, dates: rows.map(r => r.date) },
-        }).catch(() => {})
-      }
-    } catch (e) { /* ignore */ }
-    setSharing(false)
-  }
-
   return (
     <div className="flex flex-wrap items-center gap-2 mb-5">
       <div className="flex items-center gap-1.5 text-[11px] text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5">
         <CheckCircle2 size={11} strokeWidth={2} />
         Your calendar connected — busy times dimmed below
       </div>
-      {!shared && freeDates.length > 0 && guestNameProp && (
-        <button onClick={handleShare} disabled={sharing}
-          className="flex items-center gap-1.5 text-[11px] font-medium text-accent hover:text-zinc-100 bg-accent/10 hover:bg-accent border border-accent/20 hover:border-accent rounded-full px-3 py-1.5 transition-all disabled:opacity-50">
-          <Share2 size={11} strokeWidth={2} />
-          {sharing ? 'Sharing...' : 'Share with team'}
-        </button>
-      )}
-      {shared && (
-        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500">
-          <CheckCircle2 size={11} strokeWidth={2} className="text-green-500" />
-          Shared with team
-        </span>
-      )}
       <button onClick={onDisconnect}
         className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors ml-auto">
         Disconnect
@@ -303,7 +244,6 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
         <>
           {guestCalendarEnabled && (
             <GuestCalendarPanel
-              slots={slots} groupId={groupId} guestName={guestName} ownerId={ownerId}
               guestEvents={guestEvents}
               onConnect={connectGuestCalendar}
               onDisconnect={disconnectGuestCalendar}

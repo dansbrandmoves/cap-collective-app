@@ -36,26 +36,66 @@ export function MonthlyView({
           const isToday = ds === todayStr
           const isSelected = selectedDates.includes(ds)
 
+          // Unique guests who indicated they're free this day — both mechanisms
+          const overlapGuests = new Set([
+            ...dateRequests
+              .filter(r => r.dates?.includes(ds) && r.status !== 'declined' && r.status !== 'archived')
+              .map(r => r.requester_name),
+            ...sharedAvailability
+              .filter(a => a.date === ds && a.is_available)
+              .map(a => a.guest_name),
+          ])
+          overlapGuests.delete(undefined)
+          overlapGuests.delete(null)
+          overlapGuests.delete('')
+          const overlapCount = overlapGuests.size
+
+          // Cell tint intensifies with overlap — the "heat" of overlap is immediately readable
+          const overlapBg =
+            overlapCount >= 3 ? 'bg-accent/[0.14] ring-1 ring-accent/30 shadow-[0_0_0_1px_rgba(139,92,246,0.15)]' :
+            overlapCount === 2 ? 'bg-accent/[0.09] ring-1 ring-accent/20' :
+            overlapCount === 1 ? 'bg-accent/[0.05]' :
+            'bg-surface-800'
+
           return (
             <button
               key={i}
               onClick={() => onDayClick(date)}
               disabled={!inMonth}
-              className={`min-h-[56px] sm:min-h-[72px] rounded-lg p-1.5 sm:p-2 text-left transition-all flex flex-col
-                ${inMonth ? 'hover:ring-1 hover:ring-zinc-500 cursor-pointer' : 'opacity-20 cursor-default'}
-                ${isToday ? 'ring-1 ring-accent' : 'bg-surface-800'}
-                ${isSelected ? 'ring-2 ring-accent bg-accent/10' : ''}
+              className={`relative min-h-[56px] sm:min-h-[72px] rounded-lg p-1.5 sm:p-2 text-left transition-all duration-200 ease-ios flex flex-col
+                ${inMonth ? 'hover:ring-1 hover:ring-white/20 cursor-pointer' : 'opacity-20 cursor-default'}
+                ${isSelected ? 'ring-2 ring-accent bg-accent/20' : overlapBg}
+                ${isToday && !isSelected ? 'ring-1 ring-accent/60' : ''}
               `}
             >
+              {/* Overlap count badge — the primary signal */}
+              {inMonth && overlapCount > 0 && !isSelected && (
+                <div
+                  className={`absolute top-1 right-1 z-10 flex items-center justify-center rounded-full font-semibold tracking-tight shadow-[0_2px_8px_-2px_rgba(139,92,246,0.6)] ${
+                    overlapCount >= 2
+                      ? 'bg-accent text-white min-w-[18px] h-[18px] px-1 text-[10px] sm:text-[11px]'
+                      : 'bg-accent/90 text-white min-w-[16px] h-4 px-1 text-[10px]'
+                  }`}
+                  title={`${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} free: ${[...overlapGuests].join(', ')}`}
+                >
+                  {overlapCount}
+                </div>
+              )}
+
               <span className={`text-xs font-medium mb-1 ${
-                isSelected ? 'text-accent' : isToday ? 'text-accent' : inMonth ? 'text-zinc-300' : 'text-zinc-600'
+                isSelected ? 'text-white' :
+                overlapCount > 0 ? 'text-zinc-50 font-semibold' :
+                isToday ? 'text-accent' :
+                inMonth ? 'text-zinc-300' :
+                'text-zinc-600'
               }`}>
                 {date.getDate()}
               </span>
+
               {inMonth && (
                 <div className="flex flex-col gap-0.5 flex-1">
                   {slots.length <= 4 ? (
-                    /* Named slots — show individual bars */
+                    /* Named slots — individual bars */
                     slots.map(slot => {
                       const state = dayMatrix[slot.id]?.state ?? slot.defaultState
                       const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
@@ -69,45 +109,19 @@ export function MonthlyView({
                       )
                     })
                   ) : (
-                    /* Many time blocks — compact stacked stripes with phase dividers */
-                    (() => {
-                      return (
-                        <div className="flex flex-col flex-1 rounded-sm overflow-hidden">
-                          {slots.map(slot => {
-                            const state = dayMatrix[slot.id]?.state ?? slot.defaultState
-                            const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
-                            return (
-                              <div key={slot.id} className="flex-1 min-h-0"
-                                style={{ backgroundColor: meta.color }}
-                                title={`${slot.name}: ${meta.label}`} />
-                            )
-                          })}
-                        </div>
-                      )
-                    })()
+                    /* Many time blocks — compact stacked stripes */
+                    <div className="flex flex-col flex-1 rounded-sm overflow-hidden">
+                      {slots.map(slot => {
+                        const state = dayMatrix[slot.id]?.state ?? slot.defaultState
+                        const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
+                        return (
+                          <div key={slot.id} className="flex-1 min-h-0"
+                            style={{ backgroundColor: meta.color }}
+                            title={`${slot.name}: ${meta.label}`} />
+                        )
+                      })}
+                    </div>
                   )}
-                  {/* Overlay: date requests + shared availability */}
-                  {(() => {
-                    const reqCount = dateRequests.filter(r => r.dates?.includes(ds) && r.status !== 'declined').length
-                    const availForDay = sharedAvailability.filter(a => a.date === ds && a.is_available)
-                    const totalGuests = new Set(sharedAvailability.filter(a => a.date === ds).map(a => a.guest_name)).size
-                    const freeCount = new Set(availForDay.map(a => a.guest_name)).size
-                    return (reqCount > 0 || freeCount > 0) ? (
-                      <div className="flex items-center gap-1 mt-auto pt-0.5">
-                        {reqCount > 0 && (
-                          <span className="text-[8px] sm:text-[9px] font-medium text-amber-400" title={`${reqCount} date request${reqCount !== 1 ? 's' : ''}`}>
-                            {reqCount} req
-                          </span>
-                        )}
-                        {freeCount > 0 && (
-                          <span className={`text-[8px] sm:text-[9px] font-medium ${freeCount === totalGuests ? 'text-green-400' : 'text-zinc-500'}`}
-                            title={`${freeCount} of ${totalGuests} people are free`}>
-                            {freeCount}/{totalGuests}
-                          </span>
-                        )}
-                      </div>
-                    ) : null
-                  })()}
                 </div>
               )}
             </button>

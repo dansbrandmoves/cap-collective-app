@@ -262,6 +262,32 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp }) {
 
 function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots, projectBusinessHours, guestSlotSelection }) {
   const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, guestCalendarEnabled, businessHours } = useApp()
+  const [dateRequests, setDateRequests] = useState([])
+  const [sharedAvailability, setSharedAvailability] = useState([])
+
+  // Fetch overlap data so the calendar can show who's free at a glance
+  useEffect(() => {
+    if (!groupId) return
+    supabase.from('date_requests').select('*').eq('group_id', groupId)
+      .then(({ data }) => setDateRequests(data || []))
+    supabase.from('shared_availability').select('*').eq('group_id', groupId)
+      .then(({ data }) => setSharedAvailability(data || []))
+
+    // Live updates when guests share new availability
+    const channel = supabase
+      .channel(`room-overlap-${groupId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'date_requests', filter: `group_id=eq.${groupId}` }, () => {
+        supabase.from('date_requests').select('*').eq('group_id', groupId)
+          .then(({ data }) => setDateRequests(data || []))
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_availability', filter: `group_id=eq.${groupId}` }, () => {
+        supabase.from('shared_availability').select('*').eq('group_id', groupId)
+          .then(({ data }) => setSharedAvailability(data || []))
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [groupId])
+
   return (
     <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
@@ -285,6 +311,8 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
         groupId={groupId}
         guestName={guestName}
         onRequestSubmit={createDateRequest}
+        dateRequests={dateRequests}
+        sharedAvailability={sharedAvailability}
       />
     </div>
   )

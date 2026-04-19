@@ -53,7 +53,7 @@ function formatDayHeader(ds) {
 }
 
 /* ── Month Calendar ── */
-function MonthCalendar({ availableDays, selectedDate, onSelectDate }) {
+function MonthCalendar({ availableDays, selectedDate, onSelectDate, guestFreeDates }) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
@@ -90,6 +90,7 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate }) {
           const isToday = dateToStr(date) === dateToStr(today)
           const isAvailable = inMonth && !isPast && availableDays.includes(date.getDay())
           const isSelected = selectedDate === ds
+          const isGuestFree = guestFreeDates?.has(ds)
 
           return (
             <button key={i} disabled={!isAvailable} onClick={() => isAvailable && onSelectDate(ds)}
@@ -103,6 +104,9 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate }) {
               {isToday && !isSelected && inMonth && (
                 <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent" />
               )}
+              {!isToday && isGuestFree && !isSelected && isAvailable && (
+                <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-green-400/70" />
+              )}
             </button>
           )
         })}
@@ -112,7 +116,7 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate }) {
 }
 
 /* ── Time Slot Picker ── */
-function TimeSlotPicker({ slots, takenSlots, ownerEvents, selectedDate, selectedSlot, onSelect }) {
+function TimeSlotPicker({ slots, takenSlots, ownerEvents, guestEvents, selectedDate, selectedSlot, onSelect }) {
   const date = selectedDate ? new Date(selectedDate + 'T00:00:00') : null
   const available = slots.filter(s => {
     if (takenSlots.some(t => t.start_time === s.startTime)) return false
@@ -138,6 +142,8 @@ function TimeSlotPicker({ slots, takenSlots, ownerEvents, selectedDate, selected
     <div className="space-y-2">
       {available.map((slot, i) => {
         const isSelected = selectedSlot?.startTime === slot.startTime
+        const isGuestBusy = guestEvents !== null && date &&
+          guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
         return (
           <motion.button
             key={slot.startTime}
@@ -148,9 +154,14 @@ function TimeSlotPicker({ slots, takenSlots, ownerEvents, selectedDate, selected
             className={`w-full min-h-touch flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 ease-ios ${
               isSelected
                 ? 'bg-accent text-white shadow-[0_8px_24px_-8px_rgb(139_92_246/0.5)]'
+                : isGuestBusy
+                ? 'border border-white/[0.05] text-zinc-600'
                 : 'border border-white/10 text-zinc-200 hover:border-accent/40 hover:bg-white/[0.03]'
             }`}>
             {slot.label}
+            {isGuestBusy && !isSelected && (
+              <span className="text-[10px] font-normal text-zinc-700">busy</span>
+            )}
           </motion.button>
         )
       })}
@@ -216,10 +227,10 @@ function ConfirmForm({ page, selectedDate, selectedSlot, onConfirm, submitting }
 /* ── Guest Calendar Panel ── */
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
-function GuestCalendarPanel({ bookingSlots }) {
+// guestEvents: null = not connected, array = connected
+function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
   const [gisReady, setGisReady] = useState(false)
-  const [guestEvents, setGuestEvents] = useState(null)
-  const [guestLoading, setGuestLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showGuide, setShowGuide] = useState(false)
   const tokenClientRef = useRef(null)
@@ -241,102 +252,64 @@ function GuestCalendarPanel({ bookingSlots }) {
 
   async function handleTokenResponse(tokenResponse) {
     if (tokenResponse.error) { setError('Sign-in failed.'); return }
-    setGuestLoading(true)
+    setLoading(true)
     setError(null)
     try {
       const timeMin = new Date()
       const timeMax = new Date()
       timeMax.setDate(timeMax.getDate() + 60)
       const events = await fetchCalendarEvents(tokenResponse.access_token, 'primary', timeMin, timeMax)
-      setGuestEvents(events)
-    } catch {
+      onConnect(events)
+    } catch (e) {
       setError('Could not fetch calendar events.')
     }
-    setGuestLoading(false)
+    setLoading(false)
   }
-
-  const freeDates = useMemo(() => {
-    if (!guestEvents || !bookingSlots.length) return []
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const result = []
-    for (let i = 1; i < 60; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
-      const hasFreeSlot = bookingSlots.some(slot => {
-        return !guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
-      })
-      if (hasFreeSlot) result.push(date)
-    }
-    return result.slice(0, 30)
-  }, [guestEvents, bookingSlots])
 
   if (!configured) return null
 
-  if (guestEvents === null) {
+  // Connected — compact chip
+  if (guestEvents !== null) {
     return (
-      <>
-        {showGuide && (
-          <GoogleOAuthGuide
-            onConfirm={() => { setShowGuide(false); tokenClientRef.current?.requestAccessToken() }}
-            onCancel={() => setShowGuide(false)}
-          />
-        )}
-        <div className="border border-dashed border-white/10 rounded-xl px-4 py-3 mt-4">
-          <div className="flex items-center gap-3">
-            <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-500 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-zinc-300">See your free days</p>
-              <p className="text-[11px] text-zinc-500 leading-relaxed">Connect Google Calendar to highlight days that work. Only free/busy is read.</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowGuide(true)}
-            disabled={!gisReady || guestLoading}
-            className="mt-2 w-full text-xs font-medium text-zinc-300 hover:text-zinc-100 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
-          >
-            Connect Calendar
-          </button>
+      <div className="flex items-center gap-2 mt-4">
+        <div className="flex items-center gap-1.5 text-[11px] text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5">
+          <CheckCircle2 size={11} strokeWidth={2} />
+          Your calendar connected
         </div>
-      </>
-    )
-  }
-
-  if (guestLoading) {
-    return (
-      <div className="border border-surface-700 rounded-xl px-4 py-3 mt-4 text-xs text-zinc-500">
-        Loading your calendar...
-      </div>
-    )
-  }
-
-  return (
-    <div className="bg-surface-800/50 border border-surface-700 rounded-xl px-4 py-3 mt-4">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-medium text-zinc-300">Your free days</p>
-        <button onClick={() => setGuestEvents(null)} className="p-0.5 rounded text-zinc-600 hover:text-zinc-400 transition-colors">
+        <button onClick={onDisconnect} className="p-1 rounded text-zinc-600 hover:text-zinc-400 transition-colors" title="Disconnect">
           <X size={12} strokeWidth={1.75} />
         </button>
       </div>
-      {error && <p className="text-[11px] text-red-400 mb-2">{error}</p>}
-      {freeDates.length === 0 ? (
-        <p className="text-xs text-zinc-500">No free days found in the next 60 days.</p>
-      ) : (
-        <div className="space-y-1 max-h-32 overflow-y-auto">
-          {freeDates.slice(0, 10).map(date => (
-            <div key={dateToStr(date)} className="flex items-center gap-1.5 text-xs">
-              <CheckCircle2 size={11} strokeWidth={1.75} className="text-green-500 flex-shrink-0" />
-              <span className="text-zinc-300">
-                {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-              </span>
-            </div>
-          ))}
-          {freeDates.length > 10 && (
-            <p className="text-[11px] text-zinc-600">+{freeDates.length - 10} more days</p>
-          )}
-        </div>
+    )
+  }
+
+  // Not connected — invite to connect
+  return (
+    <>
+      {showGuide && (
+        <GoogleOAuthGuide
+          onConfirm={() => { setShowGuide(false); tokenClientRef.current?.requestAccessToken() }}
+          onCancel={() => setShowGuide(false)}
+        />
       )}
-    </div>
+      <div className="border border-dashed border-white/10 rounded-xl px-4 py-3 mt-4">
+        <div className="flex items-center gap-3">
+          <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-500 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-zinc-300">See your free slots</p>
+            <p className="text-[11px] text-zinc-500 leading-relaxed">Connect to highlight times that work for you.</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowGuide(true)}
+          disabled={!gisReady || loading}
+          className="mt-2 w-full text-xs font-medium text-zinc-300 hover:text-zinc-100 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Connecting...' : 'Connect Calendar'}
+        </button>
+        {error && <p className="text-[11px] text-red-400 mt-1.5">{error}</p>}
+      </div>
+    </>
   )
 }
 
@@ -354,6 +327,7 @@ export function BookingPageView() {
   const [ownerLogo, setOwnerLogo] = useState(null)
   const [ownerLogoDark, setOwnerLogoDark] = useState(true)
   const [ownerGuestCalendarEnabled, setOwnerGuestCalendarEnabled] = useState(true)
+  const [guestEvents, setGuestEvents] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -398,6 +372,22 @@ export function BookingPageView() {
     const hours = page.available_hours || { start: '09:00', end: '17:00' }
     return generateTimeSlots(hours.start, hours.end, page.duration_minutes || 30)
   }, [page])
+
+  // Days where guest has at least one free slot — used to dot the calendar
+  const guestFreeDates = useMemo(() => {
+    if (!guestEvents || !timeSlots.length) return null
+    const result = new Set()
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    for (let i = 1; i < 90; i++) {
+      const date = new Date(today); date.setDate(today.getDate() + i)
+      const ds = dateToStr(date)
+      const hasFree = timeSlots.some(slot =>
+        !guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
+      )
+      if (hasFree) result.add(ds)
+    }
+    return result
+  }, [guestEvents, timeSlots])
 
   function handleDateSelect(ds) {
     setSelectedDate(ds)
@@ -534,7 +524,7 @@ export function BookingPageView() {
           </div>
 
           <div className="space-y-6 pt-10">
-            {ownerGuestCalendarEnabled && <GuestCalendarPanel bookingSlots={timeSlots} />}
+            {ownerGuestCalendarEnabled && <GuestCalendarPanel guestEvents={guestEvents} onConnect={setGuestEvents} onDisconnect={() => setGuestEvents(null)} />}
             <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
               <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
@@ -556,6 +546,7 @@ export function BookingPageView() {
                 availableDays={page.available_days || [1, 2, 3, 4, 5]}
                 selectedDate={selectedDate}
                 onSelectDate={handleDateSelect}
+                guestFreeDates={guestFreeDates}
               />
             </div>
 
@@ -597,7 +588,7 @@ export function BookingPageView() {
                       <p className="text-2xl font-semibold text-zinc-100 tracking-tight">{dateHeader.day}</p>
                     </div>
                     <TimeSlotPicker
-                      slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents}
+                      slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} guestEvents={guestEvents}
                       selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect}
                     />
                   </motion.div>
@@ -647,7 +638,7 @@ export function BookingPageView() {
             <Clock size={11} strokeWidth={1.75} className="text-zinc-500" />
             {page.duration_minutes} minutes
           </div>
-          {ownerGuestCalendarEnabled && <GuestCalendarPanel bookingSlots={timeSlots} />}
+          {ownerGuestCalendarEnabled && <GuestCalendarPanel guestEvents={guestEvents} onConnect={setGuestEvents} onDisconnect={() => setGuestEvents(null)} />}
         </header>
 
         <div className="border-t border-white/[0.05] mx-6" />
@@ -682,7 +673,7 @@ export function BookingPageView() {
                       <p className="text-xl font-semibold text-zinc-100 tracking-tight">{dateHeader.day}</p>
                     </div>
                   </div>
-                  <TimeSlotPicker slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect} />
+                  <TimeSlotPicker slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} guestEvents={guestEvents} selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect} />
                 </div>
               )}
 

@@ -110,7 +110,7 @@ export function GoogleOAuthGuide({ onConfirm, onCancel }) {
                   coordie.com has not been verified by Google yet. Only proceed if you understand the risks.
                 </p>
                 <div className="relative inline-block">
-                  <div className={`text-[#1a73e8] text-[10px] underline font-medium rounded px-1 py-0.5 transition-colors duration-300 ${phase >= 3 && phase < 5 ? 'animate-click-flash' : ''}`}>
+                  <div className={`text-[#1a73e8] text-[11px] underline font-semibold rounded px-1.5 py-0.5 transition-all duration-300 ${expanded ? 'bg-yellow-100' : ''} ${phase >= 3 && phase < 5 ? 'animate-click-flash' : ''}`}>
                     Go to coordie.com (unsafe)
                   </div>
                   {phase >= 3 && phase < 5 && (

@@ -311,7 +311,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
     <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
         <>
-          {guestCalendarEnabled && <GuestCalendarPanel slots={slots} groupId={groupId} guestName={guestName} ownerId={ownerId} />}
+          <GuestCalendarPanel slots={slots} groupId={groupId} guestName={guestName} ownerId={ownerId} />
           <p className="text-sm text-zinc-400 mb-4">
             {guestSlotSelection ? 'Tap a date to pick which time slots work for you.' : 'Tap dates to select them, then send a request.'}
           </p>

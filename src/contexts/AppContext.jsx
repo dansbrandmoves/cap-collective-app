@@ -1046,7 +1046,7 @@ export function AppProvider({ children }) {
   }, [])
 
   // --- Date Requests ---
-  const createDateRequest = useCallback(async (groupId, { requesterName, requesterEmail, dates, message, ownerId }) => {
+  const createDateRequest = useCallback(async (groupId, { requesterName, requesterEmail, dates, message, ownerId, slotMap }) => {
     const request = {
       id: `dr-${Date.now()}`,
       group_id: groupId,
@@ -1055,6 +1055,7 @@ export function AppProvider({ children }) {
       dates: dates,
       message: message || '',
       status: 'pending',
+      slot_map: slotMap || null,
     }
     const { error } = await supabase.from('date_requests').insert(request)
     if (error) { console.error('createDateRequest:', error); return false }

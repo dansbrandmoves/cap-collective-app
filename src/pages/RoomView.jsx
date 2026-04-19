@@ -251,7 +251,7 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId 
                 body: { guestName: guestNameProp, ownerId, groupId, dates: rows.map(r => r.date) },
               }).catch(() => {})
             }
-          } catch { /* ignore */ }
+          } catch (e) { /* ignore */ }
           setSharing(false)
         }} disabled={sharing}
           className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs font-medium text-accent hover:text-amber-400 bg-accent/10 hover:bg-accent/15 border border-accent/20 rounded-lg px-3 py-2 transition-colors disabled:opacity-50">

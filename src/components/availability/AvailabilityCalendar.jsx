@@ -263,6 +263,24 @@ export function AvailabilityCalendar({
                 )
               })}
             </div>
+            {selectedDates.length > 0 && (
+              <div className="border-t border-surface-700 px-4 py-4 safe-bottom bg-surface-900/95 backdrop-blur">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em]">
+                    {selectedDates.length} date{selectedDates.length !== 1 ? 's' : ''} ready
+                  </span>
+                  <button onClick={() => setSlotPickerDate(null)}
+                    className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors">
+                    + another day
+                  </button>
+                </div>
+                <Button
+                  onClick={() => { setSlotPickerDate(null); setShowRequestModal(true) }}
+                  className="w-full justify-center">
+                  Send Request →
+                </Button>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -299,6 +317,7 @@ export function AvailabilityCalendar({
         isOpen={showRequestModal}
         onClose={() => setShowRequestModal(false)}
         selectedDates={selectedDates}
+        selectedSlotMap={selectedSlotMap}
         guestName={guestName}
         onSubmit={handleRequestSubmit}
       />
@@ -308,6 +327,7 @@ export function AvailabilityCalendar({
         <DayInspectorPanel
           dateStr={inspectedDate}
           groupId={groupId}
+          slots={slots}
           dateRequests={dateRequests.filter(r => r.dates?.includes(inspectedDate) && r.status !== 'declined' && r.status !== 'archived')}
           sharedAvailability={sharedAvailability.filter(a => a.date === inspectedDate && a.is_available)}
           onClose={() => setInspectedDate(null)}
@@ -318,7 +338,7 @@ export function AvailabilityCalendar({
 }
 
 /* ── Day Inspector: owner-only panel with overlap + Schedule in Google Calendar ── */
-function DayInspectorPanel({ dateStr, groupId, dateRequests, sharedAvailability, onClose }) {
+function DayInspectorPanel({ dateStr, groupId, slots = [], dateRequests, sharedAvailability, onClose }) {
   const { getMembersForGroup } = useApp()
   const members = useMemo(() => getMembersForGroup(groupId || ''), [getMembersForGroup, groupId])
 
@@ -367,6 +387,30 @@ function DayInspectorPanel({ dateStr, groupId, dateRequests, sharedAvailability,
       return next
     })
   }
+
+  // Slot-level overlap: which slots does each guest say they're free for?
+  // A guest with a slot_map entry for this date → only those slot IDs count.
+  // A guest with no slot_map (date-only request) → counts as free for every slot.
+  const slotOverlap = useMemo(() => {
+    if (!slots || slots.length === 0) return { rows: [], anySlotData: false }
+    let anySlotData = false
+    const perSlot = slots.map(slot => {
+      const free = new Set()
+      dateRequests.forEach(r => {
+        const slotIdsForDate = r.slot_map?.[dateStr]
+        if (Array.isArray(slotIdsForDate)) {
+          anySlotData = true
+          if (slotIdsForDate.includes(slot.id)) free.add(r.requester_name)
+        } else {
+          if (r.requester_name) free.add(r.requester_name)
+        }
+      })
+      sharedAvailability.forEach(a => { if (a.guest_name) free.add(a.guest_name) })
+      free.delete(undefined); free.delete(null); free.delete('')
+      return { slot, freeCount: free.size, freeNames: [...free] }
+    })
+    return { rows: perSlot, anySlotData }
+  }, [slots, dateRequests, sharedAvailability, dateStr])
 
   const selectedEmails = useMemo(
     () => guestData.filter(g => g.email && selectedNames.has(g.name)).map(g => g.email),
@@ -510,6 +554,50 @@ function DayInspectorPanel({ dateStr, groupId, dateRequests, sharedAvailability,
                   )
                 })}
               </div>
+
+              {slotOverlap.anySlotData && slotOverlap.rows.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-3">By time slot</p>
+                  <div className="space-y-1.5">
+                    {slotOverlap.rows.map(({ slot, freeCount, freeNames }) => {
+                      const total = guestData.length
+                      const pct = total > 0 ? Math.round((freeCount / total) * 100) : 0
+                      const isBest = freeCount === total && freeCount > 0
+                      const isNone = freeCount === 0
+                      return (
+                        <div
+                          key={slot.id}
+                          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-colors ${
+                            isBest
+                              ? 'bg-accent/10 border-accent/30'
+                              : isNone
+                              ? 'bg-white/[0.02] border-white/[0.04] opacity-60'
+                              : 'bg-white/[0.03] border-white/[0.05]'
+                          }`}
+                          title={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : 'No one free'}
+                        >
+                          <div className="w-1.5 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: slot.color || '#8b5cf6' }} />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[13px] font-medium truncate leading-tight ${isBest ? 'text-zinc-50' : 'text-zinc-200'}`}>{slot.name}</p>
+                            <p className="text-[11px] text-zinc-500 mt-0.5">{slot.startTime}–{slot.endTime}</p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="w-16 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                              <div
+                                className={`h-full transition-all duration-300 ${isBest ? 'bg-accent' : 'bg-accent/50'}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className={`text-[12px] font-semibold tabular-nums w-10 text-right ${isBest ? 'text-accent' : isNone ? 'text-zinc-600' : 'text-zinc-300'}`}>
+                              {freeCount}/{total}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="py-8 text-center">

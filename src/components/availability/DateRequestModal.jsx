@@ -3,7 +3,7 @@ import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 import { CheckCircle2 } from 'lucide-react'
 
-export function DateRequestModal({ isOpen, onClose, selectedDates, guestName, onSubmit }) {
+export function DateRequestModal({ isOpen, onClose, selectedDates, selectedSlotMap, guestName, onSubmit }) {
   const [name, setName] = useState(guestName || '')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
@@ -19,6 +19,7 @@ export function DateRequestModal({ isOpen, onClose, selectedDates, guestName, on
       requesterEmail: email.trim(),
       dates: selectedDates,
       message: message.trim(),
+      slotMap: selectedSlotMap && Object.keys(selectedSlotMap).length > 0 ? selectedSlotMap : null,
     })
     setSubmitting(false)
     if (success) {

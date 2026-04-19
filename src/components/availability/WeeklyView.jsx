@@ -92,20 +92,21 @@ export function WeeklyView({
                     }`}>
                       {day.getDate()}
                     </div>
-                    {/* Day-level badge: always on mobile; on desktop only when no slot-level data exists
-                        (desktop shows per-cell counts instead, so the header badge would double-count) */}
-                    {overlapCount > 0 && (
-                      <div
-                        className={`mx-auto mt-1 flex items-center justify-center rounded-full font-semibold shadow-[0_2px_8px_-2px_rgba(139,92,246,0.6)] ${hasSlotData ? 'sm:hidden' : ''} ${
-                          overlapCount >= 2
-                            ? 'bg-accent text-white min-w-[18px] h-[18px] px-1 text-[10px]'
-                            : 'bg-accent/90 text-white min-w-[16px] h-4 px-1 text-[10px]'
-                        }`}
-                        title={isOwner ? `${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} free: ${[...overlapGuests].join(', ')}` : `${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} available`}
-                      >
-                        {overlapCount}
-                      </div>
-                    )}
+                    {/* Fixed-height badge row — always reserves space so all columns stay the same height */}
+                    <div className="h-[18px] mt-1 flex items-center justify-center">
+                      {overlapCount > 0 && !hasSlotData && (
+                        <div
+                          className={`flex items-center justify-center rounded-full font-semibold shadow-[0_2px_8px_-2px_rgba(139,92,246,0.6)] ${
+                            overlapCount >= 2
+                              ? 'bg-accent text-white min-w-[18px] h-[18px] px-1 text-[10px]'
+                              : 'bg-accent/90 text-white min-w-[16px] h-4 px-1 text-[10px]'
+                          }`}
+                          title={isOwner ? `${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} free: ${[...overlapGuests].join(', ')}` : `${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} available`}
+                        >
+                          {overlapCount}
+                        </div>
+                      )}
+                    </div>
                   </button>
                 </th>
               )
@@ -161,11 +162,14 @@ export function WeeklyView({
                       <span className="text-xs font-medium hidden sm:inline" style={{ color: isChecked ? '#8b5cf6' : meta.color }}>
                         {isChecked ? '✓' : meta.label}
                       </span>
-                      {/* Owner: per-slot interest count badge — desktop only (mobile uses day header badge) */}
+                      {/* Owner: per-slot interest indicator — dot on mobile, count badge on desktop */}
                       {isOwner && slotCount > 0 && (
-                        <span className="hidden sm:flex absolute top-0.5 right-0.5 text-[9px] font-bold text-white bg-accent rounded-full leading-none px-1 min-w-[14px] h-[14px] items-center justify-center shadow-[0_1px_4px_rgba(139,92,246,0.5)]">
-                          {slotCount}
-                        </span>
+                        <>
+                          <span className="sm:hidden absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-accent/75" />
+                          <span className="hidden sm:flex absolute top-0.5 right-0.5 text-[9px] font-bold text-white bg-accent rounded-full leading-none px-1 min-w-[14px] h-[14px] items-center justify-center shadow-[0_1px_4px_rgba(139,92,246,0.5)]">
+                            {slotCount}
+                          </span>
+                        </>
                       )}
                     </button>
                   </td>

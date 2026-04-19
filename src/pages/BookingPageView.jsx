@@ -160,7 +160,10 @@ function TimeSlotPicker({ slots, takenSlots, ownerEvents, guestEvents, selectedD
             }`}>
             {slot.label}
             {isGuestBusy && !isSelected && (
-              <span className="text-[10px] font-normal text-zinc-700">busy</span>
+              <span className="flex items-center gap-1 text-[10px] font-normal text-zinc-700">
+                <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                busy
+              </span>
             )}
           </motion.button>
         )

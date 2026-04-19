@@ -206,14 +206,14 @@ export function getMonthGrid(year, month) {
     days.push({ date: new Date(year, month, d), inMonth: true })
   }
 
-  // Pad end to Saturday
-  const remaining = 7 - (days.length % 7)
-  if (remaining < 7) {
-    for (let i = 1; i <= remaining; i++) {
-      const d = new Date(lastDay)
-      d.setDate(d.getDate() + i)
-      days.push({ date: d, inMonth: false })
-    }
+  // Pad end so the grid is always 6 full rows (42 cells). Consistent
+  // calendar height across all months — prevents layout jump when
+  // navigating between 5-row and 6-row months.
+  while (days.length < 42) {
+    const last = days[days.length - 1].date
+    const d = new Date(last)
+    d.setDate(d.getDate() + 1)
+    days.push({ date: d, inMonth: false })
   }
 
   return days

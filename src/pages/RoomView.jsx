@@ -96,7 +96,7 @@ function NotesTab({ productionId, group, guestName }) {
 }
 
 // Guest calendar panel — lets guest connect their Google Calendar and see their free dates
-function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp }) {
+function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId }) {
   const [gisReady, setGisReady] = useState(false)
   const [guestEvents, setGuestEvents] = useState(null) // null = not connected yet
   const [loading, setLoading] = useState(false)
@@ -246,6 +246,11 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp }) {
               .eq('group_id', groupId).eq('guest_name', guestNameProp)
             await supabase.from('shared_availability').insert(rows)
             setShared(true)
+            if (ownerId) {
+              supabase.functions.invoke('notify-shared-availability', {
+                body: { guestName: guestNameProp, ownerId, groupId, dates: rows.map(r => r.date) },
+              }).catch(() => {})
+            }
           } catch { /* ignore */ }
           setSharing(false)
         }} disabled={sharing}
@@ -299,7 +304,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
     <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
         <>
-          {guestCalendarEnabled && <GuestCalendarPanel slots={slots} groupId={groupId} guestName={guestName} />}
+          {guestCalendarEnabled && <GuestCalendarPanel slots={slots} groupId={groupId} guestName={guestName} ownerId={ownerId} />}
           <p className="text-sm text-zinc-400 mb-4">
             {guestSlotSelection ? 'Tap a date to pick which time slots work for you.' : 'Tap dates to select them, then send a request.'}
           </p>

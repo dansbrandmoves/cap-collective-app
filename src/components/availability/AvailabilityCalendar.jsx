@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { MonthlyView } from './MonthlyView'
 import { WeeklyView } from './WeeklyView'
 import { DailyView } from './DailyView'
@@ -6,7 +6,7 @@ import { DateRequestModal } from './DateRequestModal'
 import { useApp } from '../../contexts/AppContext'
 import { getWeekStart, dateToStr, deriveSlotState } from '../../utils/availability'
 import { Button } from '../ui/Button'
-import { CalendarPlus, X } from 'lucide-react'
+import { CalendarPlus, X, Check } from 'lucide-react'
 
 const VIEWS = ['Monthly', 'Weekly', 'Daily']
 
@@ -323,21 +323,54 @@ function DayInspectorPanel({ dateStr, groupId, dateRequests, sharedAvailability,
 
   const dateObj = useMemo(() => new Date(dateStr + 'T00:00:00'), [dateStr])
 
-  // Unique guests free this day (union of date_requests + shared_availability)
-  const uniqueNames = useMemo(() => {
+  // Guest data for this day: name + email (from their request or from group_members).
+  // Only people who said they're free THIS DAY — not everyone in the group.
+  const guestData = useMemo(() => {
     const set = new Set()
     dateRequests.forEach(r => { if (r.requester_name) set.add(r.requester_name) })
     sharedAvailability.forEach(a => { if (a.guest_name) set.add(a.guest_name) })
-    return [...set]
-  }, [dateRequests, sharedAvailability])
+    return [...set].map(name => {
+      const fromRequest = dateRequests.find(r => r.requester_name === name)?.requester_email
+      const fromMember = members.find(m => m.name === name)?.email
+      const email = (fromRequest || fromMember || '').trim()
+      return { name, email: email || null }
+    })
+  }, [dateRequests, sharedAvailability, members])
 
-  // Email list for Google Calendar `add=` query: merge known emails from date_requests + group_members
-  const emails = useMemo(() => {
-    const set = new Set()
-    dateRequests.forEach(r => { if (r.requester_email) set.add(r.requester_email.trim()) })
-    members.forEach(m => { if (m.email) set.add(m.email.trim()) })
-    return [...set]
-  }, [dateRequests, members])
+  // Selected names (to include as attendees) — default to everyone with an email
+  const [selectedNames, setSelectedNames] = useState(() =>
+    new Set(guestData.filter(g => g.email).map(g => g.name))
+  )
+
+  // Keep selection in sync if the guest list grows live (new person shares availability
+  // while the panel is open). Auto-include new people with emails; preserve existing choices.
+  const guestNamesKey = guestData.map(g => g.name).sort().join('|')
+  useEffect(() => {
+    setSelectedNames(prev => {
+      const next = new Set(prev)
+      guestData.forEach(g => {
+        if (g.email && !next.has(g.name) && !prev.has(g.name)) next.add(g.name)
+      })
+      // Drop anyone no longer in the list (e.g. request was archived)
+      const allNames = new Set(guestData.map(g => g.name))
+      ;[...next].forEach(n => { if (!allNames.has(n)) next.delete(n) })
+      return next
+    })
+  }, [guestNamesKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleGuest(name) {
+    setSelectedNames(prev => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      return next
+    })
+  }
+
+  const selectedEmails = useMemo(
+    () => guestData.filter(g => g.email && selectedNames.has(g.name)).map(g => g.email),
+    [guestData, selectedNames]
+  )
 
   function handleSchedule() {
     // Default a 1-hour slot at 2pm local — owner can adjust inside Google Calendar
@@ -345,16 +378,17 @@ function DayInspectorPanel({ dateStr, groupId, dateRequests, sharedAvailability,
     const start = `${datePart}T140000`
     const end = `${datePart}T150000`
 
-    const title = uniqueNames.length === 1
-      ? `Meeting with ${uniqueNames[0]}`
-      : uniqueNames.length > 1
-      ? `Meeting · ${uniqueNames.slice(0, 2).join(' & ')}${uniqueNames.length > 2 ? ` +${uniqueNames.length - 2}` : ''}`
+    const selectedList = guestData.filter(g => selectedNames.has(g.name)).map(g => g.name)
+    const title = selectedList.length === 1
+      ? `Meeting with ${selectedList[0]}`
+      : selectedList.length > 1
+      ? `Meeting · ${selectedList.slice(0, 2).join(' & ')}${selectedList.length > 2 ? ` +${selectedList.length - 2}` : ''}`
       : 'Meeting'
 
     const detailsLines = ['Scheduled via Coordie.']
-    if (uniqueNames.length > 0) {
+    if (selectedList.length > 0) {
       detailsLines.push('')
-      detailsLines.push(`Indicated free for ${dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}: ${uniqueNames.join(', ')}.`)
+      detailsLines.push(`Indicated free for ${dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}: ${selectedList.join(', ')}.`)
     }
 
     const params = new URLSearchParams({
@@ -363,8 +397,8 @@ function DayInspectorPanel({ dateStr, groupId, dateRequests, sharedAvailability,
       dates: `${start}/${end}`,
       details: detailsLines.join('\n'),
     })
-    if (emails.length > 0) {
-      params.set('add', emails.join(','))
+    if (selectedEmails.length > 0) {
+      params.set('add', selectedEmails.join(','))
     }
 
     window.open(
@@ -414,25 +448,66 @@ function DayInspectorPanel({ dateStr, groupId, dateRequests, sharedAvailability,
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-6">
-          {uniqueNames.length > 0 ? (
+          {guestData.length > 0 ? (
             <>
               <div className="flex items-baseline gap-2 mb-4">
                 <span className="inline-flex items-center justify-center rounded-full bg-accent text-white text-[13px] font-bold min-w-[26px] h-[26px] px-1.5">
-                  {uniqueNames.length}
+                  {guestData.length}
                 </span>
                 <p className="text-[15px] text-zinc-300">
-                  {uniqueNames.length === 1 ? 'person is free' : 'people are free'}
+                  {guestData.length === 1 ? 'person is free' : 'people are free'}
                 </p>
               </div>
+              {guestData.some(g => g.email) && (
+                <p className="text-[12px] text-zinc-500 mb-3 leading-relaxed">
+                  Tap anyone to include or exclude from the invite.
+                </p>
+              )}
               <div className="space-y-1.5 mb-6">
-                {uniqueNames.map(name => (
-                  <div key={name} className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                    <div className="w-7 h-7 rounded-full bg-accent/15 border border-accent/25 text-accent flex items-center justify-center text-[12px] font-semibold flex-shrink-0">
-                      {name?.[0]?.toUpperCase() ?? '?'}
-                    </div>
-                    <span className="text-[14px] text-zinc-100 truncate">{name}</span>
-                  </div>
-                ))}
+                {guestData.map(({ name, email }) => {
+                  const selected = selectedNames.has(name)
+                  const hasEmail = !!email
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={hasEmail ? () => toggleGuest(name) : undefined}
+                      disabled={!hasEmail}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all duration-200 ease-ios text-left ${
+                        !hasEmail
+                          ? 'bg-white/[0.02] border-white/[0.04] opacity-60 cursor-default'
+                          : selected
+                          ? 'bg-accent/10 border-accent/30 hover:bg-accent/15'
+                          : 'bg-white/[0.03] border-white/[0.05] hover:bg-white/[0.05] hover:border-white/10'
+                      }`}
+                    >
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold flex-shrink-0 border ${
+                        selected
+                          ? 'bg-accent/20 border-accent/35 text-accent'
+                          : 'bg-white/[0.04] border-white/10 text-zinc-400'
+                      }`}>
+                        {name?.[0]?.toUpperCase() ?? '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] text-zinc-100 truncate leading-tight">{name}</p>
+                        {hasEmail ? (
+                          <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{email}</p>
+                        ) : (
+                          <p className="text-[11px] text-zinc-600 mt-0.5">No email &mdash; add manually in GCal</p>
+                        )}
+                      </div>
+                      {hasEmail && (
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 ease-ios ${
+                          selected
+                            ? 'bg-accent text-white'
+                            : 'border border-white/20 bg-transparent'
+                        }`}>
+                          {selected && <Check size={12} strokeWidth={2.5} />}
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             </>
           ) : (
@@ -457,14 +532,15 @@ function DayInspectorPanel({ dateStr, groupId, dateRequests, sharedAvailability,
             <CalendarPlus size={16} strokeWidth={2} />
             Schedule in Google Calendar
           </button>
-          {emails.length > 0 && (
+          {guestData.length > 0 && (
             <p className="text-[12px] text-zinc-500 mt-3 text-center leading-relaxed">
-              Opens Google Calendar with {emails.length} {emails.length === 1 ? 'attendee' : 'attendees'} pre-filled.
-            </p>
-          )}
-          {emails.length === 0 && uniqueNames.length > 0 && (
-            <p className="text-[12px] text-zinc-500 mt-3 text-center leading-relaxed">
-              No emails on file for these guests &mdash; add them as attendees in Google Calendar.
+              {selectedEmails.length === 0 ? (
+                <>No attendees selected &mdash; opens a blank event for this day.</>
+              ) : selectedEmails.length === 1 ? (
+                <>Opens Google Calendar with 1 attendee pre-filled.</>
+              ) : (
+                <>Opens Google Calendar with {selectedEmails.length} attendees pre-filled.</>
+              )}
             </p>
           )}
         </div>

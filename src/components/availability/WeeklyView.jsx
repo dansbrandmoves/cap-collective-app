@@ -8,6 +8,7 @@ export function WeeklyView({
   onDayClick, isOwner, slotStates = DEFAULT_SLOT_STATES,
   selectedDates = [], isSelectionMode = false, businessHours = null,
   dateRequests = [], sharedAvailability = [],
+  guestSlotSelection = false, selectedSlotMap = {}, toggleSlotForDate = null,
 }) {
   const days = useMemo(() => getWeekDays(weekStart), [weekStart])
   const matrix = useMemo(
@@ -17,7 +18,8 @@ export function WeeklyView({
 
   const todayStr = dateToStr(new Date())
 
-  function getOverlap(ds) {
+  // Day-level overlap for column headers
+  function getDayOverlap(ds) {
     const guests = new Set([
       ...dateRequests
         .filter(r => r.dates?.includes(ds) && r.status !== 'declined' && r.status !== 'archived')
@@ -28,6 +30,33 @@ export function WeeklyView({
     ])
     guests.delete(undefined); guests.delete(null); guests.delete('')
     return guests
+  }
+
+  // Slot-level overlap: back-compat — date-only requests count for all slots
+  function getSlotOverlap(ds, slotId) {
+    const guests = new Set()
+    dateRequests
+      .filter(r => r.dates?.includes(ds) && r.status !== 'declined' && r.status !== 'archived')
+      .forEach(r => {
+        const slotIds = r.slot_map?.[ds]
+        if (Array.isArray(slotIds)) {
+          if (slotIds.includes(slotId)) guests.add(r.requester_name)
+        } else {
+          if (r.requester_name) guests.add(r.requester_name)
+        }
+      })
+    sharedAvailability
+      .filter(a => a.date === ds && a.is_available)
+      .forEach(a => { if (a.guest_name) guests.add(a.guest_name) })
+    guests.delete(undefined); guests.delete(null); guests.delete('')
+    return guests
+  }
+
+  // Per-day: does this day have any slot-level (not day-only) request data?
+  function dayHasSlotData(ds) {
+    return dateRequests.some(
+      r => r.dates?.includes(ds) && r.status !== 'declined' && r.status !== 'archived' && r.slot_map?.[ds] != null
+    )
   }
 
   return (
@@ -42,8 +71,9 @@ export function WeeklyView({
               const ds = dateToStr(day)
               const isToday = ds === todayStr
               const isSelected = selectedDates.includes(ds)
-              const overlapGuests = getOverlap(ds)
+              const overlapGuests = getDayOverlap(ds)
               const overlapCount = overlapGuests.size
+              const hasSlotData = dayHasSlotData(ds)
               return (
                 <th key={i} className="pb-3 px-0.5 sm:px-1 text-center min-w-[40px] sm:min-w-[80px]">
                   <button
@@ -62,7 +92,8 @@ export function WeeklyView({
                     }`}>
                       {day.getDate()}
                     </div>
-                    {overlapCount > 0 && (
+                    {/* Day-level badge: only when no slot-level data (avoids double-counting confusion) */}
+                    {overlapCount > 0 && !hasSlotData && (
                       <div
                         className={`mx-auto mt-1 flex items-center justify-center rounded-full font-semibold shadow-[0_2px_8px_-2px_rgba(139,92,246,0.6)] ${
                           overlapCount >= 2
@@ -89,22 +120,52 @@ export function WeeklyView({
               </td>
               {days.map((day, i) => {
                 const ds = dateToStr(day)
-                const { state, drivingEvent } = matrix[ds]?.[slot.id] ?? { state: slot.defaultState, drivingEvent: null }
+                const { state } = matrix[ds]?.[slot.id] ?? { state: slot.defaultState }
                 const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
                 const isToday = ds === todayStr
+
+                // Guest: is this slot selected?
+                const isChecked = isSelectionMode && guestSlotSelection && (selectedSlotMap[ds] || []).includes(slot.id)
+
+                // Owner: how many guests want this slot?
+                const slotGuests = isOwner ? getSlotOverlap(ds, slot.id) : null
+                const slotCount = slotGuests?.size ?? 0
 
                 return (
                   <td key={i} className="py-1 sm:py-1.5 px-0.5 sm:px-1">
                     <button
-                      onClick={() => onDayClick(day)}
-                      title={meta.label}
-                      className={`w-full rounded-lg py-2 sm:py-3 flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all
-                        hover:opacity-90 ${isToday ? 'ring-1 ring-accent' : ''}
+                      onClick={() => {
+                        if (isSelectionMode && guestSlotSelection && toggleSlotForDate) {
+                          toggleSlotForDate(ds, slot.id)
+                        } else {
+                          onDayClick(day)
+                        }
+                      }}
+                      title={
+                        isOwner && slotCount > 0
+                          ? `${slotCount} free: ${[...slotGuests].join(', ')}`
+                          : meta.label
+                      }
+                      className={`relative w-full rounded-lg py-2 sm:py-3 flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all
+                        hover:opacity-90
+                        ${isToday ? 'ring-1 ring-accent' : ''}
+                        ${isChecked ? 'ring-2 ring-accent' : ''}
                       `}
-                      style={{ backgroundColor: meta.color + '22', border: `1px solid ${meta.color}44` }}
+                      style={{
+                        backgroundColor: isChecked ? '#8b5cf633' : meta.color + '22',
+                        border: isChecked ? '1px solid #8b5cf660' : `1px solid ${meta.color}44`,
+                      }}
                     >
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: meta.color }} />
-                      <span className="text-xs font-medium hidden sm:inline" style={{ color: meta.color }}>{meta.label}</span>
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: isChecked ? '#8b5cf6' : meta.color }} />
+                      <span className="text-xs font-medium hidden sm:inline" style={{ color: isChecked ? '#8b5cf6' : meta.color }}>
+                        {isChecked ? '✓' : meta.label}
+                      </span>
+                      {/* Owner: per-slot interest count badge */}
+                      {isOwner && slotCount > 0 && (
+                        <span className="absolute top-0.5 right-0.5 text-[9px] font-bold text-white bg-accent rounded-full leading-none px-1 min-w-[14px] h-[14px] flex items-center justify-center shadow-[0_1px_4px_rgba(139,92,246,0.5)]">
+                          {slotCount}
+                        </span>
+                      )}
                     </button>
                   </td>
                 )

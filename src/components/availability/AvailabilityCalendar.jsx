@@ -198,6 +198,9 @@ export function AvailabilityCalendar({
           slotStates={slotStates} businessHours={businessHours}
           selectedDates={selectedDates} isSelectionMode={isSelectionMode}
           dateRequests={dateRequests} sharedAvailability={sharedAvailability}
+          guestSlotSelection={guestSlotSelection}
+          selectedSlotMap={selectedSlotMap}
+          toggleSlotForDate={toggleSlotForDate}
         />
       )}
 

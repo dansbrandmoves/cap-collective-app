@@ -134,7 +134,7 @@ function TimeSlotPicker({ slots, takenSlots, ownerEvents, selectedDate, selected
   }
 
   return (
-    <div className="space-y-2 overflow-y-auto max-h-[60vh] md:max-h-[480px] pr-1 -mr-1">
+    <div className="space-y-2">
       {available.map((slot, i) => {
         const isSelected = selectedSlot?.startTime === slot.startTime
         return (
@@ -543,47 +543,70 @@ export function BookingPageView() {
               />
             </div>
 
-            {/* Time slots or confirm */}
-            <AnimatePresence mode="wait">
-              {step !== 'date' && (
-                <motion.div
-                  key={step}
-                  initial={{ opacity: 0, x: 16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -8 }}
-                  transition={{ duration: 0.25, ease: IOS_EASE }}
-                  className="w-[240px] lg:w-[260px] flex-shrink-0"
-                >
-                  {step === 'time' && (
-                    <>
-                      <div className="mb-5">
-                        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-1">
-                          {dateHeader.weekday}
-                        </p>
-                        <p className="text-2xl font-semibold text-zinc-100 tracking-tight">{dateHeader.day}</p>
-                      </div>
-                      <TimeSlotPicker
-                        slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents}
-                        selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect}
-                      />
-                    </>
-                  )}
-                  {step === 'confirm' && (
-                    <>
-                      <div className="flex items-center justify-between mb-5">
-                        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Your details</p>
-                        <button onClick={() => setSelectedSlot(null)}
-                          className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors">
-                          Change time
-                        </button>
-                      </div>
-                      <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={selectedSlot}
-                        onConfirm={handleConfirm} submitting={submitting} />
-                    </>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Slot column — always reserved so the calendar never resizes.
+                Inside, animate between the empty hint, time picker, and
+                confirm form. */}
+            <div className="w-[240px] lg:w-[260px] flex-shrink-0">
+              <AnimatePresence mode="wait">
+                {step === 'date' && (
+                  <motion.div
+                    key="date-hint"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2, ease: IOS_EASE }}
+                    className="border border-dashed border-white/10 rounded-2xl px-5 py-10 text-center"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-white/[0.04] border border-white/5 flex items-center justify-center mx-auto mb-3">
+                      <CalendarDays size={16} strokeWidth={1.5} className="text-zinc-500" />
+                    </div>
+                    <p className="text-[13px] font-medium text-zinc-300 mb-1">Pick a date</p>
+                    <p className="text-[12px] text-zinc-500 leading-relaxed">
+                      Open times will appear here.
+                    </p>
+                  </motion.div>
+                )}
+                {step === 'time' && (
+                  <motion.div
+                    key="time"
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
+                    transition={{ duration: 0.25, ease: IOS_EASE }}
+                  >
+                    <div className="mb-5">
+                      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-1">
+                        {dateHeader.weekday}
+                      </p>
+                      <p className="text-2xl font-semibold text-zinc-100 tracking-tight">{dateHeader.day}</p>
+                    </div>
+                    <TimeSlotPicker
+                      slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents}
+                      selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect}
+                    />
+                  </motion.div>
+                )}
+                {step === 'confirm' && (
+                  <motion.div
+                    key="confirm"
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
+                    transition={{ duration: 0.25, ease: IOS_EASE }}
+                  >
+                    <div className="flex items-center justify-between mb-5">
+                      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Your details</p>
+                      <button onClick={() => setSelectedSlot(null)}
+                        className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors">
+                        Change time
+                      </button>
+                    </div>
+                    <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={selectedSlot}
+                      onConfirm={handleConfirm} submitting={submitting} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </main>
       </div>

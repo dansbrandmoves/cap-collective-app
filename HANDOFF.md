@@ -23,7 +23,7 @@
    git pull origin master
    ```
 2. **Read the vision doc before anything else:**
-   - `C:\Users\danie\.claude\projects\C--Users-danie-Dropbox-Creative-Cloud-Files-Client-Fulfillment-MM-vibe-coding-cap-collective-app\memory\project_coordie_vision.md`
+   - `VISION.md` at project root — core promise, features, pricing, what it is/isn't
 3. **Skim `CLAUDE.md` at project root** — architecture, conventions, Dropbox git-index workaround.
 
 ---

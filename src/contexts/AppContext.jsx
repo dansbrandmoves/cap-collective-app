@@ -1074,6 +1074,8 @@ export function AppProvider({ children }) {
         requesterName,
         requesterEmail: requesterEmail || '',
         dates,
+        slotMap: slotMap || null,
+        slots: slots.map(s => ({ id: s.id, name: s.name, startTime: s.startTime, endTime: s.endTime })),
         message: message || '',
         groupName,
         productionName,

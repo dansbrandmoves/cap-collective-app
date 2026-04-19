@@ -44,10 +44,67 @@ function formatDate(ds: string) {
   }
 }
 
+type SlotDef = { id: string; name: string; startTime: string; endTime: string };
+
+function formatTime(t: string) {
+  // "08:00" → "8:00 AM"
+  try {
+    const [h, m] = t.split(":").map(Number);
+    const ampm = h < 12 ? "AM" : "PM";
+    const hour = h % 12 || 12;
+    return `${hour}${m > 0 ? ":" + String(m).padStart(2, "0") : ""} ${ampm}`;
+  } catch {
+    return t;
+  }
+}
+
+function buildDatesBlock(
+  dates: string[],
+  slotMap: Record<string, string[]> | null | undefined,
+  slots: SlotDef[],
+): string {
+  const slotById = Object.fromEntries(slots.map((s) => [s.id, s]));
+
+  if (!slotMap || Object.keys(slotMap).length === 0) {
+    // No slot selections — just date chips
+    const chips = (dates || [])
+      .map(
+        (d) =>
+          `<span style="display:inline-block;background:rgba(139,92,246,0.08);color:#8b5cf6;border:1px solid rgba(139,92,246,0.20);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:500;margin:0 6px 6px 0;letter-spacing:-0.005em;">${escapeHtml(formatDate(d))}</span>`,
+      )
+      .join("");
+    return chips || '<span style="color:#a1a1aa;font-size:14px;">No dates specified</span>';
+  }
+
+  // Slot-level selections — group by date, show slot chips under each
+  return (dates || [])
+    .map((d) => {
+      const slotIds: string[] = slotMap[d] ?? [];
+      const slotChips = slotIds
+        .map((sid) => {
+          const slot = slotById[sid];
+          if (!slot) return "";
+          const label = slot.startTime
+            ? `${escapeHtml(slot.name)} · ${formatTime(slot.startTime)}–${formatTime(slot.endTime)}`
+            : escapeHtml(slot.name);
+          return `<span style="display:inline-block;background:rgba(139,92,246,0.06);color:#7c3aed;border:1px solid rgba(139,92,246,0.18);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:500;margin:0 5px 5px 0;letter-spacing:-0.003em;">${label}</span>`;
+        })
+        .join("");
+
+      return `<div style="margin-bottom:14px;">
+  <p style="margin:0 0 6px 0;font-size:13px;font-weight:600;color:#3f3f46;letter-spacing:-0.005em;">${escapeHtml(formatDate(d))}</p>
+  <div>${slotChips || '<span style="font-size:12px;color:#a1a1aa;">All day</span>'}</div>
+</div>`;
+    })
+    .join("");
+}
+
 function buildEmailHtml(opts: {
   requesterName: string;
   requesterEmail?: string;
   dates: string[];
+  slotMap?: Record<string, string[]> | null;
+  slots: SlotDef[];
   message?: string;
   groupName: string;
   productionName: string;
@@ -56,17 +113,15 @@ function buildEmailHtml(opts: {
     requesterName,
     requesterEmail,
     dates,
+    slotMap,
+    slots,
     message,
     groupName,
     productionName,
   } = opts;
 
-  const dateChips = (dates || [])
-    .map(
-      (d) =>
-        `<span style="display:inline-block;background:rgba(139,92,246,0.08);color:#8b5cf6;border:1px solid rgba(139,92,246,0.20);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:500;margin:0 6px 6px 0;letter-spacing:-0.005em;">${escapeHtml(formatDate(d))}</span>`,
-    )
-    .join("");
+  const hasSlotMap = slotMap && Object.keys(slotMap).length > 0;
+  const datesBlock = buildDatesBlock(dates, slotMap, slots);
 
   const messageBlock = message
     ? `
@@ -128,8 +183,8 @@ function buildEmailHtml(opts: {
           </p>
         </td></tr>
         <tr><td style="padding:0 0 28px 0;">
-          <p class="text-muted" style="margin:0 0 10px 0;color:#a1a1aa;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">Requested dates</p>
-          <div>${dateChips || '<span style="color:#a1a1aa;font-size:14px;">No dates specified</span>'}</div>
+          <p class="text-muted" style="margin:0 0 12px 0;color:#a1a1aa;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">${hasSlotMap ? "Requested dates &amp; slots" : "Requested dates"}</p>
+          <div>${datesBlock}</div>
         </td></tr>
         ${messageBlock}
         <tr><td style="padding:4px 0 28px 0;">
@@ -167,6 +222,8 @@ Deno.serve(async (req: Request) => {
       requesterName,
       requesterEmail,
       dates,
+      slotMap,
+      slots,
       message,
       groupName,
       productionName,
@@ -207,6 +264,8 @@ Deno.serve(async (req: Request) => {
       requesterName: requesterName || "A guest",
       requesterEmail,
       dates: dates || [],
+      slotMap: slotMap ?? null,
+      slots: slots || [],
       message,
       groupName: groupName || "",
       productionName: productionName || "",

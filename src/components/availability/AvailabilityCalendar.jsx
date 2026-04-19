@@ -211,6 +211,10 @@ export function AvailabilityCalendar({
           availabilityRules={availabilityRules} prefixRules={prefixRules} isOwner={isOwner}
           slotStates={slotStates} businessHours={businessHours}
           dateRequests={dateRequests} sharedAvailability={sharedAvailability}
+          isSelectionMode={isSelectionMode}
+          guestSlotSelection={guestSlotSelection}
+          selectedSlotMap={selectedSlotMap}
+          toggleSlotForDate={toggleSlotForDate}
         />
       )}
 

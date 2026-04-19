@@ -7,7 +7,7 @@ import { AvailabilityCalendar } from '../components/availability/AvailabilityCal
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
 import { deriveSlotState, dateToStr } from '../utils/availability'
-import { CalendarDays, X, CheckCircle2, CircleDot, Share2 } from 'lucide-react'
+import { CalendarDays, X, CheckCircle2, CircleDot, Share2, MousePointer2, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react'
 
 const TABS = ['Availability', 'Notes']
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -95,6 +95,179 @@ function NotesTab({ productionId, group, guestName }) {
   )
 }
 
+// Animated step-by-step guide shown before Google OAuth to set expectations
+function GoogleOAuthGuide({ onConfirm, onCancel }) {
+  const [step, setStep] = useState(0) // 0 = step 1 (Advanced), 1 = step 2 (Go to)
+  const [phase, setPhase] = useState('idle') // idle → moving → clicking → done
+
+  // Sequence: show cursor → bob → click → advance
+  useEffect(() => {
+    let t1, t2, t3
+    setPhase('idle')
+    t1 = setTimeout(() => setPhase('moving'), 400)
+    t2 = setTimeout(() => setPhase('clicking'), 1800)
+    t3 = setTimeout(() => {
+      if (step === 0) { setStep(1); }
+      else { setPhase('done') }
+    }, 2600)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+  }, [step])
+
+  const STEP_DURATION = 2600
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-0 sm:px-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative w-full sm:max-w-[420px] bg-surface-900 border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-sheet overflow-hidden animate-slideUp">
+
+        {/* Progress bar */}
+        <div className="h-[2px] bg-white/5">
+          <div
+            key={step}
+            className="h-full bg-accent animate-progress-fill"
+            style={{ animationDuration: `${STEP_DURATION}ms` }}
+          />
+        </div>
+
+        <div className="px-6 pt-5 pb-6">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-1">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0">
+                <ShieldAlert size={14} strokeWidth={1.75} className="text-accent" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-100 tracking-tight">What you'll see next</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">Google shows a security screen — here's what to click</p>
+              </div>
+            </div>
+            <button onClick={onCancel} className="p-1 text-zinc-600 hover:text-zinc-400 transition-colors mt-0.5">
+              <X size={15} strokeWidth={1.75} />
+            </button>
+          </div>
+
+          {/* Step dots */}
+          <div className="flex items-center gap-1.5 mb-5 pl-10">
+            {[0, 1].map(i => (
+              <div key={i} className={`rounded-full transition-all duration-300 ${i === step ? 'w-4 h-1.5 bg-accent' : 'w-1.5 h-1.5 bg-white/15'}`} />
+            ))}
+          </div>
+
+          {/* Google screen mockup */}
+          <div className="relative rounded-2xl overflow-hidden border border-white/8 shadow-xl mb-5">
+            {/* Google's UI — white card */}
+            <div className="bg-white px-5 pt-5 pb-4">
+              {/* Google logo row */}
+              <div className="flex items-center gap-1 mb-4">
+                <span style={{ fontFamily: 'Product Sans, system-ui, sans-serif', fontSize: 20 }}>
+                  <span style={{ color: '#4285F4' }}>G</span><span style={{ color: '#EA4335' }}>o</span><span style={{ color: '#FBBC05' }}>o</span><span style={{ color: '#4285F4' }}>g</span><span style={{ color: '#34A853' }}>l</span><span style={{ color: '#EA4335' }}>e</span>
+                </span>
+              </div>
+
+              <p className="text-[11px] text-gray-600 mb-0.5 leading-snug">coordie.com wants to access your Google Account</p>
+
+              {/* Warning badge */}
+              <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 mb-3 mt-2">
+                <span className="text-yellow-500 text-sm leading-none mt-0.5">⚠</span>
+                <p className="text-[11px] text-gray-700 leading-snug font-medium">Google hasn't verified this app</p>
+              </div>
+
+              <p className="text-[10px] text-gray-500 leading-snug mb-4">
+                The app is requesting access to sensitive info in your Google Account. Only proceed if you trust the developer.
+              </p>
+
+              {/* Back to safety button */}
+              <div className="w-full py-2 bg-blue-600 rounded-md text-center text-[11px] text-white font-medium mb-3">
+                Back to safety
+              </div>
+
+              {/* Advanced section */}
+              {step === 0 ? (
+                <div className="relative">
+                  <div className={`inline-flex items-center gap-1 text-blue-600 text-[11px] font-medium cursor-pointer rounded px-1 py-0.5 transition-all ${phase !== 'idle' ? 'bg-blue-50' : ''}`}>
+                    <ChevronDown size={11} />
+                    <span>Advanced</span>
+                  </div>
+                  {/* Pulse ring on the Advanced link */}
+                  {phase !== 'idle' && (
+                    <div className="absolute left-0 top-0 -inset-0.5 rounded animate-pulse-ring pointer-events-none" />
+                  )}
+                  {/* Animated cursor */}
+                  <div className={`absolute left-6 transition-all duration-500 ${phase === 'idle' ? 'top-6 opacity-0' : phase === 'clicking' ? 'top-0.5 opacity-100' : 'top-2 opacity-100'}`}>
+                    <MousePointer2
+                      size={18}
+                      strokeWidth={1.5}
+                      className={`text-gray-800 drop-shadow ${phase === 'clicking' ? 'animate-cursor-bob' : ''}`}
+                      style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="inline-flex items-center gap-1 text-blue-600 text-[11px] font-medium cursor-pointer rounded px-1 py-0.5 mb-2">
+                    <ChevronUp size={11} />
+                    <span>Advanced</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 leading-snug mb-2">
+                    coordie.com has not been verified by Google yet. Only proceed if you understand the risks.
+                  </p>
+                  {/* "Go to coordie.com (unsafe)" */}
+                  <div className="relative">
+                    <p className={`text-blue-600 text-[11px] underline font-medium cursor-pointer rounded px-1 py-0.5 inline-block transition-all ${phase !== 'idle' ? 'bg-blue-50' : ''}`}>
+                      Go to coordie.com (unsafe)
+                    </p>
+                    {phase !== 'idle' && (
+                      <div className="absolute left-0 top-0 -inset-0.5 rounded animate-pulse-ring pointer-events-none" />
+                    )}
+                    {/* Cursor */}
+                    <div className={`absolute left-44 transition-all duration-500 ${phase === 'idle' ? 'top-6 opacity-0' : phase === 'clicking' ? 'top-0.5 opacity-100' : 'top-2 opacity-100'}`}>
+                      <MousePointer2
+                        size={18}
+                        strokeWidth={1.5}
+                        className={`text-gray-800 ${phase === 'clicking' ? 'animate-cursor-bob' : ''}`}
+                        style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Step label overlay */}
+            <div className="bg-surface-800 border-t border-white/8 px-4 py-2.5 flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center flex-shrink-0">
+                <span className="text-[9px] font-bold text-accent">{step + 1}</span>
+              </div>
+              <p className="text-[11px] text-zinc-300 font-medium">
+                {step === 0 ? 'Click "Advanced" at the bottom of Google\'s screen' : 'Then click "Go to coordie.com (unsafe)"'}
+              </p>
+            </div>
+          </div>
+
+          {/* Trust note */}
+          <p className="text-[11px] text-zinc-500 leading-relaxed mb-5 text-center">
+            This screen appears because Coordie is pending Google's 4-week verification. Your calendar data never leaves your device.
+          </p>
+
+          {/* CTA */}
+          <button
+            onClick={onConfirm}
+            className="w-full py-3 bg-accent hover:bg-accent/90 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            Got it — connect my calendar
+          </button>
+          <button
+            onClick={onCancel}
+            className="w-full py-2 mt-1.5 text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Guest calendar panel — lets guest connect their Google Calendar and see their free dates
 function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId }) {
   const [gisReady, setGisReady] = useState(false)
@@ -103,6 +276,7 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId 
   const [error, setError] = useState(null)
   const [shared, setShared] = useState(false)
   const [sharing, setSharing] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   const tokenClientRef = useRef(null)
   const configured = isConfigured()
 
@@ -162,32 +336,37 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId 
 
   if (guestEvents === null) {
     return (
-      <div className="border border-dashed border-white/10 rounded-2xl px-5 py-4 mb-5 flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <CalendarDays size={15} strokeWidth={1.75} className="text-accent" />
+      <>
+        {showGuide && (
+          <GoogleOAuthGuide
+            onConfirm={() => { setShowGuide(false); tokenClientRef.current?.requestAccessToken() }}
+            onCancel={() => setShowGuide(false)}
+          />
+        )}
+        <div className="border border-dashed border-white/10 rounded-2xl px-5 py-4 mb-5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <CalendarDays size={15} strokeWidth={1.75} className="text-accent" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-100 mb-0.5 tracking-tight">See overlap instantly</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">Connect your calendar to highlight days that work for both of you. Only free/busy is read &mdash; never event details.</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-zinc-100 mb-0.5 tracking-tight">See overlap instantly</p>
-              <p className="text-xs text-zinc-400 leading-relaxed">Connect your calendar to highlight days that work for both of you. Only free/busy is read &mdash; never event details.</p>
-            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setShowGuide(true)}
+              disabled={!gisReady || loading}
+              className="flex-shrink-0 self-start sm:self-auto"
+            >
+              <CalendarDays size={13} strokeWidth={1.75} className="mr-1.5" />
+              Connect Calendar
+            </Button>
           </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => tokenClientRef.current?.requestAccessToken()}
-            disabled={!gisReady || loading}
-            className="flex-shrink-0 self-start sm:self-auto"
-          >
-            <CalendarDays size={13} strokeWidth={1.75} className="mr-1.5" />
-            Connect Calendar
-          </Button>
         </div>
-        <p className="text-[11px] text-zinc-600 leading-relaxed pl-12">
-          Google may show a &ldquo;Google hasn&rsquo;t verified this app&rdquo; notice &mdash; click <span className="text-zinc-400">Advanced</span> &rarr; <span className="text-zinc-400">Go to coordie.com</span>. Verification is in progress.
-        </p>
-      </div>
+      </>
     )
   }
 

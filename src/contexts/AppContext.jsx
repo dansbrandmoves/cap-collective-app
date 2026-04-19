@@ -333,7 +333,7 @@ export function AppProvider({ children }) {
       }
     }
   })
-  const [guestCalendarEnabled, setGuestCalendarEnabled] = useState(() => stored?.guestCalendarEnabled ?? false)
+  const [guestCalendarEnabled, setGuestCalendarEnabled] = useState(() => stored?.guestCalendarEnabled ?? true)
   const [timezone, setTimezone] = useState(() => stored?.timezone ?? 'America/New_York')
   const [availabilityMode, setAvailabilityMode] = useState(() => stored?.availabilityMode ?? 'blocks')
   const [blockDuration, setBlockDuration] = useState(() => stored?.blockDuration ?? 30)

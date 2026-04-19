@@ -97,6 +97,25 @@ html.light {
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0   rgba(139,92,246,0.55); }
+    70%  { box-shadow: 0 0 0 7px rgba(139,92,246,0); }
+    100% { box-shadow: 0 0 0 0   rgba(139,92,246,0); }
+  }
+  .animate-pulse-ring { animation: pulse-ring 1.3s ease-out infinite; }
+
+  @keyframes cursor-bob {
+    0%, 100% { transform: translateY(0)   scale(1);    opacity: 1; }
+    45%       { transform: translateY(3px) scale(0.82); opacity: 0.9; }
+  }
+  .animate-cursor-bob { animation: cursor-bob 0.75s ease-in-out infinite; }
+
+  @keyframes progress-fill {
+    from { width: 0%; }
+    to   { width: 100%; }
+  }
+  .animate-progress-fill { animation: progress-fill linear forwards; }
+
   @keyframes slideIn {
     from { transform: translateX(100%); }
     to { transform: translateX(0); }

@@ -80,8 +80,25 @@ GIT_INDEX_FILE=.git/index_tmp git read-tree HEAD   # CRITICAL — start from HEA
 GIT_INDEX_FILE=.git/index_tmp git add <files>      # stage specific files, NEVER `git add -A`
 GIT_INDEX_FILE=.git/index_tmp git commit -m "..."
 rm -f .git/index_tmp
-git push origin master
+git push -u origin <branch>
 ```
+
+**After every commit — reset the main index** (prevents stop-hook false positives):
+
+```bash
+GIT_INDEX_FILE=.git/index_tmp git read-tree HEAD && cp .git/index_tmp .git/index && rm -f .git/index_tmp
+```
+
+The stop hook (`~/.claude/stop-hook-git-check.sh`) checks the main index. The temp-index commit workflow bypasses it, leaving the main index stale. The reset above syncs it to HEAD so the hook sees a clean state.
+
+### Keeping HANDOFF current
+
+Update `HANDOFF.md` at the end of every session (or whenever a meaningful chunk of work lands):
+
+1. Add shipped commits to the "Shipped this session" table
+2. Update "Pending before next session" with anything that needs to happen before work resumes (merges, deploys, etc.)
+3. Remove backlog items that are done
+4. Commit and push HANDOFF as the very last commit of the session, then run the index reset above
 
 ### Preview server
 

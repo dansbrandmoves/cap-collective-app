@@ -14,7 +14,50 @@ import {
   fetchAllGoverningEvents,
   isConfigured,
 } from '../utils/googleCalendar'
-import { RefreshCw, Plug, Unplug, Plus, Trash2, Sun, Moon, Monitor } from 'lucide-react'
+import { RefreshCw, Plug, Unplug, Plus, Trash2, Sun, Moon, Globe } from 'lucide-react'
+
+const TIMEZONES = [
+  { group: 'Americas', zones: [
+    { value: 'America/New_York',    label: 'Eastern Time (ET)' },
+    { value: 'America/Chicago',     label: 'Central Time (CT)' },
+    { value: 'America/Denver',      label: 'Mountain Time (MT)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+    { value: 'America/Anchorage',   label: 'Alaska (AKT)' },
+    { value: 'Pacific/Honolulu',    label: 'Hawaii (HT)' },
+    { value: 'America/Toronto',     label: 'Toronto (ET)' },
+    { value: 'America/Vancouver',   label: 'Vancouver (PT)' },
+    { value: 'America/Sao_Paulo',   label: 'São Paulo (BRT)' },
+  ]},
+  { group: 'Europe', zones: [
+    { value: 'Europe/London',  label: 'London (GMT/BST)' },
+    { value: 'Europe/Paris',   label: 'Paris (CET)' },
+    { value: 'Europe/Berlin',  label: 'Berlin (CET)' },
+    { value: 'Europe/Moscow',  label: 'Moscow (MSK)' },
+  ]},
+  { group: 'Middle East & Africa', zones: [
+    { value: 'Asia/Dubai',              label: 'Dubai (GST)' },
+    { value: 'Africa/Johannesburg',     label: 'Johannesburg (SAST)' },
+  ]},
+  { group: 'Asia & Pacific', zones: [
+    { value: 'Asia/Kolkata',     label: 'India (IST)' },
+    { value: 'Asia/Singapore',   label: 'Singapore (SGT)' },
+    { value: 'Asia/Tokyo',       label: 'Tokyo (JST)' },
+    { value: 'Asia/Seoul',       label: 'Seoul (KST)' },
+    { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)' },
+    { value: 'Pacific/Auckland', label: 'Auckland (NZST)' },
+  ]},
+  { group: 'Universal', zones: [
+    { value: 'UTC', label: 'UTC' },
+  ]},
+]
+
+function tzLabel(value) {
+  for (const g of TIMEZONES) {
+    const z = g.zones.find(z => z.value === value)
+    if (z) return z.label
+  }
+  return value
+}
 
 const ROLE_META = {
   governs:       { label: 'Blocks your time',   badge: 'green',  desc: 'Events on this calendar block booking slots.' },
@@ -75,6 +118,7 @@ export function CalendarSettings() {
     businessHours, setBusinessHours,
     guestCalendarEnabled, setGuestCalendarEnabled,
     theme, toggleTheme,
+    timezone, setTimezone,
     availabilityMode, setAvailabilityMode, blockDuration, setBlockDuration,
     logoUrl, logoIsDark, setLogoIsDark, uploadLogo, removeLogo, user,
     resetAllSettings,
@@ -91,6 +135,7 @@ export function CalendarSettings() {
   const [newState, setNewState] = useState('blocked')
   const [editingHours, setEditingHours] = useState(false)
   const [themeOpen, setThemeOpen] = useState(false)
+  const [tzOpen, setTzOpen] = useState(false)
 
   const configured = isConfigured()
   const [connected, setConnected] = useState(false)
@@ -297,6 +342,47 @@ export function CalendarSettings() {
                       {label}
                       {value === theme && <span className="ml-auto text-accent text-xs">✓</span>}
                     </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Timezone ── */}
+      <div className="py-5 border-b border-surface-800">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Timezone</p>
+            <p className="text-xs text-zinc-600 mt-1">Used for availability and booking times.</p>
+          </div>
+          <div className="relative">
+            <button onClick={() => setTzOpen(!tzOpen)}
+              className="flex items-center gap-2.5 bg-surface-800 border border-surface-700 rounded-lg px-3.5 py-2 text-sm text-zinc-300 hover:border-surface-500 transition-colors min-w-[200px]">
+              <Globe size={14} strokeWidth={1.75} className="text-zinc-400 flex-shrink-0" />
+              <span className="flex-1 text-left truncate">{tzLabel(timezone)}</span>
+              <svg className={`w-3 h-3 text-zinc-500 flex-shrink-0 transition-transform ${tzOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            {tzOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setTzOpen(false)} />
+                <div className="absolute top-full right-0 mt-1 w-64 bg-surface-800 border border-surface-700 rounded-lg shadow-xl shadow-black/30 overflow-y-auto max-h-72 z-20">
+                  {TIMEZONES.map(group => (
+                    <div key={group.group}>
+                      <div className="px-3 pt-2.5 pb-1 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">{group.group}</div>
+                      {group.zones.map(z => (
+                        <button key={z.value} onClick={() => { setTimezone(z.value); setTzOpen(false) }}
+                          className={`w-full flex items-center justify-between px-3.5 py-2 text-sm transition-colors ${
+                            z.value === timezone
+                              ? 'bg-accent/10 text-zinc-100'
+                              : 'text-zinc-400 hover:bg-surface-700 hover:text-zinc-200'
+                          }`}>
+                          {z.label}
+                          {z.value === timezone && <span className="text-accent text-xs">✓</span>}
+                        </button>
+                      ))}
+                    </div>
                   ))}
                 </div>
               </>

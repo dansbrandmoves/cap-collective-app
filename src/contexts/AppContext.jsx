@@ -334,6 +334,7 @@ export function AppProvider({ children }) {
     }
   })
   const [guestCalendarEnabled, setGuestCalendarEnabled] = useState(() => stored?.guestCalendarEnabled ?? false)
+  const [timezone, setTimezone] = useState(() => stored?.timezone ?? 'America/New_York')
   const [availabilityMode, setAvailabilityMode] = useState(() => stored?.availabilityMode ?? 'blocks')
   const [blockDuration, setBlockDuration] = useState(() => stored?.blockDuration ?? 30)
 
@@ -620,11 +621,11 @@ export function AppProvider({ children }) {
       slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced,
       theme, slotStateCustomizations, businessHours, guestCalendarEnabled,
-      availabilityMode, blockDuration,
+      availabilityMode, blockDuration, timezone,
     })
   }, [slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced, theme, slotStateCustomizations,
-      businessHours, guestCalendarEnabled, availabilityMode, blockDuration])
+      businessHours, guestCalendarEnabled, availabilityMode, blockDuration, timezone])
 
   // --- Slots ---
   const createSlot = useCallback((data) => {
@@ -1159,6 +1160,8 @@ export function AppProvider({ children }) {
       // Business Hours & Guest Calendar
       businessHours, setBusinessHours,
       guestCalendarEnabled, setGuestCalendarEnabled,
+      // Timezone
+      timezone, setTimezone,
       // Availability Mode
       availabilityMode, setAvailabilityMode, blockDuration, setBlockDuration,
       // Branding

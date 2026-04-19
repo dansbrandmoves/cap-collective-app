@@ -13,21 +13,51 @@ function formatDate(date) {
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-export function DailyView({ date, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules = [], isOwner, slotStates = DEFAULT_SLOT_STATES, dateRequests = [], sharedAvailability = [], businessHours = null }) {
+export function DailyView({
+  date, slots, calendarEvents, connectedCalendars, availabilityRules, prefixRules = [],
+  isOwner, slotStates = DEFAULT_SLOT_STATES, dateRequests = [], sharedAvailability = [],
+  businessHours = null,
+}) {
+  const ds = dateToStr(date)
+  const isToday = ds === dateToStr(new Date())
+
   const slotResults = useMemo(() =>
     slots.map(slot => ({
       slot,
       ...deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules, businessHours),
     })),
-    [date, slots, calendarEvents, connectedCalendars, prefixRules]
+    [date, slots, calendarEvents, connectedCalendars, prefixRules, businessHours]
   )
 
-  const ds = dateToStr(date)
-  const isToday = ds === dateToStr(new Date())
+  // Filter to active requests for this day
+  const dayRequests = useMemo(() =>
+    dateRequests.filter(r => r.dates?.includes(ds) && r.status !== 'declined' && r.status !== 'archived'),
+    [dateRequests, ds]
+  )
 
-  const privateRule = isOwner
-    ? availabilityRules.find(r => r.date === ds)
-    : null
+  const dayAvailability = useMemo(() =>
+    sharedAvailability.filter(a => a.date === ds && a.is_available),
+    [sharedAvailability, ds]
+  )
+
+  // Per-slot free list: back-compat with date-only requests (no slot_map = free for all slots)
+  function getFreeForSlot(slotId) {
+    const names = new Set()
+    dayRequests.forEach(r => {
+      const slotIds = r.slot_map?.[ds]
+      if (Array.isArray(slotIds)) {
+        if (slotIds.includes(slotId)) names.add(r.requester_name)
+      } else {
+        if (r.requester_name) names.add(r.requester_name)
+      }
+    })
+    dayAvailability.forEach(a => { if (a.guest_name) names.add(a.guest_name) })
+    names.delete(undefined); names.delete(null); names.delete('')
+    return [...names]
+  }
+
+  const hasAnyGuests = dayRequests.length > 0 || dayAvailability.length > 0
+  const privateRule = isOwner ? availabilityRules.find(r => r.date === ds) : null
 
   return (
     <div>
@@ -36,11 +66,27 @@ export function DailyView({ date, slots, calendarEvents, connectedCalendars, ava
           {formatDate(date)}
         </h3>
         {isToday && <Badge variant="accent">Today</Badge>}
+        {hasAnyGuests && (
+          <span className="text-xs font-medium text-zinc-500">
+            {(() => {
+              const allNames = new Set([
+                ...dayRequests.map(r => r.requester_name),
+                ...dayAvailability.map(a => a.guest_name),
+              ])
+              allNames.delete(undefined); allNames.delete(null); allNames.delete('')
+              const n = allNames.size
+              return `${n} ${n === 1 ? 'person' : 'people'} available`
+            })()}
+          </span>
+        )}
       </div>
 
       <div className="space-y-3">
         {slotResults.map(({ slot, state, drivingEvent }) => {
           const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
+          const freeGuests = getFreeForSlot(slot.id)
+          const MAX_SHOWN = 5
+
           return (
             <div
               key={slot.id}
@@ -54,64 +100,44 @@ export function DailyView({ date, slots, calendarEvents, connectedCalendars, ava
                 </div>
                 <Badge variant={STATE_BADGE[state]}>{meta.label}</Badge>
               </div>
+
+              {/* Driving event */}
+              {drivingEvent && (
+                <p className="text-xs text-zinc-600 mt-2 truncate">
+                  <span className="text-zinc-500">↳</span> {drivingEvent.title}
+                </p>
+              )}
+
+              {/* Per-slot guest availability */}
+              {freeGuests.length > 0 && (
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/[0.05]">
+                  <div className="flex items-center -space-x-1.5">
+                    {freeGuests.slice(0, MAX_SHOWN).map(name => (
+                      <div
+                        key={name}
+                        title={name}
+                        className="w-6 h-6 rounded-full bg-accent/20 border-2 border-surface-800 flex items-center justify-center text-[9px] font-bold text-accent flex-shrink-0"
+                      >
+                        {name[0]?.toUpperCase()}
+                      </div>
+                    ))}
+                    {freeGuests.length > MAX_SHOWN && (
+                      <div className="w-6 h-6 rounded-full bg-surface-700 border-2 border-surface-800 flex items-center justify-center text-[9px] font-semibold text-zinc-400 flex-shrink-0">
+                        +{freeGuests.length - MAX_SHOWN}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-zinc-500">
+                    {freeGuests.length === 1
+                      ? `${freeGuests[0]} is free`
+                      : `${freeGuests.slice(0, 2).join(' & ')}${freeGuests.length > 2 ? ` +${freeGuests.length - 2}` : ''} free`}
+                  </span>
+                </div>
+              )}
             </div>
           )
         })}
       </div>
-
-      {/* Date requests for this day */}
-      {(() => {
-        const dayReqs = dateRequests.filter(r => r.dates?.includes(ds) && r.status !== 'declined')
-        if (!dayReqs.length) return null
-        return (
-          <div className="mt-5">
-            <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-2">Date Requests</p>
-            <div className="space-y-1.5">
-              {dayReqs.map(r => (
-                <div key={r.id} className="flex items-center justify-between bg-surface-800 rounded-lg px-4 py-2.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-5 h-5 rounded-full bg-surface-700 flex items-center justify-center text-[10px] font-semibold text-zinc-300 flex-shrink-0">
-                      {r.requester_name?.[0]?.toUpperCase()}
-                    </div>
-                    <span className="text-sm text-zinc-200 truncate">{r.requester_name}</span>
-                  </div>
-                  <Badge variant={r.status === 'pending' ? 'yellow' : 'green'} className="text-[10px]">{r.status}</Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* Shared availability for this day */}
-      {(() => {
-        const dayAvail = sharedAvailability.filter(a => a.date === ds)
-        if (!dayAvail.length) return null
-        const guests = [...new Set(dayAvail.map(a => a.guest_name))]
-        return (
-          <div className="mt-5">
-            <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-2">Team Availability</p>
-            <div className="space-y-1.5">
-              {guests.map(name => {
-                const isFree = dayAvail.find(a => a.guest_name === name)?.is_available
-                return (
-                  <div key={name} className="flex items-center justify-between bg-surface-800 rounded-lg px-4 py-2.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-5 h-5 rounded-full bg-surface-700 flex items-center justify-center text-[10px] font-semibold text-zinc-300 flex-shrink-0">
-                        {name[0]?.toUpperCase()}
-                      </div>
-                      <span className="text-sm text-zinc-200 truncate">{name}</span>
-                    </div>
-                    <span className={`text-xs font-medium ${isFree ? 'text-green-400' : 'text-zinc-600'}`}>
-                      {isFree ? 'Free' : 'Busy'}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })()}
 
       {isOwner && privateRule && (
         <div className="mt-4 bg-surface-950 border border-accent/20 rounded-xl px-5 py-4">
@@ -123,8 +149,8 @@ export function DailyView({ date, slots, calendarEvents, connectedCalendars, ava
         </div>
       )}
 
-      {slotResults.every(r => !r.drivingEvent) && (
-        <p className="text-xs text-zinc-600 mt-4">No calendar events found for this day.</p>
+      {!hasAnyGuests && slotResults.every(r => !r.drivingEvent) && (
+        <p className="text-xs text-zinc-600 mt-4">No calendar events or guest availability for this day.</p>
       )}
     </div>
   )

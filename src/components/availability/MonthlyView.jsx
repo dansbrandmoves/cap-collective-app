@@ -85,7 +85,7 @@ export function MonthlyView({
               {/* Overlap count badge — the primary signal */}
               {inMonth && overlapCount > 0 && !isSelected && (
                 <div
-                  className={`absolute top-1 right-1 z-10 flex items-center justify-center rounded-full font-semibold tracking-tight shadow-[0_2px_8px_-2px_rgba(139,92,246,0.6)] ${
+                  className={`absolute top-1.5 right-1.5 z-10 flex items-center justify-center rounded-full font-semibold tracking-tight shadow-[0_2px_8px_-2px_rgba(139,92,246,0.6)] ${
                     overlapCount >= 2
                       ? 'bg-accent text-white min-w-[18px] h-[18px] px-1 text-[10px] sm:text-[11px]'
                       : 'bg-accent/90 text-white min-w-[16px] h-4 px-1 text-[10px]'
@@ -96,16 +96,16 @@ export function MonthlyView({
                 </div>
               )}
 
-              <span className={`text-xs font-medium mb-1 flex items-center gap-1 ${
+              <span className={`text-xs font-medium mb-1 flex items-center gap-1.5 ${
                 isSelected ? 'text-white' :
                 overlapCount > 0 ? 'text-zinc-50 font-semibold' :
                 isToday ? 'text-accent' :
                 inMonth ? 'text-zinc-300' :
                 'text-zinc-600'
               }`}>
-                {date.getDate()}
+                <span>{date.getDate()}</span>
                 {inMonth && guestFreeDays?.has(ds) && !isSelected && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400" title="You have free time this day" />
+                  <span className="w-1 h-1 rounded-full bg-green-400 flex-shrink-0" title="You have free time this day" />
                 )}
               </span>
 

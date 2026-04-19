@@ -119,8 +119,14 @@ export function DailyView({
                   <p className="text-xs text-zinc-500 mt-0.5">{slot.startTime} – {slot.endTime}</p>
                 </div>
                 {isGuestBusy && !isChecked ? (
-                  <span className="flex items-center gap-1 text-[10px] text-zinc-500 self-center">
-                    <span className="w-1 h-1 rounded-full bg-zinc-500" />
+                  <span
+                    className="flex items-center gap-1 text-[10px] self-center"
+                    style={{ color: slotStates.booked?.color || '#f59e0b' }}
+                  >
+                    <span
+                      className="w-1 h-1 rounded-full"
+                      style={{ backgroundColor: slotStates.booked?.color || '#f59e0b' }}
+                    />
                     you're busy
                   </span>
                 ) : isSlotSelectMode ? (

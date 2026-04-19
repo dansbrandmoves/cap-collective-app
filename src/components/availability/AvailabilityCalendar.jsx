@@ -264,8 +264,14 @@ export function AvailabilityCalendar({
                       </div>
                       <div className="flex items-center gap-2">
                         {isGuestBusy && !isChecked ? (
-                          <span className="flex items-center gap-1 text-[10px] text-zinc-500">
-                            <span className="w-1 h-1 rounded-full bg-zinc-500" />
+                          <span
+                            className="flex items-center gap-1 text-[10px]"
+                            style={{ color: slotStates.booked?.color || '#f59e0b' }}
+                          >
+                            <span
+                              className="w-1 h-1 rounded-full"
+                              style={{ backgroundColor: slotStates.booked?.color || '#f59e0b' }}
+                            />
                             you're busy
                           </span>
                         ) : (

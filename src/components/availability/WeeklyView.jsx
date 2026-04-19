@@ -166,7 +166,11 @@ export function WeeklyView({
                       }}
                     >
                       {isGuestBusy && !isChecked && (
-                        <span className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-zinc-400" title="You're busy" />
+                        <span
+                          className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: slotStates.booked?.color || '#f59e0b' }}
+                          title="You're busy"
+                        />
                       )}
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: isChecked ? '#8b5cf6' : meta.color }} />
                       <span className="text-xs font-medium hidden sm:inline" style={{ color: isChecked ? '#8b5cf6' : meta.color }}>

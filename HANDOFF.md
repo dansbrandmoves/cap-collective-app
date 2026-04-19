@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-04-19 (evening)
-**Last commit on `master` (pushed):** `c649576` — "Settings: sync all owner settings to Supabase profiles.settings"
+**Last session ended:** 2026-04-19 (late evening)
+**Last commit on `master` (pushed):** `f3359f5` — "Rooms: guest calendar overlap across Monthly/Weekly/Daily views"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push)
 
 ---
@@ -28,23 +28,41 @@
 | `beae9b0` | Extract GoogleOAuthGuide to shared component; wire into booking page |
 | `f85d8b2` | Room: always show GuestCalendarPanel for guests — remove localStorage gate |
 | `c649576` | Settings: sync all owner settings to Supabase profiles.settings |
+| `7512d59` | Booking: slot-level overlap — dim guest-busy slots, dot free days; OAuth guide highlights "Go to coordie.com" with yellow bg |
+| `5911a6c` | Guest calendar: replace bare X with labeled "Disconnect" in both views |
+| `82bf0df` | Guest calendar: persist connection in sessionStorage across remounts |
+| `4fea274` | Booking: add visual dot before "busy" label for easier scanning |
+| `f3359f5` | Rooms: guest calendar overlap across Monthly/Weekly/Daily views |
 
 ---
 
 ## 📋 Backlog (priority order)
 
-1. **Verify slot-request flow E2E in a real room** — toggle `guestSlotSelection`, guest selects date → slots → Send. Confirm owner inbox shows slot chips and DayInspectorPanel renders the "By time slot" heatmap.
-2. **Inbox UI for slot_map** — Inbox list currently shows dates only. Should surface selected slots per date when `slot_map` exists.
-3. **RESEND_API_KEY check** — edge functions silently no-op if key isn't set. Confirm still configured in Supabase → Edge Function Secrets.
-4. **Google OAuth verification** (parallel track, ~2 hrs of Daniel's time):
+1. **Phase 2 of room overlap: multi-person filter** — when others have shared availability, add a chip-row at top of AvailabilityTab: `Show overlap with: [Me] [Sarah] [Tom]`. Lets guests isolate two-person overlap. Right now the personal calendar overlay (busy/free) is independent of the per-day "N people free" badges.
+2. **Verify slot-request flow E2E in a real room** — toggle `guestSlotSelection`, guest selects date → slots → Send. Confirm owner inbox shows slot chips and DayInspectorPanel renders the "By time slot" heatmap.
+3. **Inbox UI for slot_map** — Inbox list currently shows dates only. Should surface selected slots per date when `slot_map` exists.
+4. **RESEND_API_KEY check** — edge functions silently no-op if key isn't set. Confirm still configured in Supabase → Edge Function Secrets.
+5. **Google OAuth verification** (parallel track, ~2 hrs of Daniel's time):
    - Verify `coordie.com` via Google Search Console
    - Fill OAuth consent screen (sensitive `calendar.readonly` scope only)
    - Record a 60s demo of the guest-calendar-connect flow
    - Submit; 2–4 wk wait
-5. **Guest view privacy pass** — overlap counts show for guests but names should NOT. Double-check MonthlyView/WeeklyView tooltip `title` attributes are owner-gated.
-6. **Real-time subscription on `shared_availability`** in RoomView — currently only `date_requests` live-updates.
-7. **DayInspectorPanel polish** for 10+ guests — may need scroll or "show more" collapse.
-8. **Timezone actually used** — stored in context, but booking page slot times and email timestamps don't yet use it. Wire up when ready.
+6. **Guest view privacy pass** — overlap counts show for guests but names should NOT. Double-check MonthlyView/WeeklyView tooltip `title` attributes are owner-gated.
+7. **Real-time subscription on `shared_availability`** in RoomView — currently only `date_requests` live-updates.
+8. **DayInspectorPanel polish** for 10+ guests — may need scroll or "show more" collapse.
+9. **Timezone actually used** — stored in context, but booking page slot times and email timestamps don't yet use it. Wire up when ready.
+
+---
+
+## 🧠 Mental model: the personal-calendar overlay
+
+Two separate concepts, intentionally:
+
+1. **Personal-calendar overlay** (passive, sessionStorage-only) — guest connects their Google Calendar, sees their busy/free state highlighted in the views (booking + room). Helps them *see* what works. Stored in `sessionStorage['coordie-gcal']` so it survives view switches and tab navigation but doesn't persist forever. Disconnect button always available.
+
+2. **Date-request flow** (active, persisted to Supabase) — guest manually picks dates/slots and sends a request. Writes to `date_requests` and `shared_availability` tables. Triggers email to owner. This is the explicit coordination action.
+
+**Booking** uses overlay only — booking is one-and-done, no team coordination needed. **Rooms** use both — overlay helps each participant see their own fit; date-request flow lets them communicate intent. The room overlay also subtly informs Phase 2 (multi-person filtering) — see backlog #1.
 
 ---
 
@@ -129,13 +147,13 @@ git push origin master
 
 | File | What's there |
 |---|---|
-| `src/pages/RoomView.jsx` | Guest-facing room. Fetches `profiles.settings` for owner → gates GuestCalendarPanel on `guestCalendarEnabled`. |
-| `src/pages/BookingPageView.jsx` | Booking page. Reads `guestCalendarEnabled` from owner's `profiles.settings`. |
+| `src/pages/RoomView.jsx` | Guest room. AvailabilityTab owns `guestEvents` (sessionStorage). GuestCalendarPanel = compact chip + Share + Disconnect (no free-days list). Threads `guestEvents` into AvailabilityCalendar. |
+| `src/pages/BookingPageView.jsx` | Booking page. Owns `guestEvents` (sessionStorage). TimeSlotPicker dims guest-busy slots (`• busy` chip). MonthCalendar gets green dots on free days. |
 | `src/components/ui/GoogleOAuthGuide.jsx` | Shared animated OAuth guide modal — reused in Room + Booking. |
-| `src/components/availability/AvailabilityCalendar.jsx` | DayInspectorPanel (owner tap-a-day); slot picker slide-over (mobile/monthly); threads selection state to all three views. |
-| `src/components/availability/WeeklyView.jsx` | Slot grid: owner per-slot count badges (desktop) / dots (mobile); guest direct cell toggle. |
-| `src/components/availability/DailyView.jsx` | Slot cards: owner avatar chips per slot; guest toggleable cards with checkmark. |
-| `src/components/availability/MonthlyView.jsx` | Day-cell overlap count badges; tooltip owner-gated. |
+| `src/components/availability/AvailabilityCalendar.jsx` | DayInspectorPanel; threads `guestEvents` to all three views. |
+| `src/components/availability/WeeklyView.jsx` | Slot×day grid; owner overlap badges; **guest-busy cells dimmed `opacity-30`**. |
+| `src/components/availability/DailyView.jsx` | Slot cards; owner avatar chips; **guest-busy cards dimmed + `you're busy` chip**. |
+| `src/components/availability/MonthlyView.jsx` | Day-cell overlap badges; **green dot next to date if guest has free time that day**. |
 | `src/contexts/AppContext.jsx` | `fetchPlan()` restores settings from `profiles.settings`. Sync effect writes back on change. `guestCalendarEnabled` defaults to `true`. |
 | `src/pages/CalendarSettings.jsx` | Settings page: Google OAuth, business hours, timezone selector, theme, branding, guestCalendarEnabled toggle. |
 | `src/App.jsx` | Auth gate (`AuthGate`); `LoadingScreen` uses `<PageLoader />`. |

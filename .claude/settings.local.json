@@ -27,7 +27,9 @@
       "Bash(powershell.exe -Command \":*)",
       "Bash(GIT_INDEX_FILE=.git/index_tmp git add .)",
       "Bash(GIT_INDEX_FILE=.git/index_tmp git commit -m \"$\\(cat <<''EOF'':*)",
-      "Bash(rm -f .git/index_tmp)"
+      "Bash(rm -f .git/index_tmp)",
+      "Bash(GIT_INDEX_FILE=.git/index_tmp git read-tree HEAD)",
+      "Bash(cp .git/index_tmp .git/index)"
     ]
   }
 }

@@ -83,3 +83,31 @@ Organize rooms and booking pages by client or engagement. Keep coordination cont
 Not a project management tool. Not a CRM. Not an AI assistant. Not another thing to maintain.
 
 It's the layer between your calendar and everyone else — thin, fast, invisible when it's working.
+
+-----
+
+## Open Questions & Thinking-Out-Loud
+
+*This section captures real dialogue as the product evolves. Not decisions — just honest thinking.*
+
+---
+
+**Who exactly is this for?** *(2026-04-19)*
+
+Leaning more niche. The production/creative workflow roots (bucket mode, Cap Collective) point toward a specific person: creative freelancers, photographers, producers, consultants who coordinate multiple parties per project. That person has a sharper pain point and would pay faster than "small business founders" broadly. Not decided yet — sitting with it.
+
+**Rooms vs. booking pages — what leads?** *(2026-04-19)*
+
+Booking pages exist everywhere (Calendly, Cal.com). Group rooms with automatic overlap detection is the genuinely differentiated thing. Worth considering whether rooms should lead the pitch, not sit in section 3.
+
+**Feature surface vs. core promise** *(2026-04-19)*
+
+The promise is "thin, fast, invisible." The feature list is growing. Pressure test for every addition: *does this make coordination faster, or does it make Coordie something you have to manage?*
+
+**Pricing** *(2026-04-19)*
+
+$10/mo may be underpriced if the target is a professional who bills by the hour and this replaces hours of back-and-forth per week. Intentional for now (growth), but a known choice.
+
+**"What it's not" is doing a lot of work** *(2026-04-19)*
+
+Four disclaimers is a signal someone's confused. Worth resolving in positioning rather than disclaimers as the product sharpens.

@@ -215,10 +215,9 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId 
         </div>
         <button
           onClick={() => setGuestEvents(null)}
-          className="p-1 rounded text-zinc-600 hover:text-zinc-400 transition-colors"
-          aria-label="Disconnect calendar"
+          className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
         >
-          <X size={14} strokeWidth={1.75} />
+          Disconnect
         </button>
       </div>
 

@@ -276,8 +276,8 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
           <CheckCircle2 size={11} strokeWidth={2} />
           Your calendar connected
         </div>
-        <button onClick={onDisconnect} className="p-1 rounded text-zinc-600 hover:text-zinc-400 transition-colors" title="Disconnect">
-          <X size={12} strokeWidth={1.75} />
+        <button onClick={onDisconnect} className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
+          Disconnect
         </button>
       </div>
     )

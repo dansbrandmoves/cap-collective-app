@@ -588,7 +588,7 @@ export function BookingPageView() {
       <div className="md:hidden min-h-screen flex flex-col">
         {/* Header */}
         <header className="px-6 pt-6 safe-top pb-6 relative">
-          <div className="absolute top-0 left-6 w-px h-16 bg-gradient-to-b from-accent/50 to-transparent" />
+          <div className="absolute top-0 left-0 w-px h-16 bg-gradient-to-b from-accent/50 to-transparent" />
           <div className="mb-5">
             {ownerLogo ? (
               <div className={`rounded-xl px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>

@@ -343,7 +343,7 @@ function GuestCalendarPanel({ bookingSlots }) {
 /* ── Main Component ── */
 export function BookingPageView() {
   const { slug } = useParams()
-  const { resolveBookingSlug, createBooking, guestCalendarEnabled } = useApp()
+  const { resolveBookingSlug, createBooking } = useApp()
 
   const [page, setPage] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -353,6 +353,7 @@ export function BookingPageView() {
   const [ownerEvents, setOwnerEvents] = useState([])
   const [ownerLogo, setOwnerLogo] = useState(null)
   const [ownerLogoDark, setOwnerLogoDark] = useState(true)
+  const [ownerGuestCalendarEnabled, setOwnerGuestCalendarEnabled] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -375,10 +376,14 @@ export function BookingPageView() {
       .eq('owner_id', page.owner_id)
       .then(({ data }) => setOwnerEvents(data || []))
     supabase.from('profiles')
-      .select('logo_url, logo_is_dark')
+      .select('logo_url, logo_is_dark, settings')
       .eq('id', page.owner_id)
       .single()
-      .then(({ data }) => { setOwnerLogo(data?.logo_url || null); setOwnerLogoDark(data?.logo_is_dark ?? true) })
+      .then(({ data }) => {
+        setOwnerLogo(data?.logo_url || null)
+        setOwnerLogoDark(data?.logo_is_dark ?? true)
+        setOwnerGuestCalendarEnabled(data?.settings?.guestCalendarEnabled ?? true)
+      })
   }, [page])
 
   useEffect(() => {
@@ -529,7 +534,7 @@ export function BookingPageView() {
           </div>
 
           <div className="space-y-6 pt-10">
-            {guestCalendarEnabled && <GuestCalendarPanel bookingSlots={timeSlots} />}
+            {ownerGuestCalendarEnabled && <GuestCalendarPanel bookingSlots={timeSlots} />}
             <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
               <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
@@ -642,7 +647,7 @@ export function BookingPageView() {
             <Clock size={11} strokeWidth={1.75} className="text-zinc-500" />
             {page.duration_minutes} minutes
           </div>
-          {guestCalendarEnabled && <GuestCalendarPanel bookingSlots={timeSlots} />}
+          {ownerGuestCalendarEnabled && <GuestCalendarPanel bookingSlots={timeSlots} />}
         </header>
 
         <div className="border-t border-white/[0.05] mx-6" />

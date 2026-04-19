@@ -277,8 +277,8 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp, ownerId 
   )
 }
 
-function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots, projectBusinessHours, guestSlotSelection, ownerCalendarEvents, ownerConnectedCalendars, ownerId }) {
-  const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, guestCalendarEnabled, businessHours } = useApp()
+function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots, projectBusinessHours, guestSlotSelection, ownerCalendarEvents, ownerConnectedCalendars, ownerId, guestCalendarEnabled }) {
+  const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, businessHours } = useApp()
   const effectiveCalendarEvents = isOwner ? calendarEvents : ownerCalendarEvents
   const effectiveConnectedCalendars = isOwner ? connectedCalendars : ownerConnectedCalendars
   const [dateRequests, setDateRequests] = useState([])
@@ -311,7 +311,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
     <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
       {!isOwner && (
         <>
-          <GuestCalendarPanel slots={slots} groupId={groupId} guestName={guestName} ownerId={ownerId} />
+          {guestCalendarEnabled && <GuestCalendarPanel slots={slots} groupId={groupId} guestName={guestName} ownerId={ownerId} />}
           <p className="text-sm text-zinc-400 mb-4">
             {guestSlotSelection ? 'Tap a date to pick which time slots work for you.' : 'Tap dates to select them, then send a request.'}
           </p>
@@ -348,6 +348,7 @@ export function RoomView() {
   const [ownerLogoDark, setOwnerLogoDark] = useState(true)
   const [ownerCalendarEvents, setOwnerCalendarEvents] = useState([])
   const [ownerConnectedCalendars, setOwnerConnectedCalendars] = useState([])
+  const [ownerGuestCalendarEnabled, setOwnerGuestCalendarEnabled] = useState(true)
 
   useEffect(() => {
     if (loading) return
@@ -392,13 +393,14 @@ export function RoomView() {
 
   useEffect(() => {
     if (!production?.ownerId) return
-    supabase.from('profiles').select('logo_url, logo_is_dark, connected_calendars').eq('id', production.ownerId).single()
+    supabase.from('profiles').select('logo_url, logo_is_dark, connected_calendars, settings').eq('id', production.ownerId).single()
       .then(({ data }) => {
         setOwnerLogo(data?.logo_url || null)
         setOwnerLogoDark(data?.logo_is_dark ?? true)
         if (!isOwner && data?.connected_calendars?.length) {
           setOwnerConnectedCalendars(data.connected_calendars)
         }
+        setOwnerGuestCalendarEnabled(data?.settings?.guestCalendarEnabled ?? true)
       })
   }, [production?.ownerId, isOwner])
 
@@ -535,6 +537,7 @@ export function RoomView() {
           ownerCalendarEvents={ownerCalendarEvents}
           ownerConnectedCalendars={ownerConnectedCalendars}
           ownerId={production?.ownerId}
+          guestCalendarEnabled={ownerGuestCalendarEnabled}
         />
       )}
 

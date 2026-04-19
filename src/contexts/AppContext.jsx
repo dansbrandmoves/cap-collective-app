@@ -156,10 +156,19 @@ export function AppProvider({ children }) {
 
   async function fetchPlan(userId) {
     if (!userId) { setPlan('free'); setLogoUrl(null); setProfileLoaded(true); return }
-    const { data } = await supabase.from('profiles').select('plan, logo_url, logo_is_dark, connected_calendars, google_refresh_token').eq('id', userId).single()
+    const { data } = await supabase.from('profiles').select('plan, logo_url, logo_is_dark, connected_calendars, google_refresh_token, settings').eq('id', userId).single()
     setPlan(data?.plan ?? 'free')
     setLogoUrl(data?.logo_url ?? null)
     setLogoIsDark(data?.logo_is_dark ?? true)
+    // Restore settings from Supabase (cross-device sync)
+    if (data?.settings && Object.keys(data.settings).length > 0) {
+      const s = data.settings
+      if (s.guestCalendarEnabled !== undefined) setGuestCalendarEnabled(s.guestCalendarEnabled)
+      if (s.timezone) setTimezone(s.timezone)
+      if (s.theme) setTheme(s.theme)
+      if (s.slotStateCustomizations) setSlotStateCustomizations(s.slotStateCustomizations)
+      if (s.prefixRules?.length) setPrefixRules(s.prefixRules)
+    }
     // Restore connected calendars from Supabase (cross-device sync)
     if (data?.connected_calendars?.length) {
       setConnectedCalendars(data.connected_calendars)
@@ -721,6 +730,15 @@ export function AppProvider({ children }) {
     supabase.from('profiles').update({ connected_calendars: connectedCalendars }).eq('id', user.id)
       .then(({ error }) => { if (error) console.error('Sync calendars:', error) })
   }, [connectedCalendars, user?.id, profileLoaded])
+
+  // Sync all owner settings to Supabase so they persist cross-device and are readable by guests
+  useEffect(() => {
+    if (!user?.id || !profileLoaded) return
+    supabase.from('profiles').update({
+      settings: { guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules }
+    }).eq('id', user.id)
+      .then(({ error }) => { if (error) console.error('Sync settings:', error) })
+  }, [guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules, user?.id, profileLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const replaceCalendarEvents = useCallback(async (newEvents) => {
     setCalendarEvents(newEvents)

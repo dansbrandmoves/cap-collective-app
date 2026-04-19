@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-04-19 (evening)
-**Last commit on `master` (pushed):** `c540597` — "Daily view: direct slot toggle for guests + owner per-slot guest chips"
+**Last commit on `master` (pushed):** `c649576` — "Settings: sync all owner settings to Supabase profiles.settings"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push)
 
 ---
@@ -22,14 +22,12 @@
 
 | SHA | Summary |
 |---|---|
-| `1290ebb` | Weekly view: per-slot heatmap for owner (desktop count badges) + direct guest cell toggle (no slide-over on desktop) |
-| `57d05ab` | Toggle fixes dark/light mode (`bg-[#f0f0f0]` → `bg-surface-600` + `shadow-sm` knobs); LoadingScreen → Coordie logo |
-| `607cb5c` | Timezone selector in Settings (defaults Eastern Time; curated list of ~25 IANA zones) |
-| `f27b59c` | Daily view: per-slot guest avatar chips inline in each slot card; removed disconnected bottom lists |
-| `2f19ddb` | Weekly mobile: subtle purple dot per cell instead of count badge; normalized column header height |
-| `4524d33` | Mobile dot + desktop count badge split; fixed-height badge row so date number never gets smooshed |
-| `b471aa4` | Weekly: day header count always shows regardless of slot_map presence (bug fix) |
-| `c540597` | Daily view: direct slot toggle for guests + owner per-slot guest chips (parity with weekly) |
+| `5e71830` | Email: render slot chips per date when slot_map present in notify-date-request (v13 deployed) |
+| `ee6cfa7` | Google OAuth guide: animated step-by-step modal before calendar connect + guestCalendarEnabled defaults to true |
+| `2d18357` | OAuth guide: full start-to-finish animation — cursor clicks Advanced, section expands, cursor clicks "Go to coordie.com" |
+| `beae9b0` | Extract GoogleOAuthGuide to shared component; wire into booking page |
+| `f85d8b2` | Room: always show GuestCalendarPanel for guests — remove localStorage gate |
+| `c649576` | Settings: sync all owner settings to Supabase profiles.settings |
 
 ---
 
@@ -37,17 +35,16 @@
 
 1. **Verify slot-request flow E2E in a real room** — toggle `guestSlotSelection`, guest selects date → slots → Send. Confirm owner inbox shows slot chips and DayInspectorPanel renders the "By time slot" heatmap.
 2. **Inbox UI for slot_map** — Inbox list currently shows dates only. Should surface selected slots per date when `slot_map` exists.
-3. **`notify-date-request` email — show slot_map** — email body only shows dates. If `slot_map` present, render slot chips per date.
-4. **RESEND_API_KEY check** — edge functions silently no-op if key isn't set. Confirm still configured in Supabase → Edge Function Secrets.
-5. **Google OAuth verification** (parallel track, ~2 hrs of Daniel's time):
+3. **RESEND_API_KEY check** — edge functions silently no-op if key isn't set. Confirm still configured in Supabase → Edge Function Secrets.
+4. **Google OAuth verification** (parallel track, ~2 hrs of Daniel's time):
    - Verify `coordie.com` via Google Search Console
    - Fill OAuth consent screen (sensitive `calendar.readonly` scope only)
    - Record a 60s demo of the guest-calendar-connect flow
    - Submit; 2–4 wk wait
-6. **Guest view privacy pass** — overlap counts show for guests but names should NOT. Double-check MonthlyView/WeeklyView tooltip `title` attributes are owner-gated.
-7. **Real-time subscription on `shared_availability`** in RoomView — currently only `date_requests` live-updates.
-8. **DayInspectorPanel polish** for 10+ guests — may need scroll or "show more" collapse.
-9. **Timezone actually used** — stored in context, but booking page slot times and email timestamps don't yet use it. Wire up when ready.
+5. **Guest view privacy pass** — overlap counts show for guests but names should NOT. Double-check MonthlyView/WeeklyView tooltip `title` attributes are owner-gated.
+6. **Real-time subscription on `shared_availability`** in RoomView — currently only `date_requests` live-updates.
+7. **DayInspectorPanel polish** for 10+ guests — may need scroll or "show more" collapse.
+8. **Timezone actually used** — stored in context, but booking page slot times and email timestamps don't yet use it. Wire up when ready.
 
 ---
 
@@ -69,7 +66,7 @@ git push origin master
 
 - `preview_start` with name `cap-collective` (config in `.claude/launch.json`, port 5173)
 - Vite dep cache is pinned to `os.tmpdir()/vite-cap-collective` via `vite.config.js` to avoid Dropbox EBUSY.
-- App now uses real Supabase auth — can't navigate owner routes in preview without credentials.
+- App uses real Supabase auth — can't navigate owner routes in preview without credentials.
 - **Parser gotcha:** Babel in this project doesn't parse optional-catch-binding (`catch { }`) — use `catch (e) { }`.
 
 ### Design tokens
@@ -110,22 +107,40 @@ git push origin master
 - Purple CTA (`#8b5cf6`)
 - Deploy via MCP `mcp__0d08157b-...__deploy_edge_function`
 
+### Google OAuth guide (`src/components/ui/GoogleOAuthGuide.jsx`)
+
+- Shared component used in both `RoomView.jsx` and `BookingPageView.jsx`
+- Animated 7-second walkthrough: cursor flies to "Advanced" → clicks → section expands → cursor moves to "Go to coordie.com (unsafe)" → clicks → CTA lights up
+- CSS keyframes in `index.css`: `animate-cursor-fly-click`, `animate-cursor-fly-click-down`, `animate-click-flash`, `animate-pulse-ring`, `animate-progress-fill`
+- Intercepts the "Connect Calendar" button click; fires `requestAccessToken()` on confirm
+
+### Settings persistence architecture
+
+- **`profiles.settings` JSONB** — stores all owner settings cross-device: `guestCalendarEnabled`, `timezone`, `theme`, `slotStateCustomizations`, `prefixRules`
+- `AppContext.fetchPlan()` reads `settings` on login and restores state — Supabase wins over localStorage on conflict
+- A sync `useEffect` (guarded by `profileLoaded`) writes all five fields back to Supabase whenever they change
+- **Rooms** read `guestCalendarEnabled` from the owner's profile (`production.ownerId` → `profiles.settings`) — not from context
+- **Booking pages** read same from `page.owner_id` → `profiles.settings`
+- This means the toggle in Settings actually reaches real guests on other devices
+
 ---
 
 ## 🗂 Key files
 
 | File | What's there |
 |---|---|
-| `src/pages/RoomView.jsx` | Guest-facing room. Fetches owner calendar data; fires `notify-shared-availability` when guest shares. |
+| `src/pages/RoomView.jsx` | Guest-facing room. Fetches `profiles.settings` for owner → gates GuestCalendarPanel on `guestCalendarEnabled`. |
+| `src/pages/BookingPageView.jsx` | Booking page. Reads `guestCalendarEnabled` from owner's `profiles.settings`. |
+| `src/components/ui/GoogleOAuthGuide.jsx` | Shared animated OAuth guide modal — reused in Room + Booking. |
 | `src/components/availability/AvailabilityCalendar.jsx` | DayInspectorPanel (owner tap-a-day); slot picker slide-over (mobile/monthly); threads selection state to all three views. |
 | `src/components/availability/WeeklyView.jsx` | Slot grid: owner per-slot count badges (desktop) / dots (mobile); guest direct cell toggle. |
 | `src/components/availability/DailyView.jsx` | Slot cards: owner avatar chips per slot; guest toggleable cards with checkmark. |
 | `src/components/availability/MonthlyView.jsx` | Day-cell overlap count badges; tooltip owner-gated. |
-| `src/contexts/AppContext.jsx` | `createDateRequest` accepts `slotMap` + `ownerId`; `timezone` stored (default ET); all settings persisted to localStorage. |
-| `src/pages/CalendarSettings.jsx` | Settings page: Google OAuth, business hours, timezone selector, theme, branding. |
+| `src/contexts/AppContext.jsx` | `fetchPlan()` restores settings from `profiles.settings`. Sync effect writes back on change. `guestCalendarEnabled` defaults to `true`. |
+| `src/pages/CalendarSettings.jsx` | Settings page: Google OAuth, business hours, timezone selector, theme, branding, guestCalendarEnabled toggle. |
 | `src/App.jsx` | Auth gate (`AuthGate`); `LoadingScreen` uses `<PageLoader />`. |
-| `tailwind.config.js` + `src/index.css` | Design tokens + light mode overrides |
-| `supabase/functions/notify-date-request/index.ts` | Email v12 — admin email lookup via `ownerId` |
+| `tailwind.config.js` + `src/index.css` | Design tokens + light mode overrides + OAuth guide keyframes |
+| `supabase/functions/notify-date-request/index.ts` | Email v13 — renders slot chips per date when slot_map present |
 | `supabase/functions/notify-shared-availability/index.ts` | v1 live — owner email when guest shares calendar |
 
 ---
@@ -134,8 +149,9 @@ git push origin master
 
 - Vercel: auto-deploys on push to `master`
 - Supabase project ID: `xwuekcysigkujhyucugi`
-- Google OAuth: works but unverified. UI copy explains the warning screen.
+- Google OAuth: works but unverified. UI copy explains the warning screen. Animated guide bridges the gap until verified.
 - Resend: requires `RESEND_API_KEY` in Supabase Edge Function Secrets.
+- **Supabase `profiles` table columns**: `id`, `plan`, `logo_url`, `logo_is_dark`, `connected_calendars`, `google_refresh_token`, `settings` (jsonb, added 2026-04-19)
 
 ---
 

@@ -407,7 +407,7 @@ function ProjectAvailabilityEditor({ config, onSave, onReset, onClose }) {
             <div key={i} className="flex items-center h-9 gap-2.5">
               <button onClick={() => setSchedule(s => ({ ...s, [i]: s[i] ? null : { start: '09:00', end: '17:00' } }))}
                 className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${isActive ? 'bg-accent' : 'bg-surface-700'}`}>
-                <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${isActive ? 'translate-x-4' : 'translate-x-0'}`} />
+                <span className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${isActive ? 'translate-x-4' : 'translate-x-0'}`} />
               </button>
               <span className={`w-8 text-xs font-medium ${isActive ? 'text-zinc-200' : 'text-zinc-600'}`}>{name.slice(0, 3)}</span>
               {isActive ? (
@@ -438,7 +438,7 @@ function ProjectAvailabilityEditor({ config, onSave, onReset, onClose }) {
         </div>
         <button onClick={() => setSlotSelection(!slotSelection)}
           className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${slotSelection ? 'bg-accent' : 'bg-surface-700'}`}>
-          <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${slotSelection ? 'translate-x-4' : 'translate-x-0'}`} />
+          <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${slotSelection ? 'translate-x-4' : 'translate-x-0'}`} />
         </button>
       </div>
 

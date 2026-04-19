@@ -14,16 +14,12 @@ import { TermsPage } from './pages/TermsPage'
 import { BillingPage } from './pages/BillingPage'
 import { BookingPages } from './pages/BookingPages'
 import { BookingPageView } from './pages/BookingPageView'
+import { PageLoader } from './components/ui/PageLoader'
 
 function LoadingScreen() {
   return (
     <div className="flex items-center justify-center h-screen bg-surface-950">
-      <div className="text-center">
-        <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center mx-auto mb-3">
-          <span className="text-white font-bold text-sm">Co</span>
-        </div>
-        <p className="text-sm text-zinc-500">Loading...</p>
-      </div>
+      <PageLoader />
     </div>
   )
 }

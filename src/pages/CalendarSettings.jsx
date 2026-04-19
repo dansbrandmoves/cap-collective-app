@@ -413,9 +413,9 @@ export function CalendarSettings() {
               <div key={i} className="flex items-center h-10 gap-3 group/day">
                 <button onClick={() => toggleDay(i)}
                   className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
-                    isActive ? 'bg-accent' : 'bg-[#f0f0f0]'
+                    isActive ? 'bg-accent' : 'bg-surface-600'
                   }`}>
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[#f0f0f0] transition-transform ${
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
                     isActive ? 'translate-x-4' : 'translate-x-0'
                   }`} />
                 </button>
@@ -459,10 +459,10 @@ export function CalendarSettings() {
           </div>
           <button onClick={() => setGuestCalendarEnabled(!guestCalendarEnabled)}
             className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
-              guestCalendarEnabled ? 'bg-accent' : 'bg-[#f0f0f0]'
+              guestCalendarEnabled ? 'bg-accent' : 'bg-surface-600'
             }`}>
-            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-[#f0f0f0] transition-transform ${
-              guestCalendarEnabled ? 'translate-x-[18px]' : 'translate-x-0.5'
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
+              guestCalendarEnabled ? 'translate-x-4' : 'translate-x-0'
             }`} />
           </button>
         </div>

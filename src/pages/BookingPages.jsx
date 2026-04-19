@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
-import { CalendarCheck, Plus, Copy, Check, Trash2, ChevronDown, ChevronUp, ExternalLink, Pencil } from 'lucide-react'
+import { CalendarCheck, Plus, Copy, Check, Trash2, ChevronDown, ChevronUp, ExternalLink, Pencil, Clock, CalendarRange } from 'lucide-react'
 
 const DURATIONS = [15, 30, 45, 60]
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -52,58 +52,78 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
     return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
   }
 
+  const selectedDays = page.available_days || [1, 2, 3, 4, 5]
+
   return (
-    <div className={`bg-surface-900 border rounded-xl overflow-hidden shadow-sm shadow-black/10 transition-all duration-150 hover:shadow-lg hover:shadow-black/20 ${page.is_active ? 'border-surface-700 hover:border-surface-500' : 'border-surface-800 opacity-60'}`}>
+    <div className={`bg-surface-900 border rounded-2xl overflow-hidden shadow-sm shadow-black/10 transition-all duration-200 ease-ios hover:border-white/10 hover:shadow-lift ${page.is_active ? 'border-white/[0.06]' : 'border-white/[0.04] opacity-60'}`}>
       <div className="p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <h3 className="text-base font-semibold text-zinc-100">{page.name}</h3>
-          <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <h3 className="text-[17px] font-semibold text-zinc-100 leading-snug tracking-tight min-w-0 flex-1">{page.name}</h3>
+          <div className="flex items-center gap-0.5 flex-shrink-0 -mr-1.5">
             <button onClick={() => setEditing(true)}
-              className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-700 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
               title="Edit booking page">
-              <Pencil size={13} />
+              <Pencil size={14} strokeWidth={1.75} />
             </button>
             <button onClick={copyLink}
-              className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-700 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
               title="Copy booking link">
-              {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+              {copied ? <Check size={15} strokeWidth={2} className="text-green-400" /> : <Copy size={14} strokeWidth={1.75} />}
             </button>
             <a href={link} target="_blank" rel="noopener noreferrer"
-              className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-700 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
               title="Open booking page">
-              <ExternalLink size={14} />
+              <ExternalLink size={14} strokeWidth={1.75} />
             </a>
           </div>
         </div>
 
-        {page.description && <p className="text-sm text-zinc-500 mb-3 line-clamp-2">{page.description}</p>}
+        {page.description && <p className="text-sm text-zinc-400 mb-4 line-clamp-2 leading-relaxed">{page.description}</p>}
 
-        <div className="flex items-center gap-2 mb-3">
-          <Badge variant="ghost">{page.duration_minutes} min</Badge>
-          <Badge variant="ghost">{formatTime(hours.start)} – {formatTime(hours.end)}</Badge>
-          <Badge variant="ghost">{days}</Badge>
+        {/* Metadata — stacks vertical on mobile, flows horizontal on sm+ */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1.5 mb-5">
+          <div className="flex items-center gap-1.5 text-[13px] text-zinc-400">
+            <Clock size={13} strokeWidth={1.75} className="text-zinc-500" />
+            {page.duration_minutes} min
+          </div>
+          <div className="flex items-center gap-1.5 text-[13px] text-zinc-400">
+            <CalendarRange size={13} strokeWidth={1.75} className="text-zinc-500" />
+            {formatTime(hours.start)} – {formatTime(hours.end)}
+          </div>
+          <div className="flex items-center gap-1">
+            {DAY_LABELS.map((label, i) => (
+              <span key={i}
+                className={`w-5 h-5 flex items-center justify-center text-[10px] font-semibold rounded ${
+                  selectedDays.includes(i)
+                    ? 'bg-accent/15 text-accent'
+                    : 'bg-white/[0.03] text-zinc-700'
+                }`}>
+                {label}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={() => onToggle(page.id, !page.is_active)}
-              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+              className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
                 page.is_active
-                  ? 'border-green-500/30 text-green-400 bg-green-500/10 hover:bg-green-500/20'
-                  : 'border-surface-600 text-zinc-500 bg-surface-800 hover:bg-surface-700'
+                  ? 'border-green-500/25 text-green-400 bg-green-500/[0.08] hover:bg-green-500/15'
+                  : 'border-white/10 text-zinc-500 bg-white/[0.03] hover:bg-white/5'
               }`}
             >
               {page.is_active ? 'Active' : 'Inactive'}
             </button>
             <button
               onClick={() => { if (confirm('Delete this booking page and all its bookings?')) onDelete(page.id) }}
-              className="p-1.5 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
             >
-              <Trash2 size={13} />
+              <Trash2 size={13} strokeWidth={1.75} />
             </button>
           </div>
-          <button onClick={toggleExpand} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+          <button onClick={toggleExpand} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-200 transition-colors px-2 py-1.5">
             Bookings {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
         </div>

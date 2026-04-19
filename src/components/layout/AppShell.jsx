@@ -15,19 +15,17 @@ export function AppShell() {
       )}
       <main className="flex-1 min-w-0 flex flex-col">
         {isOwner && (
-          <div className="md:hidden flex items-center justify-between px-4 py-4 bg-surface-900 border-b border-surface-800 sticky top-0 z-30 safe-top">
+          <div className="md:hidden flex items-center justify-between px-5 h-14 bg-surface-900/95 backdrop-blur-xl border-b border-white/[0.05] sticky top-0 z-30 safe-top">
             <div className="flex items-center gap-2">
-              <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
+              <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
             </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setMobileMenuOpen(true)}
-                className="w-10 h-10 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 transition-colors"
-                aria-label="Open menu"
-              >
-                <Menu size={18} strokeWidth={1.75} />
-              </button>
-            </div>
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="w-11 h-11 -mr-1.5 flex items-center justify-center rounded-xl text-zinc-300 hover:text-zinc-100 hover:bg-white/5 active:bg-white/10 transition-colors"
+              aria-label="Open menu"
+            >
+              <Menu size={20} strokeWidth={1.75} />
+            </button>
           </div>
         )}
         <Outlet />

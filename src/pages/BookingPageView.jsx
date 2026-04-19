@@ -1,11 +1,15 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { getMonthGrid, dateToStr, eventOverlapsSlot } from '../utils/availability'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
-import { ChevronLeft, ChevronRight, CheckCircle2, Clock, CalendarDays, User, Mail, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckCircle2, Clock, CalendarDays, X } from 'lucide-react'
+
+// iOS system motion curve
+const IOS_EASE = [0.32, 0.72, 0, 1]
 
 function formatTime(timeStr) {
   const [h, m] = timeStr.split(':').map(Number)
@@ -58,21 +62,23 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 transition-colors">
-          <ChevronLeft size={16} />
-        </button>
-        <h3 className="text-sm font-semibold text-zinc-100">{monthLabel}</h3>
-        <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 transition-colors">
-          <ChevronRight size={16} />
-        </button>
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-base font-semibold text-zinc-100 tracking-tight">{monthLabel}</h3>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
+            className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors">
+            <ChevronLeft size={16} strokeWidth={1.75} />
+          </button>
+          <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
+            className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors">
+            <ChevronRight size={16} strokeWidth={1.75} />
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-7 mb-2">
         {dayHeaders.map(d => (
-          <div key={d} className="text-center text-[11px] font-semibold text-zinc-600 uppercase tracking-wider py-1">{d}</div>
+          <div key={d} className="text-center text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] py-1.5">{d}</div>
         ))}
       </div>
 
@@ -86,15 +92,15 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate }) {
 
           return (
             <button key={i} disabled={!isAvailable} onClick={() => isAvailable && onSelectDate(ds)}
-              className={`relative aspect-square flex items-center justify-center text-sm rounded-xl transition-all duration-150 font-medium ${
-                !inMonth ? 'text-zinc-800' :
-                isSelected ? 'bg-accent text-white shadow-sm shadow-accent/30' :
-                isAvailable ? 'text-zinc-200 hover:bg-surface-700 cursor-pointer' :
+              className={`relative aspect-square flex items-center justify-center text-sm rounded-full transition-all duration-200 ease-ios font-medium ${
+                !inMonth ? 'text-transparent' :
+                isSelected ? 'bg-accent text-white shadow-[0_4px_16px_-4px_rgb(139_92_246/0.5)] scale-100' :
+                isAvailable ? 'text-zinc-100 hover:bg-white/5 hover:scale-105 cursor-pointer' :
                 'text-zinc-700 cursor-default'
               }`}>
               {date.getDate()}
               {isToday && !isSelected && inMonth && (
-                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent" />
+                <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent" />
               )}
             </button>
           )
@@ -117,28 +123,34 @@ function TimeSlotPicker({ slots, takenSlots, ownerEvents, selectedDate, selected
 
   if (!available.length) {
     return (
-      <div className="text-center py-10">
-        <Clock size={24} className="text-zinc-600 mx-auto mb-2" />
-        <p className="text-sm text-zinc-500">No available times.</p>
+      <div className="text-center py-12">
+        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3">
+          <Clock size={16} strokeWidth={1.75} className="text-zinc-500" />
+        </div>
+        <p className="text-sm text-zinc-400">No available times</p>
         <p className="text-xs text-zinc-600 mt-1">Try a different date.</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-2 overflow-y-auto max-h-[400px] pr-1">
-      {available.map(slot => {
+    <div className="space-y-2 overflow-y-auto max-h-[60vh] md:max-h-[480px] pr-1 -mr-1">
+      {available.map((slot, i) => {
         const isSelected = selectedSlot?.startTime === slot.startTime
         return (
-          <button key={slot.startTime} onClick={() => onSelect(slot)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+          <motion.button
+            key={slot.startTime}
+            onClick={() => onSelect(slot)}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.015, duration: 0.2, ease: IOS_EASE }}
+            className={`w-full min-h-touch flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 ease-ios ${
               isSelected
-                ? 'bg-accent text-white shadow-sm shadow-accent/30'
-                : 'border border-surface-600 text-zinc-300 hover:border-accent/50 hover:text-accent'
+                ? 'bg-accent text-white shadow-[0_8px_24px_-8px_rgb(139_92_246/0.5)]'
+                : 'border border-white/10 text-zinc-200 hover:border-accent/40 hover:bg-white/[0.03]'
             }`}>
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isSelected ? 'bg-white' : 'bg-green-400'}`} />
             {slot.label}
-          </button>
+          </motion.button>
         )
       })}
     </div>
@@ -403,13 +415,13 @@ export function BookingPageView() {
   /* Not Found */
   if (!page) {
     return (
-      <div className="min-h-screen bg-surface-950 flex items-center justify-center px-5">
-        <div className="text-center max-w-sm">
-          <div className="w-12 h-12 rounded-xl bg-surface-800 border border-surface-700 flex items-center justify-center mx-auto mb-4">
-            <CalendarDays size={20} className="text-zinc-600" />
+      <div className="min-h-screen bg-surface-950 ambient-glow flex items-center justify-center px-6">
+        <div className="text-center max-w-sm animate-fadeIn">
+          <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-center mx-auto mb-5">
+            <CalendarDays size={20} strokeWidth={1.5} className="text-zinc-500" />
           </div>
-          <p className="text-zinc-300 font-medium mb-1">Booking page not found</p>
-          <p className="text-sm text-zinc-600">This link may be invalid or the page has been deactivated.</p>
+          <p className="text-zinc-100 text-lg font-semibold mb-1.5">Booking page not found</p>
+          <p className="text-sm text-zinc-500 leading-relaxed">This link may be invalid or the page has been deactivated.</p>
         </div>
       </div>
     )
@@ -418,198 +430,240 @@ export function BookingPageView() {
   /* Success */
   if (done) {
     return (
-      <div className="min-h-screen bg-surface-950 flex items-center justify-center px-5">
-        <div className="bg-surface-900 border border-surface-700 rounded-2xl p-8 sm:p-10 max-w-md w-full text-center animate-fadeIn">
-          <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 size={32} className="text-green-400" />
-          </div>
-          <h2 className="text-xl font-semibold text-zinc-100 mb-2">You're booked</h2>
-          <p className="text-sm text-zinc-500 mb-6">A spot has been reserved for you.</p>
-          <div className="bg-surface-800/50 border border-surface-700 rounded-xl p-5 text-left space-y-3 mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
-                <CalendarDays size={14} className="text-accent" />
+      <div className="min-h-screen bg-surface-950 ambient-glow flex items-center justify-center px-6 py-10 safe-top safe-bottom">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: IOS_EASE }}
+          className="max-w-md w-full text-center"
+        >
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.45, ease: IOS_EASE }}
+            className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500/20 to-green-500/[0.04] border border-green-500/20 flex items-center justify-center mx-auto mb-8"
+          >
+            <CheckCircle2 size={34} strokeWidth={1.5} className="text-green-400" />
+          </motion.div>
+          <h2 className="text-3xl sm:text-4xl font-semibold text-zinc-50 mb-3 tracking-tight">You're booked</h2>
+          <p className="text-base text-zinc-400 mb-10 leading-relaxed">A spot has been reserved for you.</p>
+          <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 sm:p-6 text-left space-y-4 mb-10">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0">
+                <CalendarDays size={16} strokeWidth={1.75} className="text-accent" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-200">{formatDateShort(selectedDate)}</p>
-                <p className="text-xs text-zinc-500">{formatTime(selectedSlot.startTime)} – {formatTime(selectedSlot.endTime)}</p>
+              <div className="min-w-0">
+                <p className="text-base font-medium text-zinc-100">{formatDateShort(selectedDate)}</p>
+                <p className="text-sm text-zinc-500">{formatTime(selectedSlot.startTime)} – {formatTime(selectedSlot.endTime)}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-surface-700 flex items-center justify-center flex-shrink-0">
-                <Clock size={14} className="text-zinc-400" />
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-white/[0.04] border border-white/5 flex items-center justify-center flex-shrink-0">
+                <Clock size={16} strokeWidth={1.75} className="text-zinc-400" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-200">{page.duration_minutes} minutes</p>
-                <p className="text-xs text-zinc-500">{page.name}</p>
+              <div className="min-w-0">
+                <p className="text-base font-medium text-zinc-100">{page.duration_minutes} minutes</p>
+                <p className="text-sm text-zinc-500 truncate">{page.name}</p>
               </div>
             </div>
           </div>
           <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 transition-colors">
-            <img src="/coordie-logo.svg" alt="" className="h-3" style={{ filter: 'invert(0.4)' }} />
+            className="inline-flex items-center justify-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
+            <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
             Powered by Coordie
           </a>
-        </div>
+        </motion.div>
       </div>
     )
   }
 
-  /* ── Desktop: side-by-side layout | Mobile: stepped flow ── */
+  /* ── Booking flow: full-bleed asymmetric (desktop) + stacked (mobile) ── */
   const dateHeader = selectedDate ? formatDayHeader(selectedDate) : null
+  const step = selectedSlot ? 'confirm' : selectedDate ? 'time' : 'date'
 
   return (
-    <div className="min-h-screen bg-surface-950 flex items-center justify-center px-4 py-8">
-      <div className="bg-surface-900 border border-surface-700 rounded-2xl w-full shadow-xl shadow-black/20 overflow-hidden
-        max-w-[420px] md:max-w-[960px] lg:max-w-[1100px]">
+    <div className="min-h-screen bg-surface-950 ambient-glow relative">
 
-        {/* ── Desktop Layout ── */}
-        <div className="hidden md:flex">
-          {/* Left: Info */}
-          <div className="w-[280px] lg:w-[300px] flex-shrink-0 border-r border-surface-800 p-6 lg:p-8 flex flex-col">
-            <div className="mb-5">
+      {/* ═══ DESKTOP (md+): asymmetric full-bleed ═══ */}
+      <div className="hidden md:grid md:grid-cols-[minmax(0,440px)_1fr] lg:grid-cols-[minmax(0,520px)_1fr] min-h-screen">
+
+        {/* LEFT — brand canvas */}
+        <aside className="flex flex-col justify-between px-10 lg:px-16 py-12 lg:py-20 border-r border-white/[0.06] relative overflow-hidden">
+          {/* Subtle accent line */}
+          <div className="absolute top-0 left-0 w-px h-32 bg-gradient-to-b from-accent/50 to-transparent" />
+
+          <div>
+            <div className="mb-10">
               {ownerLogo ? (
-                <div className={`rounded-lg px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
-                  <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
+                <div className={`rounded-xl px-3 py-2 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
+                  <img src={ownerLogo} alt="" className="max-h-7 max-w-[120px] object-contain" />
                 </div>
               ) : (
-                <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
+                <img src="/coordie-logo.svg" alt="Coordie" className="h-6" style={{ filter: 'invert(1)' }} />
               )}
             </div>
-            <h1 className="text-xl font-semibold text-zinc-100 leading-tight mb-2">{page.name}</h1>
-            {page.description && <p className="text-sm text-zinc-500 leading-relaxed mb-4">{page.description}</p>}
-            <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-              <Clock size={12} className="text-zinc-600" />
-              <span>{page.duration_minutes} min</span>
-            </div>
-            <div className="mt-auto">
-              {guestCalendarEnabled && <GuestCalendarPanel bookingSlots={timeSlots} />}
-            </div>
-          </div>
-
-          {/* Center: Calendar */}
-          <div className="flex-1 p-6 lg:p-8 border-r border-surface-800 min-w-0">
-            <MonthCalendar
-              availableDays={page.available_days || [1, 2, 3, 4, 5]}
-              selectedDate={selectedDate}
-              onSelectDate={handleDateSelect}
-            />
-          </div>
-
-          {/* Right: Times or Confirm */}
-          <div className="w-[280px] lg:w-[300px] flex-shrink-0 p-6 lg:p-8 flex flex-col">
-            {!selectedDate ? (
-              <div className="flex-1 flex items-center justify-center text-center">
-                <div>
-                  <CalendarDays size={20} className="text-zinc-700 mx-auto mb-2" />
-                  <p className="text-xs text-zinc-600">Pick a date to view open time slots</p>
-                </div>
-              </div>
-            ) : selectedSlot ? (
-              <div className="animate-fadeIn">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Your details</p>
-                  <button onClick={() => setSelectedSlot(null)} className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors">Change time</button>
-                </div>
-                <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={selectedSlot}
-                  onConfirm={handleConfirm} submitting={submitting} />
-              </div>
-            ) : (
-              <div className="animate-fadeIn">
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">
-                  {dateHeader.weekday}
-                </p>
-                <p className="text-lg font-semibold text-zinc-100 mb-4">{dateHeader.day}</p>
-                <TimeSlotPicker slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect} />
-              </div>
+            <h1 className="text-3xl lg:text-[40px] font-semibold text-zinc-50 leading-[1.1] tracking-tight mb-4">
+              {page.name}
+            </h1>
+            {page.description && (
+              <p className="text-base text-zinc-400 leading-relaxed mb-8 max-w-md">{page.description}</p>
             )}
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/[0.05] border border-white/[0.06] px-3.5 py-1.5 text-sm text-zinc-300">
+              <Clock size={13} strokeWidth={1.75} className="text-zinc-500" />
+              {page.duration_minutes} minutes
+            </div>
           </div>
-        </div>
 
-        {/* Desktop footer */}
-        <div className="hidden md:flex items-center justify-center py-3 border-t border-surface-800">
-          <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
-            <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
-            Powered by Coordie
-          </a>
-        </div>
-
-        {/* ── Mobile Layout (stepped) ── */}
-        <div className="md:hidden">
-          {/* Header */}
-          <div className="px-5 pt-5 pb-4">
-            <div className="mb-3">
-              {ownerLogo ? (
-                <div className={`rounded-lg px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
-                  <img src={ownerLogo} alt="" className="max-h-5 max-w-[80px] object-contain" />
-                </div>
-              ) : (
-                <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: 'invert(1)' }} />
-              )}
-            </div>
-            <h1 className="text-lg font-semibold text-zinc-100 leading-tight">{page.name}</h1>
-            {page.description && <p className="text-sm text-zinc-500 mt-1">{page.description}</p>}
-            <div className="flex items-center gap-1.5 mt-2 text-xs text-zinc-500">
-              <Clock size={12} className="text-zinc-600" /> {page.duration_minutes} min
-            </div>
+          <div className="space-y-6 pt-10">
             {guestCalendarEnabled && <GuestCalendarPanel bookingSlots={timeSlots} />}
-          </div>
-
-          <div className="border-t border-surface-800" />
-
-          <div className="px-5 py-5">
-            {/* Step 1: Date */}
-            {mobileStep === 1 && (
-              <div className="animate-fadeIn">
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">Select a date</p>
-                <MonthCalendar availableDays={page.available_days || [1, 2, 3, 4, 5]}
-                  selectedDate={selectedDate} onSelectDate={handleDateSelect} />
-              </div>
-            )}
-
-            {/* Step 2: Time */}
-            {mobileStep === 2 && (
-              <div className="animate-fadeIn">
-                <div className="flex items-center gap-2 mb-4">
-                  <button onClick={() => setMobileStep(1)}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors">
-                    <ChevronLeft size={15} />
-                  </button>
-                  <div>
-                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Pick a time</p>
-                    <p className="text-sm text-zinc-300 font-medium">{formatDateShort(selectedDate)}</p>
-                  </div>
-                </div>
-                <TimeSlotPicker slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect} />
-              </div>
-            )}
-
-            {/* Step 3: Confirm */}
-            {mobileStep === 3 && (
-              <div className="animate-fadeIn">
-                <div className="flex items-center gap-2 mb-4">
-                  <button onClick={() => { setSelectedSlot(null); setMobileStep(2) }}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors">
-                    <ChevronLeft size={15} />
-                  </button>
-                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Your details</p>
-                </div>
-                <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={selectedSlot}
-                  onConfirm={handleConfirm} submitting={submitting} />
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="px-5 pb-4 safe-bottom-sm">
             <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
+              className="inline-flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
               <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
               Powered by Coordie
             </a>
           </div>
+        </aside>
+
+        {/* RIGHT — booking flow */}
+        <main className="flex items-center px-10 lg:px-16 py-12 lg:py-20">
+          <div className="w-full flex items-start justify-center gap-10 lg:gap-14">
+            {/* Calendar */}
+            <div className="w-full max-w-[420px] flex-shrink-0">
+              <MonthCalendar
+                availableDays={page.available_days || [1, 2, 3, 4, 5]}
+                selectedDate={selectedDate}
+                onSelectDate={handleDateSelect}
+              />
+            </div>
+
+            {/* Time slots or confirm */}
+            <AnimatePresence mode="wait">
+              {step !== 'date' && (
+                <motion.div
+                  key={step}
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.25, ease: IOS_EASE }}
+                  className="w-[280px] lg:w-[320px] flex-shrink-0"
+                >
+                  {step === 'time' && (
+                    <>
+                      <div className="mb-5">
+                        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-1">
+                          {dateHeader.weekday}
+                        </p>
+                        <p className="text-2xl font-semibold text-zinc-100 tracking-tight">{dateHeader.day}</p>
+                      </div>
+                      <TimeSlotPicker
+                        slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents}
+                        selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect}
+                      />
+                    </>
+                  )}
+                  {step === 'confirm' && (
+                    <>
+                      <div className="flex items-center justify-between mb-5">
+                        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Your details</p>
+                        <button onClick={() => setSelectedSlot(null)}
+                          className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors">
+                          Change time
+                        </button>
+                      </div>
+                      <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={selectedSlot}
+                        onConfirm={handleConfirm} submitting={submitting} />
+                    </>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </main>
+      </div>
+
+      {/* ═══ MOBILE: stacked full-bleed ═══ */}
+      <div className="md:hidden min-h-screen flex flex-col">
+        {/* Header */}
+        <header className="px-6 pt-6 safe-top pb-6 relative">
+          <div className="absolute top-0 left-6 w-px h-16 bg-gradient-to-b from-accent/50 to-transparent" />
+          <div className="mb-5">
+            {ownerLogo ? (
+              <div className={`rounded-xl px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
+                <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
+              </div>
+            ) : (
+              <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
+            )}
+          </div>
+          <h1 className="text-[26px] font-semibold text-zinc-50 leading-[1.15] tracking-tight mb-2">{page.name}</h1>
+          {page.description && <p className="text-[15px] text-zinc-400 leading-relaxed mb-4">{page.description}</p>}
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] border border-white/[0.06] px-3 py-1 text-xs text-zinc-300">
+            <Clock size={11} strokeWidth={1.75} className="text-zinc-500" />
+            {page.duration_minutes} minutes
+          </div>
+          {guestCalendarEnabled && <GuestCalendarPanel bookingSlots={timeSlots} />}
+        </header>
+
+        <div className="border-t border-white/[0.05] mx-6" />
+
+        {/* Steps */}
+        <div className="flex-1 px-6 py-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={mobileStep}
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.22, ease: IOS_EASE }}
+            >
+              {mobileStep === 1 && (
+                <MonthCalendar
+                  availableDays={page.available_days || [1, 2, 3, 4, 5]}
+                  selectedDate={selectedDate}
+                  onSelectDate={handleDateSelect}
+                />
+              )}
+
+              {mobileStep === 2 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <button onClick={() => setMobileStep(1)}
+                      className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2">
+                      <ChevronLeft size={18} strokeWidth={1.75} />
+                    </button>
+                    <div>
+                      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{dateHeader.weekday}</p>
+                      <p className="text-xl font-semibold text-zinc-100 tracking-tight">{dateHeader.day}</p>
+                    </div>
+                  </div>
+                  <TimeSlotPicker slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect} />
+                </div>
+              )}
+
+              {mobileStep === 3 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <button onClick={() => { setSelectedSlot(null); setMobileStep(2) }}
+                      className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2">
+                      <ChevronLeft size={18} strokeWidth={1.75} />
+                    </button>
+                    <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Your details</p>
+                  </div>
+                  <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={selectedSlot}
+                    onConfirm={handleConfirm} submitting={submitting} />
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
+
+        <footer className="px-6 pb-6 safe-bottom">
+          <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
+            <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
+            Powered by Coordie
+          </a>
+        </footer>
       </div>
     </div>
   )

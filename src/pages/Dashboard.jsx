@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
-import { FolderOpen, Plus } from 'lucide-react'
+import { FolderOpen, Plus, CalendarDays, Users } from 'lucide-react'
 
 function formatDateRange(start, end) {
   const s = new Date(start + 'T00:00:00')
@@ -31,32 +31,42 @@ function daysUntil(dateStr) {
 function ProjectCard({ production }) {
   const navigate = useNavigate()
   const countdown = production.startDate ? daysUntil(production.startDate) : null
+  const countdownStyle = countdown === 'Today' || countdown === 'Tomorrow'
+    ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+    : countdown === 'In progress'
+    ? 'text-green-400 bg-green-500/10 border-green-500/20'
+    : 'text-zinc-400 bg-white/[0.04] border-white/10'
 
   return (
     <div
       onClick={() => navigate(`/project/${production.id}`)}
-      className="bg-surface-900 border border-surface-700 rounded-xl p-5 sm:p-6 cursor-pointer shadow-sm shadow-black/10 hover:border-surface-500 hover:bg-surface-800/80 hover:shadow-lg hover:shadow-black/20 transition-all duration-150 group"
+      className="bg-surface-900 border border-white/[0.06] rounded-2xl p-5 sm:p-6 cursor-pointer shadow-sm shadow-black/10 hover:border-white/10 hover:bg-white/[0.015] hover:shadow-lift transition-all duration-200 ease-ios group"
     >
       <div className="flex items-start justify-between gap-3 mb-3">
-        <h3 className="text-base font-semibold text-zinc-100 leading-snug group-hover:text-white">
+        <h3 className="text-[17px] font-semibold text-zinc-100 leading-snug tracking-tight group-hover:text-white">
           {production.name}
         </h3>
+        {countdown && (
+          <span className={`flex-shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full border ${countdownStyle}`}>
+            {countdown}
+          </span>
+        )}
       </div>
 
-      {production.description && <p className="text-sm text-zinc-500 mb-4 line-clamp-2">{production.description}</p>}
+      {production.description && <p className="text-sm text-zinc-400 mb-5 line-clamp-2 leading-relaxed">{production.description}</p>}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {production.startDate && production.endDate && (
-            <Badge variant="ghost">{formatDateRange(production.startDate, production.endDate)}</Badge>
-          )}
-          {countdown && (
-            <Badge variant={countdown === 'Today' || countdown === 'Tomorrow' ? 'yellow' : countdown === 'In progress' ? 'green' : 'ghost'}>
-              {countdown}
-            </Badge>
-          )}
+      {/* Metadata — stacked vertical on mobile, horizontal on sm+ */}
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1.5">
+        {production.startDate && production.endDate && (
+          <div className="flex items-center gap-1.5 text-[13px] text-zinc-400">
+            <CalendarDays size={13} strokeWidth={1.75} className="text-zinc-500" />
+            {formatDateRange(production.startDate, production.endDate)}
+          </div>
+        )}
+        <div className="flex items-center gap-1.5 text-[13px] text-zinc-400">
+          <Users size={13} strokeWidth={1.75} className="text-zinc-500" />
+          {production.groups.length} group{production.groups.length !== 1 ? 's' : ''}
         </div>
-        <span className="text-xs text-zinc-600">{production.groups.length} group{production.groups.length !== 1 ? 's' : ''}</span>
       </div>
     </div>
   )

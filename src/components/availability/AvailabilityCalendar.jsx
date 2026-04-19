@@ -126,24 +126,26 @@ export function AvailabilityCalendar({
   return (
     <div>
       {/* Legend */}
-      <div className="flex items-center gap-4 mb-4 flex-wrap">
+      <div className="flex items-center gap-x-5 gap-y-2 mb-5 flex-wrap">
         {Object.entries(slotStates).map(([key, val]) => (
-          <div key={key} className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: val.color }} />
-            <span className="text-sm text-zinc-400">{val.label}</span>
+          <div key={key} className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full ring-2 ring-surface-900" style={{ backgroundColor: val.color }} />
+            <span className="text-[13px] text-zinc-400">{val.label}</span>
           </div>
         ))}
       </div>
 
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-        <div className="flex items-center gap-0.5 bg-surface-800 rounded-lg p-0.5 self-start">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+        <div className="flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.04] rounded-xl p-1 self-start">
           {(isSelectionMode ? ['Monthly', 'Weekly'] : VIEWS).map(v => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                view === v ? 'bg-surface-600 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+              className={`min-h-[36px] px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200 ease-ios ${
+                view === v
+                  ? 'bg-surface-700 text-zinc-100 shadow-ring-sm'
+                  : 'text-zinc-400 hover:text-zinc-100'
               }`}
             >
               {v}
@@ -152,13 +154,20 @@ export function AvailabilityCalendar({
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={goToToday} className="text-xs text-zinc-500 hover:text-zinc-300 px-2 py-1.5 rounded-md hover:bg-surface-700 transition-colors">
+          <button onClick={goToToday}
+            className="min-h-[36px] text-[13px] font-medium text-zinc-400 hover:text-zinc-100 px-3 rounded-lg hover:bg-white/5 transition-colors">
             Today
           </button>
           <div className="flex items-center gap-1 flex-1 sm:flex-none">
-            <button onClick={handlePrev} className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-surface-700 text-zinc-400 hover:text-zinc-200 transition-colors text-sm">‹</button>
-            <span className="text-sm font-medium text-zinc-300 flex-1 sm:min-w-[160px] text-center">{getNavLabel()}</span>
-            <button onClick={handleNext} className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-surface-700 text-zinc-400 hover:text-zinc-200 transition-colors text-sm">›</button>
+            <button onClick={handlePrev}
+              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 text-zinc-400 hover:text-zinc-100 transition-colors">
+              <span className="text-lg leading-none">‹</span>
+            </button>
+            <span className="text-[13px] font-medium text-zinc-200 flex-1 sm:min-w-[180px] text-center tracking-tight">{getNavLabel()}</span>
+            <button onClick={handleNext}
+              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 text-zinc-400 hover:text-zinc-100 transition-colors">
+              <span className="text-lg leading-none">›</span>
+            </button>
           </div>
         </div>
       </div>

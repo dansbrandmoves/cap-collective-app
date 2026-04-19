@@ -29,6 +29,28 @@ export default {
           muted: '#4c1d95',
         },
       },
+      spacing: {
+        '18': '4.5rem',
+        '22': '5.5rem',
+      },
+      borderRadius: {
+        'sheet': '20px',
+      },
+      boxShadow: {
+        'ring-sm': '0 0 0 1px rgb(255 255 255 / 0.05)',
+        'ring-md': '0 0 0 1px rgb(255 255 255 / 0.08)',
+        'lift': '0 8px 24px -8px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 255 255 / 0.06)',
+        'sheet': '0 -12px 40px -8px rgb(0 0 0 / 0.6)',
+      },
+      transitionTimingFunction: {
+        'ios': 'cubic-bezier(0.32, 0.72, 0, 1)',
+      },
+      minHeight: {
+        'touch': '44px',
+      },
+      minWidth: {
+        'touch': '44px',
+      },
     },
   },
   plugins: [],

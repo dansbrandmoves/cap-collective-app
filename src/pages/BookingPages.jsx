@@ -5,6 +5,7 @@ import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
 import { CalendarCheck, Plus, Copy, Check, Trash2, ChevronDown, ChevronUp, ExternalLink, Pencil, Clock, CalendarRange } from 'lucide-react'
+import { PageLoader } from '../components/ui/PageLoader'
 
 const DURATIONS = [15, 30, 45, 60]
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -320,9 +321,8 @@ export function BookingPages() {
     setForm({ name: '', description: '', durationMinutes: 30, startHour: '09:00', endHour: '17:00', days: [1, 2, 3, 4, 5], requiredFields: { name: true, email: true, message: false } })
   }
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64 text-zinc-500">Loading...</div>
-  }
+  if (loading) return <PageLoader />
+
 
   return (
     <div className="px-5 sm:px-8 lg:px-14 py-8 sm:py-12">

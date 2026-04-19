@@ -1,19 +1,20 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
-import { LayoutGrid, Inbox, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditCard } from 'lucide-react'
+import { LayoutGrid, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditCard } from 'lucide-react'
 
+// Nav order follows the vision: coordinate (Projects) → share (Booking) →
+// see your time (Availability) → configure (Settings). Inbox is intentionally
+// NOT top-level — the list-of-requests is the pattern Coordie defeats.
+// Inbox remains accessible at /inbox and via the bell dropdown.
 const NAV = [
-  { to: '/', label: 'Projects', icon: LayoutGrid, showBadge: false },
-  { to: '/inbox', label: 'Inbox', icon: Inbox, showBadge: true },
-  { to: '/booking-pages', label: 'Booking', icon: CalendarCheck, showBadge: false },
-  { to: '/availability', label: 'Availability', icon: CalendarDays, showBadge: false },
-  { to: '/calendars', label: 'Settings', icon: Settings, showBadge: false },
+  { to: '/', label: 'Projects', icon: LayoutGrid },
+  { to: '/booking-pages', label: 'Booking', icon: CalendarCheck },
+  { to: '/availability', label: 'Availability', icon: CalendarDays },
+  { to: '/calendars', label: 'Settings', icon: Settings },
 ]
 
 export function Sidebar({ mobileOpen = false, onMobileClose }) {
-  const { productions, user, signOut, theme, getTotalPendingRequests, getPendingRequestCount, isProPlan } = useApp()
-
-  const totalPending = getTotalPendingRequests()
+  const { productions, user, signOut, theme, isProPlan } = useApp()
 
   return (
     <>
@@ -32,7 +33,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
 
         {/* Scrollable nav — everything goes here so nothing gets cut off */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
-          {NAV.map(({ to, label, icon: Icon, showBadge }) => (
+          {NAV.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -50,44 +51,31 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 <>
                   <Icon size={16} strokeWidth={1.75} className={`flex-shrink-0 ${isActive ? 'text-accent' : 'opacity-70'}`} />
                   <span className="flex-1">{label}</span>
-                  {showBadge && totalPending > 0 && (
-                    <span className="bg-accent text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                      {totalPending > 9 ? '9+' : totalPending}
-                    </span>
-                  )}
                 </>
               )}
             </NavLink>
           ))}
 
-          {/* Projects list */}
+          {/* Projects list — no pending badges; overlap shows on each project's calendar */}
           {productions.length > 0 && (
             <div className="pt-4">
               <p className="px-3 text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-2">Projects</p>
-              {productions.map(p => {
-                const pending = getPendingRequestCount(p.id)
-                return (
-                  <NavLink
-                    key={p.id}
-                    to={`/project/${p.id}`}
-                    onClick={onMobileClose}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-surface-700 text-zinc-100'
-                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
-                      }`
-                    }
-                  >
-                    <span className="flex-1 truncate">{p.name}</span>
-                    {pending > 0 && (
-                      <span className="bg-accent text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center flex-shrink-0">
-                        {pending > 9 ? '9+' : pending}
-                      </span>
-                    )}
-                  </NavLink>
-                )
-              })}
+              {productions.map(p => (
+                <NavLink
+                  key={p.id}
+                  to={`/project/${p.id}`}
+                  onClick={onMobileClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      isActive
+                        ? 'bg-surface-700 text-zinc-100'
+                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
+                    }`
+                  }
+                >
+                  <span className="flex-1 truncate">{p.name}</span>
+                </NavLink>
+              ))}
             </div>
           )}
 

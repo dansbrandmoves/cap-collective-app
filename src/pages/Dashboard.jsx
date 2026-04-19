@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
 import { FolderOpen, Plus, CalendarDays, Users } from 'lucide-react'
+import { PageLoader } from '../components/ui/PageLoader'
 
 function formatDateRange(start, end) {
   const s = new Date(start + 'T00:00:00')
@@ -93,13 +94,8 @@ export function Dashboard() {
     navigate(`/project/${id}`)
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64 text-zinc-500">
-        Loading...
-      </div>
-    )
-  }
+  if (loading) return <PageLoader />
+
 
   return (
     <div className="px-5 sm:px-8 lg:px-14 py-8 sm:py-12">

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { MonthlyView } from './MonthlyView'
 import { WeeklyView } from './WeeklyView'
 import { DailyView } from './DailyView'
@@ -6,6 +6,7 @@ import { DateRequestModal } from './DateRequestModal'
 import { useApp } from '../../contexts/AppContext'
 import { getWeekStart, dateToStr, deriveSlotState } from '../../utils/availability'
 import { Button } from '../ui/Button'
+import { CalendarPlus, X } from 'lucide-react'
 
 const VIEWS = ['Monthly', 'Weekly', 'Daily']
 
@@ -32,7 +33,9 @@ export function AvailabilityCalendar({
   const [selectedSlotMap, setSelectedSlotMap] = useState({}) // { [dateStr]: [slotId, ...] } for slot-level
   const [slotPickerDate, setSlotPickerDate] = useState(null) // date string showing slot picker
   const [showRequestModal, setShowRequestModal] = useState(false)
+  const [inspectedDate, setInspectedDate] = useState(null) // owner inspecting a day for overlap + scheduling
   const isSelectionMode = !isOwner && !!groupId
+  const isOwnerRoomContext = isOwner && !!groupId
 
   function handleDayClick(date) {
     if (isSelectionMode) {
@@ -43,6 +46,9 @@ export function AvailabilityCalendar({
       } else {
         toggleDate(ds)
       }
+    } else if (isOwnerRoomContext) {
+      // Owner viewing a room's calendar — open the day inspector panel
+      setInspectedDate(dateToStr(date))
     } else {
       setSelectedDay(date)
       setView('Daily')
@@ -295,6 +301,174 @@ export function AvailabilityCalendar({
         guestName={guestName}
         onSubmit={handleRequestSubmit}
       />
+
+      {/* Day inspector panel — owner taps a day to see who's free + schedule */}
+      {inspectedDate && isOwnerRoomContext && (
+        <DayInspectorPanel
+          dateStr={inspectedDate}
+          groupId={groupId}
+          dateRequests={dateRequests.filter(r => r.dates?.includes(inspectedDate) && r.status !== 'declined' && r.status !== 'archived')}
+          sharedAvailability={sharedAvailability.filter(a => a.date === inspectedDate && a.is_available)}
+          onClose={() => setInspectedDate(null)}
+        />
+      )}
     </div>
+  )
+}
+
+/* ── Day Inspector: owner-only panel with overlap + Schedule in Google Calendar ── */
+function DayInspectorPanel({ dateStr, groupId, dateRequests, sharedAvailability, onClose }) {
+  const { getMembersForGroup } = useApp()
+  const members = useMemo(() => getMembersForGroup(groupId || ''), [getMembersForGroup, groupId])
+
+  const dateObj = useMemo(() => new Date(dateStr + 'T00:00:00'), [dateStr])
+
+  // Unique guests free this day (union of date_requests + shared_availability)
+  const uniqueNames = useMemo(() => {
+    const set = new Set()
+    dateRequests.forEach(r => { if (r.requester_name) set.add(r.requester_name) })
+    sharedAvailability.forEach(a => { if (a.guest_name) set.add(a.guest_name) })
+    return [...set]
+  }, [dateRequests, sharedAvailability])
+
+  // Email list for Google Calendar `add=` query: merge known emails from date_requests + group_members
+  const emails = useMemo(() => {
+    const set = new Set()
+    dateRequests.forEach(r => { if (r.requester_email) set.add(r.requester_email.trim()) })
+    members.forEach(m => { if (m.email) set.add(m.email.trim()) })
+    return [...set]
+  }, [dateRequests, members])
+
+  function handleSchedule() {
+    // Default a 1-hour slot at 2pm local — owner can adjust inside Google Calendar
+    const datePart = dateStr.replace(/-/g, '')
+    const start = `${datePart}T140000`
+    const end = `${datePart}T150000`
+
+    const title = uniqueNames.length === 1
+      ? `Meeting with ${uniqueNames[0]}`
+      : uniqueNames.length > 1
+      ? `Meeting · ${uniqueNames.slice(0, 2).join(' & ')}${uniqueNames.length > 2 ? ` +${uniqueNames.length - 2}` : ''}`
+      : 'Meeting'
+
+    const detailsLines = ['Scheduled via Coordie.']
+    if (uniqueNames.length > 0) {
+      detailsLines.push('')
+      detailsLines.push(`Indicated free for ${dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}: ${uniqueNames.join(', ')}.`)
+    }
+
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: title,
+      dates: `${start}/${end}`,
+      details: detailsLines.join('\n'),
+    })
+    if (emails.length > 0) {
+      params.set('add', emails.join(','))
+    }
+
+    window.open(
+      `https://calendar.google.com/calendar/render?${params.toString()}`,
+      '_blank',
+      'noopener,noreferrer'
+    )
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fadeIn"
+        onClick={onClose}
+      />
+
+      {/* Panel: bottom sheet on mobile, right drawer on desktop */}
+      <div className="fixed z-50 bg-surface-900 border-white/[0.06] shadow-[0_-12px_40px_-8px_rgb(0_0_0/0.6)]
+        inset-x-0 bottom-0 rounded-t-[20px] border-t
+        md:inset-y-0 md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[400px] md:rounded-none md:border-l md:border-t-0
+        flex flex-col max-h-[88vh] md:max-h-none animate-slideUp md:animate-slideIn safe-bottom">
+
+        {/* Mobile grab handle */}
+        <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-10 h-1 rounded-full bg-white/15" />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 py-5 border-b border-white/[0.05]">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-1.5">
+              {dateObj.toLocaleDateString('en-US', { weekday: 'long' })}
+            </p>
+            <h3 className="text-[26px] font-semibold text-zinc-50 tracking-tight leading-tight">
+              {dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors -mr-2 flex-shrink-0"
+            aria-label="Close"
+          >
+            <X size={16} strokeWidth={1.75} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          {uniqueNames.length > 0 ? (
+            <>
+              <div className="flex items-baseline gap-2 mb-4">
+                <span className="inline-flex items-center justify-center rounded-full bg-accent text-white text-[13px] font-bold min-w-[26px] h-[26px] px-1.5">
+                  {uniqueNames.length}
+                </span>
+                <p className="text-[15px] text-zinc-300">
+                  {uniqueNames.length === 1 ? 'person is free' : 'people are free'}
+                </p>
+              </div>
+              <div className="space-y-1.5 mb-6">
+                {uniqueNames.map(name => (
+                  <div key={name} className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                    <div className="w-7 h-7 rounded-full bg-accent/15 border border-accent/25 text-accent flex items-center justify-center text-[12px] font-semibold flex-shrink-0">
+                      {name?.[0]?.toUpperCase() ?? '?'}
+                    </div>
+                    <span className="text-[14px] text-zinc-100 truncate">{name}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="py-8 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-center mx-auto mb-4">
+                <CalendarPlus size={18} strokeWidth={1.5} className="text-zinc-500" />
+              </div>
+              <p className="text-[15px] font-medium text-zinc-200 mb-1">Nothing shared yet</p>
+              <p className="text-sm text-zinc-500 leading-relaxed max-w-xs mx-auto">
+                No one&rsquo;s indicated they&rsquo;re free on this day. You can still schedule it.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Primary action */}
+        <div className="px-6 py-5 border-t border-white/[0.05]">
+          <button
+            onClick={handleSchedule}
+            className="w-full min-h-touch flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white text-[15px] font-semibold transition-all duration-200 ease-ios shadow-[0_8px_24px_-8px_rgb(139_92_246/0.55)]"
+          >
+            <CalendarPlus size={16} strokeWidth={2} />
+            Schedule in Google Calendar
+          </button>
+          {emails.length > 0 && (
+            <p className="text-[12px] text-zinc-500 mt-3 text-center leading-relaxed">
+              Opens Google Calendar with {emails.length} {emails.length === 1 ? 'attendee' : 'attendees'} pre-filled.
+            </p>
+          )}
+          {emails.length === 0 && uniqueNames.length > 0 && (
+            <p className="text-[12px] text-zinc-500 mt-3 text-center leading-relaxed">
+              No emails on file for these guests &mdash; add them as attendees in Google Calendar.
+            </p>
+          )}
+        </div>
+      </div>
+    </>
   )
 }

@@ -384,21 +384,80 @@ export function AppProvider({ children }) {
     try { localStorage.setItem(NOTIF_LAST_SEEN_KEY, now) } catch { /* full */ }
   }, [])
 
+  // Recent bookings for this owner's booking pages — feeds the bell dropdown
+  const [recentBookings, setRecentBookings] = useState([])
+
+  useEffect(() => {
+    if (!bookingPages.length) { setRecentBookings([]); return }
+    const pageIds = bookingPages.map(p => p.id)
+    supabase.from('bookings')
+      .select('*')
+      .in('booking_page_id', pageIds)
+      .eq('status', 'confirmed')
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then(({ data }) => setRecentBookings(data || []))
+
+    // Real-time: when any booking row inserts, refetch owner-scoped bookings.
+    // (Filter client-side by booking_page_id — postgres_changes filter doesn't
+    // support IN clauses cleanly.)
+    const channel = supabase
+      .channel('owner-bookings-notify')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bookings' }, (payload) => {
+        if (pageIds.includes(payload.new.booking_page_id)) {
+          setRecentBookings(prev => [payload.new, ...prev.filter(b => b.id !== payload.new.id)].slice(0, 20))
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [bookingPages])
+
   const recentNotifications = useMemo(() => {
-    return productions
-      .flatMap(p => p.groups.flatMap(g =>
-        g.room.messages.map(m => ({
-          ...m,
-          productionName: p.name,
-          groupName: g.name,
-          openToken: g.openToken,
-          productionId: p.id,
-          groupId: g.id,
-        }))
-      ))
+    const messageNotifs = productions.flatMap(p => p.groups.flatMap(g =>
+      g.room.messages.map(m => ({
+        id: `msg-${m.id}`,
+        type: 'message',
+        senderName: m.senderName,
+        text: m.text,
+        timestamp: m.timestamp,
+        productionName: p.name,
+        groupName: g.name,
+        openToken: g.openToken,
+        productionId: p.id,
+        groupId: g.id,
+      }))
+    ))
+
+    const fmt12 = (t) => {
+      if (!t) return ''
+      const [h, m] = t.split(':').map(Number)
+      const p = h >= 12 ? 'PM' : 'AM'
+      return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${p}`
+    }
+    const bookingNotifs = recentBookings.map(b => {
+      const page = bookingPages.find(p => p.id === b.booking_page_id)
+      const when = b.date && b.start_time
+        ? new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) +
+          ' @ ' + fmt12(b.start_time)
+        : ''
+      return {
+        id: `booking-${b.id}`,
+        type: 'booking',
+        senderName: b.guest_name,
+        text: `Booked ${page?.name || 'a meeting'}${when ? ' — ' + when : ''}`,
+        timestamp: b.created_at,
+        productionName: page?.name || 'Booking',
+        groupName: null,
+        openToken: null,
+        productionId: null,
+        groupId: null,
+      }
+    })
+
+    return [...messageNotifs, ...bookingNotifs]
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
       .slice(0, 30)
-  }, [productions])
+  }, [productions, recentBookings, bookingPages])
 
   const unreadNotificationCount = useMemo(() => {
     if (!notificationsLastSeen) return recentNotifications.length

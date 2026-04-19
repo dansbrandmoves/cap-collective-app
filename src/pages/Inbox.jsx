@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { supabase } from '../utils/supabase'
 import { Inbox as InboxIcon, CalendarDays, Mail, Archive, ArrowUpRight } from 'lucide-react'
+import { PageLoader } from '../components/ui/PageLoader'
 
 export function Inbox() {
   const { productions, updateDateRequestStatus } = useApp()
@@ -101,7 +102,7 @@ export function Inbox() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-40 text-zinc-500 text-sm">Loading...</div>
+        <PageLoader />
       ) : requests.length === 0 ? (
         <div className="border border-dashed border-white/10 rounded-2xl p-12 sm:p-16 text-center">
           <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-center mx-auto mb-5">

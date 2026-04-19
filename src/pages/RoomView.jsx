@@ -162,26 +162,31 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp }) {
 
   if (guestEvents === null) {
     return (
-      <div className="border border-dashed border-surface-600 rounded-xl px-5 py-4 mb-5 flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-surface-800 border border-surface-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-400" />
+      <div className="border border-dashed border-white/10 rounded-2xl px-5 py-4 mb-5 flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <CalendarDays size={15} strokeWidth={1.75} className="text-accent" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-zinc-100 mb-0.5 tracking-tight">See overlap instantly</p>
+              <p className="text-xs text-zinc-400 leading-relaxed">Connect your calendar to highlight days that work for both of you. Only free/busy is read &mdash; never event details.</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-zinc-300 mb-0.5">See your availability</p>
-            <p className="text-xs text-zinc-500">Connect your Google Calendar to see which days you're free.</p>
-          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => tokenClientRef.current?.requestAccessToken()}
+            disabled={!gisReady || loading}
+            className="flex-shrink-0 self-start sm:self-auto"
+          >
+            <CalendarDays size={13} strokeWidth={1.75} className="mr-1.5" />
+            Connect Calendar
+          </Button>
         </div>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => tokenClientRef.current?.requestAccessToken()}
-          disabled={!gisReady || loading}
-          className="flex-shrink-0 self-start sm:self-auto"
-        >
-          <CalendarDays size={13} strokeWidth={1.75} className="mr-1.5" />
-          Connect Calendar
-        </Button>
+        <p className="text-[11px] text-zinc-600 leading-relaxed pl-12">
+          Google may show a &ldquo;Google hasn&rsquo;t verified this app&rdquo; notice &mdash; click <span className="text-zinc-400">Advanced</span> &rarr; <span className="text-zinc-400">Go to coordie.com</span>. Verification is in progress.
+        </p>
       </div>
     )
   }

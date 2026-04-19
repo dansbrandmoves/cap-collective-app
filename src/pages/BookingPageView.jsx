@@ -273,21 +273,24 @@ function GuestCalendarPanel({ bookingSlots }) {
 
   if (guestEvents === null) {
     return (
-      <div className="border border-dashed border-surface-600 rounded-xl px-4 py-3 mt-4">
+      <div className="border border-dashed border-white/10 rounded-xl px-4 py-3 mt-4">
         <div className="flex items-center gap-3">
           <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-500 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-zinc-400">See your free days</p>
-            <p className="text-[11px] text-zinc-600">Connect your Google Calendar to highlight days that work for you.</p>
+            <p className="text-xs font-medium text-zinc-300">See your free days</p>
+            <p className="text-[11px] text-zinc-500 leading-relaxed">Connect Google Calendar to highlight days that work. Only free/busy is read.</p>
           </div>
         </div>
         <button
           onClick={() => tokenClientRef.current?.requestAccessToken()}
           disabled={!gisReady || guestLoading}
-          className="mt-2 w-full text-xs font-medium text-zinc-400 hover:text-zinc-200 bg-surface-800 hover:bg-surface-700 border border-surface-600 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+          className="mt-2 w-full text-xs font-medium text-zinc-300 hover:text-zinc-100 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
         >
           Connect Calendar
         </button>
+        <p className="text-[10px] text-zinc-600 mt-2 leading-relaxed">
+          Google may show an unverified-app notice &mdash; click <span className="text-zinc-400">Advanced</span> &rarr; <span className="text-zinc-400">Go to coordie.com</span>. Verification is in progress.
+        </p>
       </div>
     )
   }

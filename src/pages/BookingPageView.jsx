@@ -349,6 +349,10 @@ export function BookingPageView() {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
+  // Preserve last non-null slot so ConfirmForm doesn't crash during exit animation
+  const lastSlotRef = useRef(null)
+  if (selectedSlot !== null) lastSlotRef.current = selectedSlot
+
   // Mobile step state (desktop shows all panels)
   const [mobileStep, setMobileStep] = useState(1)
 
@@ -601,7 +605,7 @@ export function BookingPageView() {
                         Change time
                       </button>
                     </div>
-                    <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={selectedSlot}
+                    <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={lastSlotRef.current}
                       onConfirm={handleConfirm} submitting={submitting} />
                   </motion.div>
                 )}
@@ -679,7 +683,7 @@ export function BookingPageView() {
                     </button>
                     <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Your details</p>
                   </div>
-                  <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={selectedSlot}
+                  <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={lastSlotRef.current}
                     onConfirm={handleConfirm} submitting={submitting} />
                 </div>
               )}

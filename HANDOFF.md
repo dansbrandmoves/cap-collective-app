@@ -14,6 +14,10 @@
    - `notify-booking`
    - `notify-date-request`
 
+## 🎯 Next action item
+
+**Overlap on booking pages** — bring mutual overlap detection to 1:1 booking, not just rooms. Visitor connects their Google Calendar, Coordie surfaces windows that work for both sides. Same visual language as rooms (monthly/weekly/daily, color system). This is the product differentiator — see `VISION.md` for full context.
+
 ---
 
 ## 🚦 First actions in this new thread

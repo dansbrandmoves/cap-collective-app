@@ -4,7 +4,7 @@ import { WeeklyView } from './WeeklyView'
 import { DailyView } from './DailyView'
 import { DateRequestModal } from './DateRequestModal'
 import { useApp } from '../../contexts/AppContext'
-import { getWeekStart, dateToStr, deriveSlotState } from '../../utils/availability'
+import { getWeekStart, dateToStr, deriveSlotState, eventOverlapsSlot } from '../../utils/availability'
 import { Button } from '../ui/Button'
 import { CalendarPlus, X, Check } from 'lucide-react'
 
@@ -243,16 +243,19 @@ export function AvailabilityCalendar({
               <p className="text-xs text-zinc-600 mb-3">Select the time slots that work for you.</p>
               {slots.map(slot => {
                 const isChecked = (selectedSlotMap[slotPickerDate] || []).includes(slot.id)
-                const derived = deriveSlotState(new Date(slotPickerDate + 'T00:00:00'), slot, calendarEvents, connectedCalendars, prefixRules, businessHours)
+                const pickerDateObj = new Date(slotPickerDate + 'T00:00:00')
+                const derived = deriveSlotState(pickerDateObj, slot, calendarEvents, connectedCalendars, prefixRules, businessHours)
                 const stateColor = slotStates[derived.state]?.color || '#22c55e'
                 const isAvailable = derived.state === 'available'
+                const isGuestBusy = guestEvents !== null &&
+                  guestEvents.some(ev => eventOverlapsSlot(pickerDateObj, slot, { ...ev, calendarId: 'primary' }))
                 return (
                   <button key={slot.id} onClick={() => toggleSlotForDate(slotPickerDate, slot.id)}
                     className={`w-full text-left rounded-xl px-4 py-3 transition-all border ${
                       isChecked
                         ? 'bg-accent/10 border-accent/30'
                         : 'bg-surface-800 border-surface-700 hover:border-surface-500'
-                    }`}
+                    } ${isGuestBusy && !isChecked ? 'opacity-40' : ''}`}
                     style={{ borderLeftColor: stateColor, borderLeftWidth: '3px' }}>
                     <div className="flex items-center justify-between">
                       <div>
@@ -260,9 +263,16 @@ export function AvailabilityCalendar({
                         <p className="text-xs text-zinc-500 mt-0.5">{slot.startTime} – {slot.endTime}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-[10px] ${isAvailable ? 'text-green-400' : 'text-zinc-600'}`}>
-                          {slotStates[derived.state]?.label}
-                        </span>
+                        {isGuestBusy && !isChecked ? (
+                          <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                            <span className="w-1 h-1 rounded-full bg-zinc-500" />
+                            you're busy
+                          </span>
+                        ) : (
+                          <span className={`text-[10px] ${isAvailable ? 'text-green-400' : 'text-zinc-600'}`}>
+                            {slotStates[derived.state]?.label}
+                          </span>
+                        )}
                         {isChecked && (
                           <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center">
                             <span className="text-white text-xs">✓</span>

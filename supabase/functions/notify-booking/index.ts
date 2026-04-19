@@ -101,7 +101,6 @@ function buildEmailHtml(opts: {
     <style>table,td,div,p,a{font-family:Arial,sans-serif!important;}</style>
   <![endif]-->
   <style>
-    /* Prevent iOS/macOS auto-detection underlines on transactional strings */
     a[x-apple-data-detectors] {
       color: inherit !important;
       text-decoration: none !important;
@@ -113,8 +112,7 @@ function buildEmailHtml(opts: {
 
     @media (prefers-color-scheme: dark) {
       .email-bg { background: #0a0a0b !important; }
-      .email-card { background: #131316 !important; }
-      .border-soft { border-color: rgba(255,255,255,0.06) !important; }
+      .email-card { background: #131316 !important; border-color: rgba(255,255,255,0.08) !important; }
       .text-primary { color: #f4f4f5 !important; }
       .text-secondary { color: #a1a1aa !important; }
       .text-muted { color: #71717a !important; }
@@ -122,6 +120,7 @@ function buildEmailHtml(opts: {
       .message-card { background: #1c1c20 !important; border-color: rgba(255,255,255,0.06) !important; color: #d4d4d8 !important; }
       .ghost-cta { color: #a1a1aa !important; }
       .divider { background: rgba(255,255,255,0.08) !important; }
+      .footer-border { border-color: rgba(255,255,255,0.08) !important; }
     }
 
     @media (max-width: 540px) {
@@ -132,13 +131,13 @@ function buildEmailHtml(opts: {
     }
   </style>
 </head>
-<body class="email-bg" style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+<body class="email-bg" style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(guestName)} booked ${pageName ? escapeHtml(pageName) + " " : ""}on ${dateFormatted} at ${timeRange}.</div>
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-bg" style="background:#f4f4f5;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-bg" style="background:#ffffff;">
     <tr>
       <td align="center" style="padding:40px 16px;">
-        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" class="email-card border-soft" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #e4e4e7;border-radius:20px;padding:40px 36px;">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" class="email-card" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #e2e2e6;border-radius:20px;padding:40px 36px;">
 
           <!-- Brand mark -->
           <tr>
@@ -166,7 +165,7 @@ function buildEmailHtml(opts: {
           <!-- Event card -->
           <tr>
             <td style="padding:0 0 28px 0;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="event-card border-soft" style="background:#fafafa;border:1px solid #e4e4e7;border-radius:14px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="event-card" style="background:#fafafa;border:1px solid #e4e4e7;border-radius:14px;">
                 <tr>
                   <td style="padding:18px 22px;">
                     <p class="text-primary" style="margin:0 0 6px 0;color:#18181b;font-size:17px;font-weight:600;letter-spacing:-0.01em;line-height:1.3;">
@@ -212,7 +211,7 @@ function buildEmailHtml(opts: {
 
           <!-- Footer -->
           <tr>
-            <td style="padding:24px 0 0 0;border-top:1px solid #e4e4e7;" class="border-soft">
+            <td class="footer-border" style="padding:24px 0 0 0;border-top:1px solid #e4e4e7;">
               <p class="text-muted" style="margin:0;color:#a1a1aa;font-size:12px;line-height:1.5;">
                 Sent by Coordie &middot; <a href="https://www.coordie.com" style="color:#8b5cf6;text-decoration:none;font-weight:500;">coordie.com</a>
               </p>

@@ -1046,7 +1046,7 @@ export function AppProvider({ children }) {
   }, [])
 
   // --- Date Requests ---
-  const createDateRequest = useCallback(async (groupId, { requesterName, requesterEmail, dates, message }) => {
+  const createDateRequest = useCallback(async (groupId, { requesterName, requesterEmail, dates, message, ownerId }) => {
     const request = {
       id: `dr-${Date.now()}`,
       group_id: groupId,
@@ -1076,6 +1076,7 @@ export function AppProvider({ children }) {
         groupName,
         productionName,
         ownerEmail: user?.email ?? null,
+        ownerId: ownerId ?? null,
         groupId,
       },
     }).catch(err => console.warn('Date request email notification failed:', err))

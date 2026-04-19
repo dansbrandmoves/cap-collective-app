@@ -7,6 +7,7 @@ export function WeeklyView({
   weekStart, slots, calendarEvents, connectedCalendars, prefixRules = [],
   onDayClick, isOwner, slotStates = DEFAULT_SLOT_STATES,
   selectedDates = [], isSelectionMode = false, businessHours = null,
+  dateRequests = [], sharedAvailability = [],
 }) {
   const days = useMemo(() => getWeekDays(weekStart), [weekStart])
   const matrix = useMemo(
@@ -15,6 +16,19 @@ export function WeeklyView({
   )
 
   const todayStr = dateToStr(new Date())
+
+  function getOverlap(ds) {
+    const guests = new Set([
+      ...dateRequests
+        .filter(r => r.dates?.includes(ds) && r.status !== 'declined' && r.status !== 'archived')
+        .map(r => r.requester_name),
+      ...sharedAvailability
+        .filter(a => a.date === ds && a.is_available)
+        .map(a => a.guest_name),
+    ])
+    guests.delete(undefined); guests.delete(null); guests.delete('')
+    return guests
+  }
 
   return (
     <div className="overflow-x-auto">
@@ -28,11 +42,13 @@ export function WeeklyView({
               const ds = dateToStr(day)
               const isToday = ds === todayStr
               const isSelected = selectedDates.includes(ds)
+              const overlapGuests = getOverlap(ds)
+              const overlapCount = overlapGuests.size
               return (
                 <th key={i} className="pb-3 px-0.5 sm:px-1 text-center min-w-[40px] sm:min-w-[80px]">
                   <button
                     onClick={() => onDayClick(day)}
-                    className={`text-center w-full rounded-lg py-1 sm:py-1.5 px-1 sm:px-2 transition-colors hover:bg-surface-700
+                    className={`relative text-center w-full rounded-lg py-1 sm:py-1.5 px-1 sm:px-2 transition-colors hover:bg-surface-700
                       ${isToday ? 'text-accent' : 'text-zinc-400'}
                       ${isSelected ? 'ring-2 ring-accent bg-accent/10' : ''}
                     `}
@@ -46,6 +62,18 @@ export function WeeklyView({
                     }`}>
                       {day.getDate()}
                     </div>
+                    {overlapCount > 0 && (
+                      <div
+                        className={`mx-auto mt-1 flex items-center justify-center rounded-full font-semibold shadow-[0_2px_8px_-2px_rgba(139,92,246,0.6)] ${
+                          overlapCount >= 2
+                            ? 'bg-accent text-white min-w-[18px] h-[18px] px-1 text-[10px]'
+                            : 'bg-accent/90 text-white min-w-[16px] h-4 px-1 text-[10px]'
+                        }`}
+                        title={isOwner ? `${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} free: ${[...overlapGuests].join(', ')}` : `${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} available`}
+                      >
+                        {overlapCount}
+                      </div>
+                    )}
                   </button>
                 </th>
               )

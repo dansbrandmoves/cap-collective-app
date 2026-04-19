@@ -2,15 +2,20 @@
 // Sends a branded email to the project owner when a guest submits a date request.
 //
 // Required env vars (set in Supabase dashboard → Settings → Edge Functions):
-//   RESEND_API_KEY  — resend.com key
-//   FROM_EMAIL      — verified sender (defaults to notifications@app.coordie.com)
-//   OWNER_EMAIL     — fallback owner email when client omits ownerEmail
+//   RESEND_API_KEY              — resend.com key
+//   SUPABASE_URL                — auto-injected
+//   SUPABASE_SERVICE_ROLE_KEY   — auto-injected
+//   FROM_EMAIL                  — verified sender (defaults to notifications@app.coordie.com)
+//   OWNER_EMAIL                 — fallback owner email when ownerId lookup fails
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const FROM_EMAIL = Deno.env.get("FROM_EMAIL") ?? "Coordie <notifications@app.coordie.com>";
-const OWNER_EMAIL = Deno.env.get("OWNER_EMAIL");
+const OWNER_EMAIL_FALLBACK = Deno.env.get("OWNER_EMAIL");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -67,7 +72,7 @@ function buildEmailHtml(opts: {
     ? `
     <tr>
       <td style="padding:0 0 28px 0;">
-        <p class="message-card border-soft" style="margin:0;padding:14px 16px;background:#fafafa;border:1px solid #e4e4e7;border-radius:12px;color:#3f3f46;font-size:14px;font-style:italic;line-height:1.55;">&ldquo;${escapeHtml(message)}&rdquo;</p>
+        <p class="message-card" style="margin:0;padding:14px 16px;background:#fafafa;border:1px solid #e4e4e7;border-radius:12px;color:#3f3f46;font-size:14px;font-style:italic;line-height:1.55;">&ldquo;${escapeHtml(message)}&rdquo;</p>
       </td>
     </tr>`
     : "";
@@ -87,14 +92,14 @@ function buildEmailHtml(opts: {
     a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important;font-size:inherit!important;font-family:inherit!important;font-weight:inherit!important;line-height:inherit!important;}
     @media (prefers-color-scheme: dark) {
       .email-bg{background:#0a0a0b!important;}
-      .email-card{background:#131316!important;}
-      .border-soft{border-color:rgba(255,255,255,0.06)!important;}
+      .email-card{background:#131316!important;border-color:rgba(255,255,255,0.08)!important;}
       .text-primary{color:#f4f4f5!important;}
       .text-secondary{color:#a1a1aa!important;}
       .text-muted{color:#71717a!important;}
       .message-card{background:#1c1c20!important;border-color:rgba(255,255,255,0.06)!important;color:#d4d4d8!important;}
       .ghost-cta{color:#a1a1aa!important;}
       .divider{background:rgba(255,255,255,0.08)!important;}
+      .footer-border{border-color:rgba(255,255,255,0.08)!important;}
     }
     @media (max-width: 540px) {
       .email-card{padding:28px 22px!important;border-radius:0!important;border-left:none!important;border-right:none!important;}
@@ -104,11 +109,11 @@ function buildEmailHtml(opts: {
     }
   </style>
 </head>
-<body class="email-bg" style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+<body class="email-bg" style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(requesterName)} requested ${dates.length} date${dates.length === 1 ? "" : "s"} for ${escapeHtml(productionName)}.</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-bg" style="background:#f4f4f5;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-bg" style="background:#ffffff;">
     <tr><td align="center" style="padding:40px 16px;">
-      <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" class="email-card border-soft" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #e4e4e7;border-radius:20px;padding:40px 36px;">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" class="email-card" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #e2e2e6;border-radius:20px;padding:40px 36px;">
         <tr><td style="padding:0 0 36px 0;">
           <span class="text-primary" style="font-size:15px;font-weight:700;letter-spacing:-0.02em;color:#18181b;">coordie</span>
           <span style="display:inline-block;width:3px;height:3px;background:#8b5cf6;border-radius:50%;vertical-align:middle;margin:0 8px 3px 8px;"></span>
@@ -142,7 +147,7 @@ function buildEmailHtml(opts: {
             </tr>
           </table>
         </td></tr>
-        <tr><td style="padding:24px 0 0 0;border-top:1px solid #e4e4e7;" class="border-soft">
+        <tr><td class="footer-border" style="padding:24px 0 0 0;border-top:1px solid #e4e4e7;">
           <p class="text-muted" style="margin:0;color:#a1a1aa;font-size:12px;line-height:1.5;">Sent by Coordie &middot; <a href="https://www.coordie.com" style="color:#8b5cf6;text-decoration:none;font-weight:500;">coordie.com</a></p>
         </td></tr>
       </table>
@@ -152,9 +157,9 @@ function buildEmailHtml(opts: {
 </html>`;
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: { ...corsHeaders } });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
@@ -166,12 +171,23 @@ serve(async (req) => {
       groupName,
       productionName,
       ownerEmail,
+      ownerId,
     } = await req.json();
 
-    const toEmail = ownerEmail || OWNER_EMAIL;
+    // Resolve the owner's email — prefer explicit ownerEmail, then look up by ownerId, then fall back to env var
+    let toEmail: string | null = ownerEmail || null;
+
+    if (!toEmail && ownerId) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: { user } } = await supabase.auth.admin.getUserById(ownerId);
+      toEmail = user?.email ?? null;
+    }
+
+    if (!toEmail) toEmail = OWNER_EMAIL_FALLBACK ?? null;
+
     if (!toEmail) {
       return new Response(
-        JSON.stringify({ error: "No owner email configured" }),
+        JSON.stringify({ error: "Could not resolve owner email" }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -180,13 +196,10 @@ serve(async (req) => {
     }
 
     if (!RESEND_API_KEY) {
-      console.error("RESEND_API_KEY not set");
+      console.log("No RESEND_API_KEY — would send to:", toEmail);
       return new Response(
-        JSON.stringify({ error: "Email service not configured" }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        },
+        JSON.stringify({ ok: true, note: "no RESEND_API_KEY" }),
+        { headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 

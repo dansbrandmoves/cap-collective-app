@@ -265,7 +265,7 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp }) {
   )
 }
 
-function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots, projectBusinessHours, guestSlotSelection, ownerCalendarEvents, ownerConnectedCalendars }) {
+function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots, projectBusinessHours, guestSlotSelection, ownerCalendarEvents, ownerConnectedCalendars, ownerId }) {
   const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, guestCalendarEnabled, businessHours } = useApp()
   const effectiveCalendarEvents = isOwner ? calendarEvents : ownerCalendarEvents
   const effectiveConnectedCalendars = isOwner ? connectedCalendars : ownerConnectedCalendars
@@ -317,7 +317,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
         guestSlotSelection={guestSlotSelection}
         groupId={groupId}
         guestName={guestName}
-        onRequestSubmit={createDateRequest}
+        onRequestSubmit={(gId, data) => createDateRequest(gId, { ...data, ownerId })}
         dateRequests={dateRequests}
         sharedAvailability={sharedAvailability}
       />
@@ -522,6 +522,7 @@ export function RoomView() {
           guestSlotSelection={production?.availability_config?.guestSlotSelection || false}
           ownerCalendarEvents={ownerCalendarEvents}
           ownerConnectedCalendars={ownerConnectedCalendars}
+          ownerId={production?.ownerId}
         />
       )}
 

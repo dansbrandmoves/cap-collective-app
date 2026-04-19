@@ -197,6 +197,7 @@ export function AvailabilityCalendar({
           prefixRules={prefixRules} onDayClick={handleDayClick} isOwner={isOwner}
           slotStates={slotStates} businessHours={businessHours}
           selectedDates={selectedDates} isSelectionMode={isSelectionMode}
+          dateRequests={dateRequests} sharedAvailability={sharedAvailability}
         />
       )}
 

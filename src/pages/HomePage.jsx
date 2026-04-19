@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useApp } from '../contexts/AppContext'
 import { CalendarDays, Users, Link2, CheckCircle2, ArrowRight, Inbox, LayoutGrid, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -58,14 +58,48 @@ const HERO_FREE_INDICES = HERO_SLOTS
   .map((s, i) => s.busy ? -1 : i)
   .filter(i => i >= 0)
 
+function MockupCursor() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="#1a1a1a" strokeWidth="1.4"
+      style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))' }}>
+      <path d="M4 4l7.07 17 2.51-7.39L21 11.07z" />
+    </svg>
+  )
+}
+
 function HeroBookingMockup() {
-  // Cycle hover/selection through only the free slots — never highlight a busy one
+  // step 0 = not connected (cursor on Connect button)
+  // step 1..N = connected, cursor on free slot (step-1)
+  const TOTAL_STEPS = HERO_FREE_INDICES.length + 1
   const [step, setStep] = useState(0)
+
   useEffect(() => {
-    const t = setInterval(() => setStep(s => (s + 1) % HERO_FREE_INDICES.length), 1600)
-    return () => clearInterval(t)
-  }, [])
-  const selected = HERO_FREE_INDICES[step]
+    const delay = step === 0 ? 2400 : 1600
+    const t = setTimeout(() => setStep(s => (s + 1) % TOTAL_STEPS), delay)
+    return () => clearTimeout(t)
+  }, [step, TOTAL_STEPS])
+
+  const isConnected = step > 0
+  const selected = isConnected ? HERO_FREE_INDICES[step - 1] : null
+
+  // Track cursor position relative to the right column
+  const rightColRef = useRef(null)
+  const slotElRefs = useRef([])
+  const connectBtnRef = useRef(null)
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const target = isConnected ? slotElRefs.current[selected] : connectBtnRef.current
+    const container = rightColRef.current
+    if (target && container) {
+      const tRect = target.getBoundingClientRect()
+      const cRect = container.getBoundingClientRect()
+      setCursorPos({
+        x: tRect.left - cRect.left + 28,
+        y: tRect.top - cRect.top + tRect.height / 2 - 6,
+      })
+    }
+  }, [step, selected, isConnected])
 
   return (
     <div className="relative">
@@ -117,32 +151,46 @@ function HeroBookingMockup() {
           </div>
 
           {/* RIGHT — time slots with personal calendar overlay */}
-          <div className="px-6 sm:px-8 py-7 sm:py-9 flex flex-col">
+          <div ref={rightColRef} className="relative px-6 sm:px-8 py-7 sm:py-9 flex flex-col">
             <div className="mb-4">
               <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Friday</p>
               <p className="text-2xl font-semibold text-zinc-100 tracking-tight leading-none mt-0.5">17</p>
             </div>
 
-            {/* The killer chip — calendar connected, busy slots dimmed */}
-            <div className="inline-flex items-center gap-1.5 self-start text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-2.5 py-1 mb-4">
-              <CheckCircle2 size={10} strokeWidth={2.25} />
-              Your calendar connected
+            {/* Pre/post-connect swap — fixed-height row so layout doesn't shift */}
+            <div className="h-7 mb-4 flex items-center">
+              {!isConnected ? (
+                <button
+                  ref={connectBtnRef}
+                  className="inline-flex items-center gap-1.5 text-[10px] font-medium text-zinc-200 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-full px-3 py-1.5 transition-colors"
+                >
+                  <CalendarDays size={10} strokeWidth={2} />
+                  Connect Calendar
+                </button>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-2.5 py-1 animate-fadeIn">
+                  <CheckCircle2 size={10} strokeWidth={2.25} />
+                  Your calendar connected
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5 flex-1">
               {HERO_SLOTS.map((slot, i) => {
-                const isSelected = i === selected
+                const isSelected = isConnected && i === selected
+                const showBusy = isConnected && slot.busy
                 return (
                   <div key={slot.time}
+                    ref={el => { slotElRefs.current[i] = el }}
                     className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-300 ease-ios ${
                       isSelected
                         ? 'bg-accent text-white shadow-[0_8px_24px_-8px_rgb(139_92_246/0.5)]'
-                        : slot.busy
+                        : showBusy
                         ? 'border border-white/[0.04] text-zinc-600'
                         : 'border border-white/10 text-zinc-200'
                     }`}>
                     <span>{slot.time}</span>
-                    {slot.busy && !isSelected && (
+                    {showBusy && !isSelected && (
                       <span className="flex items-center gap-1 text-[9px] text-zinc-700">
                         <span className="w-1 h-1 rounded-full bg-zinc-700" />
                         busy
@@ -151,6 +199,14 @@ function HeroBookingMockup() {
                   </div>
                 )
               })}
+            </div>
+
+            {/* Animated cursor — flies to Connect button, then between free slots */}
+            <div
+              className="absolute pointer-events-none z-10 transition-transform duration-700 ease-ios"
+              style={{ transform: `translate(${cursorPos.x}px, ${cursorPos.y}px)` }}
+            >
+              <MockupCursor />
             </div>
           </div>
         </div>

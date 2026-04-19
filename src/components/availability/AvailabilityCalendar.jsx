@@ -144,7 +144,7 @@ export function AvailabilityCalendar({
       {/* Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
         <div className="flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.04] rounded-xl p-1 self-start">
-          {(isSelectionMode ? ['Monthly', 'Weekly'] : VIEWS).map(v => (
+          {(isSelectionMode ? (guestSlotSelection ? VIEWS : ['Monthly', 'Weekly']) : VIEWS).map(v => (
             <button
               key={v}
               onClick={() => setView(v)}

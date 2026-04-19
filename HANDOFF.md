@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-04-19
-**Last commit on `master` (pushed):** `0f2cfb6` — "Calendar: always pad to 6 rows (42 cells)"
+**Last commit on `master` (pushed):** `5e38df5` — "Fix: preserve last slot via ref so ConfirmForm doesn't crash during exit animation"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push)
 
 ---
@@ -18,76 +18,28 @@
 
 ---
 
-## 🐛 The first thing to fix
-
-**On the booking page desktop view, clicking "Change time" in the confirm step breaks the layout.** This was reported right before the previous session ended — I was about to reproduce it but the thread hit context limits.
-
-**Repro:**
-1. Open `/book/30-minutes-DnzQ` at 1920×1000 viewport (or any desktop)
-2. Click an available date (e.g. the 23rd)
-3. Click a time slot (e.g. 12:00 PM)
-4. Confirm form appears on the right
-5. Click **"Change time"** in the confirm header
-6. Observe what breaks
-
-**Where to look:** `src/pages/BookingPageView.jsx` — the desktop render block around the `<AnimatePresence mode="wait">` inside the slot column. The handler is literally just `() => setSelectedSlot(null)` which should transition `step` from `'confirm'` → `'time'` (since `step = selectedSlot ? 'confirm' : selectedDate ? 'time' : 'date'`).
-
-**Suspects:**
-- Motion `key` collision across `<motion.div>` children causing stuck exit animation
-- AnimatePresence `mode="wait"` blocking on stale state
-- Slot column's fixed width clashing with a re-render
-- ConfirmForm form state leaking into the remounted step
-
-Verify in preview (`preview_start` with name `cap-collective`, preset 1920×1000, navigate, click, observe). Don't trust theories — reproduce first.
-
----
-
-## 🎯 The vision (tl;dr — full doc in memory)
-
-Coordie is the **thin, fast, invisible layer between your calendar and everyone else.** Not PM, not CRM, not AI.
-
-- Rooms surface **overlap** automatically; owner confirms a day; done
-- **Lists-of-requests is what Coordie defeats** — they feel like email back-and-forth, the exact loop we kill
-- The calendar is the primary surface; Inbox is demoted to a fallback
-- Bookings notify loudly (email + bell); shares notify gently
-- Small business founders on Google Calendar, one person or small team
-
-When in doubt: **remove the feature. Coordie wins by being invisible, not by having more.**
-
----
-
-## 📦 What shipped today (most recent first)
+## ✅ Fixed this session
 
 | SHA | Summary |
 |---|---|
-| `0f2cfb6` | Calendar always 42 cells (6 rows) — no height jump between months |
-| `7ff3edd` | Booking page: stable calendar + killed double scroll |
-| `e4b6a79` | Desktop booking: calendar is the hero (560px), `items-start` kills vertical bounce |
-| `a8a828c` | Capped inner container so slots don't drift to viewport edge |
-| `04577ed` | Mobile purple accent line flush-left |
-| `b5a852c` | Per-guest attendee toggles on Schedule-in-GCal (default-on for everyone with email) |
-| `b0f8ef4` | Tap-a-day scheduling panel + bell-with-bookings + nav reorder + OAuth trust line + PageLoader |
-| `dd7d731` | Aesthetic sweep — RoomView + ProductionView + date-request email |
-| `4a94bed` | Admin page headings unified (tracking-tight, zinc-50, bigger) |
-| `63ac09e` | Booking email redesign (purple CTA, format-detection, dark-mode adaptive) |
-| `ff38d96` | Full-bleed booking page + mobile polish pass (the original flagship) |
+| `5e38df5` | **Change-time bug** — `AnimatePresence mode="wait"` kept `ConfirmForm` alive for exit animation while `selectedSlot` was already nulled → crash. Fixed with `lastSlotRef` that only updates when slot is non-null. |
+| (pending push) | **Room availability for guests** — guests saw all slots green because `calendarEvents`/`connectedCalendars` are localStorage-only. Now fetches owner's data from Supabase (`owner_calendar_events` + `profiles.connected_calendars`) and passes it to `AvailabilityCalendar` when `!isOwner`. |
 
 ---
 
 ## 📋 Backlog (priority order)
 
-1. **Change-time bug** (above) — highest priority, user-blocking
-2. **RESEND_API_KEY check** — user reported bookings send no email. `notify-booking` silently no-ops if the key isn't set in Supabase → Edge Function Secrets. Confirm it's configured.
-3. **Google OAuth verification** — parallel track, ~2 hrs of user time:
+1. **RESEND_API_KEY check** — user reported bookings send no email. `notify-booking` silently no-ops if the key isn't set in Supabase → Edge Function Secrets. Confirm it's configured.
+2. **Google OAuth verification** — parallel track, ~2 hrs of user time:
    - Verify `coordie.com` domain via Google Search Console
    - Fill out OAuth consent screen (sensitive `calendar.readonly` scope only — no security assessment needed)
    - Record 60-second demo video of the guest-calendar-connect flow
    - Submit; wait 2–4 weeks
-4. **Guest view of room calendar** — verify the overlap count badges show for guests but names do NOT (vision: "no details shared"). Check MonthlyView tooltip (`title` attr currently includes names) — may need to gate on `isOwner`.
-5. **Mobile tap-a-day panel** — the DayInspectorPanel only renders when `isOwner && !!groupId`. Confirm it works from a room on mobile, check bottom-sheet feel.
-6. **DayInspectorPanel polish** for 10+ guests — may need scroll divider or collapse
-7. **Real-time subscription on `shared_availability` in RoomView** — currently only `date_requests` live-updates. Shared availability appearing should refresh the calendar.
-8. **Inbox page** still reachable at `/inbox` (via bell footer "View shared availability"). Kept it functional but demoted; consider if it should be removed entirely on a future pass.
+3. **Guest view of room calendar** — verify overlap count badges show for guests but names do NOT (vision: "no details shared"). Check MonthlyView tooltip (`title` attr currently includes names) — may need to gate on `isOwner`.
+4. **Mobile tap-a-day panel** — DayInspectorPanel only renders when `isOwner && !!groupId`. Confirm it works from a room on mobile.
+5. **DayInspectorPanel polish** for 10+ guests — may need scroll divider or collapse
+6. **Real-time subscription on `shared_availability` in RoomView** — currently only `date_requests` live-updates.
+7. **Inbox page** still reachable at `/inbox`. Kept functional but demoted; consider removing on a future pass.
 
 ---
 
@@ -144,10 +96,10 @@ If you forget `git read-tree HEAD` first, the commit will wipe every file not ex
 
 | File | What's there |
 |---|---|
-| `src/pages/BookingPageView.jsx` | Public booking page (change-time bug is here) |
+| `src/pages/BookingPageView.jsx` | Public booking page — change-time bug FIXED |
+| `src/pages/RoomView.jsx` | Guest-facing room. Now fetches owner calendar data from Supabase for guests. |
 | `src/components/availability/AvailabilityCalendar.jsx` | DayInspectorPanel inlined at bottom — tap-a-day panel with Schedule-in-GCal |
 | `src/components/availability/MonthlyView.jsx` | Day-cell overlap count badges, tint intensity |
-| `src/pages/RoomView.jsx` | Guest-facing room. Live-subscribed to date_requests. |
 | `src/pages/ProductionView.jsx` | Owner project detail — sidebar nav pattern |
 | `src/pages/Inbox.jsx` | Demoted but still works. "Open room" + "Archive" actions. |
 | `src/contexts/AppContext.jsx` | `recentNotifications` merges messages + bookings; realtime subs |
@@ -181,4 +133,4 @@ If you forget `git read-tree HEAD` first, the commit will wipe every file not ex
 
 ---
 
-**When you're ready to continue, start by pulling, then tackle the change-time bug.**
+**When you're ready to continue, start by pulling, then check the backlog.**

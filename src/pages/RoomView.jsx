@@ -265,8 +265,10 @@ function GuestCalendarPanel({ slots, groupId, guestName: guestNameProp }) {
   )
 }
 
-function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots, projectBusinessHours, guestSlotSelection }) {
+function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots, projectBusinessHours, guestSlotSelection, ownerCalendarEvents, ownerConnectedCalendars }) {
   const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, guestCalendarEnabled, businessHours } = useApp()
+  const effectiveCalendarEvents = isOwner ? calendarEvents : ownerCalendarEvents
+  const effectiveConnectedCalendars = isOwner ? connectedCalendars : ownerConnectedCalendars
   const [dateRequests, setDateRequests] = useState([])
   const [sharedAvailability, setSharedAvailability] = useState([])
 
@@ -305,8 +307,8 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
       )}
       <AvailabilityCalendar
         slots={slots}
-        calendarEvents={calendarEvents}
-        connectedCalendars={connectedCalendars}
+        calendarEvents={effectiveCalendarEvents}
+        connectedCalendars={effectiveConnectedCalendars}
         availabilityRules={availabilityRules}
         prefixRules={prefixRules}
         isOwner={isOwner}
@@ -332,6 +334,8 @@ export function RoomView() {
   const [guestName, setGuestName] = useState(null)
   const [ownerLogo, setOwnerLogo] = useState(null)
   const [ownerLogoDark, setOwnerLogoDark] = useState(true)
+  const [ownerCalendarEvents, setOwnerCalendarEvents] = useState([])
+  const [ownerConnectedCalendars, setOwnerConnectedCalendars] = useState([])
 
   useEffect(() => {
     if (loading) return
@@ -376,9 +380,32 @@ export function RoomView() {
 
   useEffect(() => {
     if (!production?.ownerId) return
-    supabase.from('profiles').select('logo_url, logo_is_dark').eq('id', production.ownerId).single()
-      .then(({ data }) => { setOwnerLogo(data?.logo_url || null); setOwnerLogoDark(data?.logo_is_dark ?? true) })
-  }, [production?.ownerId])
+    supabase.from('profiles').select('logo_url, logo_is_dark, connected_calendars').eq('id', production.ownerId).single()
+      .then(({ data }) => {
+        setOwnerLogo(data?.logo_url || null)
+        setOwnerLogoDark(data?.logo_is_dark ?? true)
+        if (!isOwner && data?.connected_calendars?.length) {
+          setOwnerConnectedCalendars(data.connected_calendars)
+        }
+      })
+  }, [production?.ownerId, isOwner])
+
+  useEffect(() => {
+    if (!production?.ownerId || isOwner) return
+    supabase.from('owner_calendar_events').select('*').eq('owner_id', production.ownerId)
+      .then(({ data }) => {
+        if (data?.length) {
+          setOwnerCalendarEvents(data.map(e => ({
+            id: e.id,
+            calendarId: e.calendar_id,
+            title: e.title,
+            start: e.start,
+            end: e.end_at,
+            isAllDay: e.is_all_day,
+          })))
+        }
+      })
+  }, [production?.ownerId, isOwner])
 
   useEffect(() => {
     if (!resolved) return
@@ -493,6 +520,8 @@ export function RoomView() {
           slots={slots}
           projectBusinessHours={production?.availability_config?.businessHours}
           guestSlotSelection={production?.availability_config?.guestSlotSelection || false}
+          ownerCalendarEvents={ownerCalendarEvents}
+          ownerConnectedCalendars={ownerConnectedCalendars}
         />
       )}
 

@@ -528,10 +528,13 @@ export function BookingPageView() {
         </aside>
 
         {/* RIGHT — booking flow */}
-        <main className="flex items-center px-10 lg:px-16 py-12 lg:py-20">
-          <div className="w-full flex items-start justify-center gap-10 lg:gap-14">
+        <main className="flex items-center justify-center px-10 lg:px-16 py-12 lg:py-20">
+          {/* Cap the inner container so calendar + slots stay a tight pair
+              on wide monitors. Otherwise the slot column drifts to the
+              viewport edge on 1920px+ screens. */}
+          <div className="w-full max-w-[820px] flex items-start justify-center gap-8 lg:gap-12">
             {/* Calendar */}
-            <div className="w-full max-w-[420px] flex-shrink-0">
+            <div className="w-full max-w-[420px] min-w-0">
               <MonthCalendar
                 availableDays={page.available_days || [1, 2, 3, 4, 5]}
                 selectedDate={selectedDate}
@@ -548,7 +551,7 @@ export function BookingPageView() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.25, ease: IOS_EASE }}
-                  className="w-[280px] lg:w-[320px] flex-shrink-0"
+                  className="w-[260px] lg:w-[300px] flex-shrink-0"
                 >
                   {step === 'time' && (
                     <>

@@ -277,7 +277,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
 
 export function RoomView() {
   const { token } = useParams()
-  const { getProduction, getGroup, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours } = useApp()
+  const { getProduction, getGroup, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions } = useApp()
   const [activeTab, setActiveTab] = useState('Availability')
   const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)
@@ -398,6 +398,13 @@ export function RoomView() {
   const group = getGroup(productionId, groupId)
 
   if (!production || !group) {
+    // If productions state is empty, the Supabase fetch hasn't completed yet (or failed mid-load).
+    // Show a loading state instead of the misleading "room gone" message — the production may arrive
+    // a moment later once the query resolves. Previously this race caused valid rooms to flash
+    // "unavailable" on slow mobile networks.
+    if (productions.length === 0) {
+      return <div className="flex items-center justify-center h-screen text-zinc-500">Loading room...</div>
+    }
     return (
       <div className="flex items-center justify-center h-screen bg-surface-950 px-5">
         <div className="text-center max-w-sm">

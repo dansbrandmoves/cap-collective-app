@@ -575,11 +575,11 @@ export function AppProvider({ children }) {
 
     console.log('[Coordie] Loading data for:', ownerId || 'guest')
 
-    // Safety timeout — never stay stuck on loading
+    // Safety timeout — never stay stuck on loading. Generous on mobile networks.
     const loadTimeout = setTimeout(() => {
       console.warn('[Coordie] Data load timed out — proceeding with empty state')
       setLoading(false)
-    }, 6000)
+    }, 12000)
 
     // Fetch everything in parallel (productions + booking pages)
     const dataPromise = fetchAll(ownerId)

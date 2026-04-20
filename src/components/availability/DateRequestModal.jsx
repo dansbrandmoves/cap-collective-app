@@ -4,18 +4,24 @@ import { Modal } from '../ui/Modal'
 import { CheckCircle2 } from 'lucide-react'
 
 export function DateRequestModal({ isOpen, onClose, selectedDates, selectedSlotMap, guestName, onSubmit }) {
-  const [name, setName] = useState(guestName || '')
+  // typedName is only used when the guest has to enter their name (open_link guest on a fresh device)
+  // When guestName prop is provided (room already identifies the guest), we skip the input and use the prop directly.
+  // Deriving `finalName` this way avoids a classic prop-to-state sync bug where guestName arrives
+  // after mount and the button stays disabled because local state was initialized empty.
+  const [typedName, setTypedName] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
+  const finalName = (guestName || typedName).trim()
+
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!name.trim() || selectedDates.length === 0) return
+    if (!finalName || selectedDates.length === 0) return
     setSubmitting(true)
     const success = await onSubmit({
-      requesterName: name.trim(),
+      requesterName: finalName,
       requesterEmail: email.trim(),
       dates: selectedDates,
       message: message.trim(),
@@ -72,7 +78,7 @@ export function DateRequestModal({ isOpen, onClose, selectedDates, selectedSlotM
           <div>
             <label className="block text-xs font-medium text-zinc-500 mb-1.5">Your Name</label>
             <input
-              type="text" value={name} onChange={e => setName(e.target.value)}
+              type="text" value={typedName} onChange={e => setTypedName(e.target.value)}
               placeholder="Your name" autoFocus
               className="w-full bg-surface-800 border border-surface-700 rounded-lg px-3.5 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-accent"
             />
@@ -102,7 +108,7 @@ export function DateRequestModal({ isOpen, onClose, selectedDates, selectedSlotM
 
         <div className="flex justify-end gap-3 pt-1">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={!name.trim() || submitting}>
+          <Button type="submit" disabled={!finalName || submitting}>
             {submitting ? 'Sending...' : 'Send Request'}
           </Button>
         </div>

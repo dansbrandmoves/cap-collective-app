@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useApp } from '../contexts/AppContext'
 import { CalendarDays, Users, Link2, CheckCircle2, ArrowRight, Inbox, LayoutGrid, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -158,7 +158,22 @@ function HeroBookingMockup() {
   const selectedSlotIdx = persona.selectedIdx
   const pickedDay = persona.day
 
+  // Pause animation when scrolled out of view (prevents mobile layout jumps)
+  const cardRef = useRef(null)
+  const [inView, setInView] = useState(true)
   useEffect(() => {
+    const el = cardRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const obs = new IntersectionObserver(
+      entries => setInView(entries[0].isIntersecting),
+      { threshold: 0.25 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!inView) return
     const t = setTimeout(() => {
       const next = (phaseIdx + 1) % PHASES.length
       setPhaseIdx(next)
@@ -171,7 +186,7 @@ function HeroBookingMockup() {
       }
     }, PHASES[phaseIdx].duration)
     return () => clearTimeout(t)
-  }, [phaseIdx])
+  }, [phaseIdx, inView])
 
   // Derived state
   const isDateSelected = phaseIdx >= 2         // after click-date
@@ -203,7 +218,7 @@ function HeroBookingMockup() {
       <div className="absolute -inset-8 sm:-inset-16 pointer-events-none opacity-60"
         style={{ background: 'radial-gradient(ellipse at center, rgb(139 92 246 / 0.16), transparent 70%)' }} />
 
-      <div className="relative bg-surface-900 border border-white/[0.08] rounded-3xl shadow-[0_24px_80px_-24px_rgba(0,0,0,0.6)] overflow-hidden">
+      <div ref={cardRef} className="relative bg-surface-900 border border-white/[0.08] rounded-3xl shadow-[0_24px_80px_-24px_rgba(0,0,0,0.6)] overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-[1.15fr_1fr]">
 
           {/* LEFT — month calendar */}

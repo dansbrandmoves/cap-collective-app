@@ -67,47 +67,101 @@ function MockupCursor() {
   )
 }
 
+// Phase sequence: fully-scripted booking flow demo
+// idle → click-date → click-connect → click-slot → form → type → submit → success → loop
+const PHASES = [
+  { name: 'idle',              duration: 1400 },
+  { name: 'cursor-to-date',    duration: 1200 },
+  { name: 'click-date',        duration: 700  },
+  { name: 'cursor-to-connect', duration: 1100 },
+  { name: 'click-connect',     duration: 700  },
+  { name: 'cursor-to-slot',    duration: 1300 },
+  { name: 'click-slot',        duration: 700  },
+  { name: 'form-entering',     duration: 700  },
+  { name: 'cursor-to-name',    duration: 800  },
+  { name: 'typing-name',       duration: 1800 },
+  { name: 'cursor-to-submit',  duration: 900  },
+  { name: 'click-submit',      duration: 700  },
+  { name: 'success',           duration: 2400 },
+]
+
+const GUEST_NAME = 'Sarah Chen'
+const SELECTED_SLOT_IDX = 4 // "11:00 AM"
+
 function HeroBookingMockup() {
-  // step 0 = not connected (cursor on Connect button)
-  // step 1..N = connected, cursor on free slot (step-1)
-  const TOTAL_STEPS = HERO_FREE_INDICES.length + 1
-  const [step, setStep] = useState(0)
+  const [phaseIdx, setPhaseIdx] = useState(0)
+  const phase = PHASES[phaseIdx].name
 
   useEffect(() => {
-    const delay = step === 0 ? 2400 : 1600
-    const t = setTimeout(() => setStep(s => (s + 1) % TOTAL_STEPS), delay)
+    const t = setTimeout(() => setPhaseIdx(i => (i + 1) % PHASES.length), PHASES[phaseIdx].duration)
     return () => clearTimeout(t)
-  }, [step, TOTAL_STEPS])
+  }, [phaseIdx])
 
-  const isConnected = step > 0
-  const selected = isConnected ? HERO_FREE_INDICES[step - 1] : null
+  // Derived state
+  const isDateSelected = phaseIdx >= 2         // after click-date
+  const isConnected    = phaseIdx >= 4         // after click-connect
+  const isSlotSelected = phaseIdx >= 6         // after click-slot
+  const showForm       = phaseIdx >= 7 && phaseIdx <= 11
+  const showSuccess    = phaseIdx >= 12
+  const isClicking     = phase.startsWith('click-')
 
-  // Track cursor position relative to the right column
-  const rightColRef = useRef(null)
-  const slotElRefs = useRef([])
+  // Typing animation: characters appear progressively during the 'typing-name' phase
+  const [typedChars, setTypedChars] = useState(0)
+  useEffect(() => {
+    if (phase !== 'typing-name') {
+      setTypedChars(showForm && phaseIdx > 9 ? GUEST_NAME.length : 0)
+      return
+    }
+    setTypedChars(0)
+    const start = Date.now()
+    const tick = setInterval(() => {
+      const chars = Math.min(GUEST_NAME.length, Math.floor((Date.now() - start) / 150))
+      setTypedChars(chars)
+      if (chars >= GUEST_NAME.length) clearInterval(tick)
+    }, 70)
+    return () => clearInterval(tick)
+  }, [phase, phaseIdx, showForm])
+
+  // Refs for cursor targets
+  const containerRef = useRef(null)
+  const dateCellRef = useRef(null)
   const connectBtnRef = useRef(null)
-  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 })
+  const slotRefs = useRef([])
+  const nameInputRef = useRef(null)
+  const submitBtnRef = useRef(null)
+
+  const [cursor, setCursor] = useState({ x: 0, y: 0, visible: false })
 
   useEffect(() => {
-    const target = isConnected ? slotElRefs.current[selected] : connectBtnRef.current
-    const container = rightColRef.current
+    let target = null
+    if (phase === 'cursor-to-date' || phase === 'click-date')          target = dateCellRef.current
+    else if (phase === 'cursor-to-connect' || phase === 'click-connect')target = connectBtnRef.current
+    else if (phase === 'cursor-to-slot' || phase === 'click-slot')     target = slotRefs.current[SELECTED_SLOT_IDX]
+    else if (phase === 'form-entering')                                 target = slotRefs.current[SELECTED_SLOT_IDX]
+    else if (phase === 'cursor-to-name' || phase === 'typing-name')    target = nameInputRef.current
+    else if (phase === 'cursor-to-submit' || phase === 'click-submit') target = submitBtnRef.current
+
+    const container = containerRef.current
     if (target && container) {
-      const tRect = target.getBoundingClientRect()
-      const cRect = container.getBoundingClientRect()
-      setCursorPos({
-        x: tRect.left - cRect.left + 28,
-        y: tRect.top - cRect.top + tRect.height / 2 - 6,
+      const t = target.getBoundingClientRect()
+      const c = container.getBoundingClientRect()
+      setCursor({
+        x: t.left - c.left + Math.min(24, t.width / 2),
+        y: t.top - c.top + t.height / 2 - 4,
+        visible: true,
       })
+    } else {
+      setCursor(c => ({ ...c, visible: false }))
     }
-  }, [step, selected, isConnected])
+  }, [phase, phaseIdx, isConnected, showForm, showSuccess])
 
   return (
     <div className="relative">
       {/* Ambient purple glow behind the card */}
       <div className="absolute -inset-8 sm:-inset-16 pointer-events-none opacity-60"
-        style={{ background: 'radial-gradient(ellipse at center, rgb(139 92 246 / 0.18), transparent 70%)' }} />
+        style={{ background: 'radial-gradient(ellipse at center, rgb(139 92 246 / 0.16), transparent 70%)' }} />
 
-      <div className="relative bg-surface-900 border border-white/[0.08] rounded-3xl shadow-[0_24px_80px_-24px_rgba(0,0,0,0.6)] overflow-hidden">
+      <div ref={containerRef} className="relative bg-surface-900 border border-white/[0.08] rounded-3xl shadow-[0_24px_80px_-24px_rgba(0,0,0,0.6)] overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-[1.15fr_1fr]">
 
           {/* LEFT — month calendar */}
@@ -128,15 +182,22 @@ function HeroBookingMockup() {
               {Array.from({ length: 35 }, (_, i) => {
                 const day = i - 2
                 const inMonth = day >= 1 && day <= 30
-                const isSelected = day === 17
+                const isThisDate = day === 17
+                const isSelected = isThisDate && isDateSelected
                 const isToday = day === 12
-                // Days the guest has free time (sample: weekdays not heavily booked)
-                const hasFree = inMonth && [2,3,8,9,10,15,16,17,21,22,23,24,28,29,30].includes(day)
+                const hasFree = inMonth && isConnected && [2,3,8,9,10,15,16,17,21,22,23,24,28,29,30].includes(day)
+                const isClickFlash = isThisDate && phase === 'click-date'
+
                 return (
-                  <div key={i} className={`relative aspect-square flex items-center justify-center text-[12px] rounded-full font-medium transition-colors
-                    ${!inMonth ? 'text-transparent' :
-                      isSelected ? 'bg-accent text-white shadow-[0_4px_16px_-4px_rgb(139_92_246/0.5)]' :
-                      'text-zinc-200'}`}>
+                  <div
+                    key={i}
+                    ref={isThisDate ? dateCellRef : null}
+                    className={`relative aspect-square flex items-center justify-center text-[12px] rounded-full font-medium transition-all duration-300 ease-ios
+                      ${!inMonth ? 'text-transparent' :
+                        isSelected ? 'bg-accent text-white shadow-[0_3px_10px_-3px_rgb(139_92_246/0.35)]' :
+                        isClickFlash ? 'bg-accent/20 text-zinc-50' :
+                        'text-zinc-200'}`}
+                  >
                     {inMonth && <span>{day}</span>}
                     {isToday && !isSelected && (
                       <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent" />
@@ -150,61 +211,121 @@ function HeroBookingMockup() {
             </div>
           </div>
 
-          {/* RIGHT — time slots with personal calendar overlay */}
-          <div ref={rightColRef} className="relative px-6 sm:px-8 py-7 sm:py-9 flex flex-col">
+          {/* RIGHT — dynamic content by phase */}
+          <div className="relative px-6 sm:px-8 py-7 sm:py-9 flex flex-col min-h-[400px]">
             <div className="mb-4">
               <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Friday</p>
               <p className="text-2xl font-semibold text-zinc-100 tracking-tight leading-none mt-0.5">17</p>
             </div>
 
-            {/* Pre/post-connect swap — fixed-height row so layout doesn't shift */}
-            <div className="h-7 mb-4 flex items-center">
-              {!isConnected ? (
-                <button
-                  ref={connectBtnRef}
-                  className="inline-flex items-center gap-1.5 text-[10px] font-medium text-zinc-200 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-full px-3 py-1.5 transition-colors"
-                >
-                  <CalendarDays size={10} strokeWidth={2} />
-                  Connect Calendar
-                </button>
-              ) : (
-                <div className="inline-flex items-center gap-1.5 text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-2.5 py-1 animate-fadeIn">
-                  <CheckCircle2 size={10} strokeWidth={2.25} />
-                  Your calendar connected
+            {/* Slot list view (phases 0-7) */}
+            {!showForm && !showSuccess && (
+              <>
+                <div className="h-7 mb-4 flex items-center">
+                  {!isConnected ? (
+                    <button
+                      ref={connectBtnRef}
+                      className={`inline-flex items-center gap-1.5 text-[10px] font-medium text-zinc-200 border border-white/10 rounded-full px-3 py-1.5 transition-all
+                        ${phase === 'click-connect' ? 'bg-accent/25 border-accent/50' : 'bg-white/[0.04]'}`}
+                    >
+                      <CalendarDays size={10} strokeWidth={2} />
+                      Connect Calendar
+                    </button>
+                  ) : (
+                    <div className="inline-flex items-center gap-1.5 text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-2.5 py-1 animate-fadeIn">
+                      <CheckCircle2 size={10} strokeWidth={2.25} />
+                      Your calendar connected
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="space-y-1.5 flex-1">
-              {HERO_SLOTS.map((slot, i) => {
-                const isSelected = isConnected && i === selected
-                const showBusy = isConnected && slot.busy
-                return (
-                  <div key={slot.time}
-                    ref={el => { slotElRefs.current[i] = el }}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-300 ease-ios ${
-                      isSelected
-                        ? 'bg-accent text-white shadow-[0_8px_24px_-8px_rgb(139_92_246/0.5)]'
-                        : showBusy
-                        ? 'border border-white/[0.04] text-zinc-600'
-                        : 'border border-white/10 text-zinc-200'
-                    }`}>
-                    <span>{slot.time}</span>
-                    {showBusy && !isSelected && (
-                      <span className="flex items-center gap-1 text-[9px] text-zinc-700">
-                        <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                        busy
-                      </span>
-                    )}
+                <div className="space-y-1.5 flex-1">
+                  {HERO_SLOTS.map((slot, i) => {
+                    const isThisSlotSelected = i === SELECTED_SLOT_IDX && isSlotSelected
+                    const isClickFlash = i === SELECTED_SLOT_IDX && phase === 'click-slot' && !isThisSlotSelected
+                    const showBusy = isConnected && slot.busy
+                    return (
+                      <div key={slot.time}
+                        ref={el => { slotRefs.current[i] = el }}
+                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-300 ease-ios ${
+                          isThisSlotSelected
+                            ? 'bg-accent text-white shadow-[0_3px_10px_-3px_rgb(139_92_246/0.3)]'
+                            : isClickFlash
+                            ? 'bg-accent/15 border border-accent/40 text-zinc-100'
+                            : showBusy
+                            ? 'border border-white/[0.04] text-zinc-600'
+                            : 'border border-white/10 text-zinc-200'
+                        }`}>
+                        <span>{slot.time}</span>
+                        {showBusy && !isThisSlotSelected && !isClickFlash && (
+                          <span className="flex items-center gap-1 text-[9px] text-zinc-700">
+                            <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                            busy
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Form view (phases 7-11) */}
+            {showForm && !showSuccess && (
+              <div className="flex-1 flex flex-col animate-fadeIn">
+                <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 mb-5">
+                  <div className="w-2 h-2 rounded-full bg-accent" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-semibold text-zinc-100">11:00 AM</p>
+                    <p className="text-[10px] text-zinc-500">30 minutes · Friday, April 17</p>
                   </div>
-                )
-              })}
-            </div>
+                </div>
 
-            {/* Animated cursor — flies to Connect button, then between free slots */}
+                <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-1.5">Your name</p>
+                <div
+                  ref={nameInputRef}
+                  className={`w-full flex items-center bg-white/[0.03] border rounded-lg px-3 py-2.5 text-[13px] text-zinc-100 transition-all
+                    ${phase === 'cursor-to-name' || phase === 'typing-name' ? 'border-accent/50 shadow-[0_0_0_2px_rgba(139,92,246,0.12)]' : 'border-white/10'}`}
+                >
+                  <span>{GUEST_NAME.slice(0, typedChars)}</span>
+                  {phase === 'typing-name' && typedChars < GUEST_NAME.length && (
+                    <span className="inline-block w-px h-4 bg-zinc-300 ml-0.5 animate-pulse" />
+                  )}
+                  {typedChars === 0 && phase !== 'typing-name' && (
+                    <span className="text-zinc-600">Your name</span>
+                  )}
+                </div>
+
+                <div className="flex-1" />
+
+                <button
+                  ref={submitBtnRef}
+                  className={`w-full mt-5 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[13px] font-semibold transition-all
+                    ${phase === 'click-submit'
+                      ? 'bg-accent text-white shadow-[0_3px_10px_-3px_rgb(139_92_246/0.35)] scale-[0.99]'
+                      : 'bg-accent text-white'}`}
+                >
+                  Book it
+                  <ArrowRight size={12} strokeWidth={2.25} />
+                </button>
+              </div>
+            )}
+
+            {/* Success view (phase 12) */}
+            {showSuccess && (
+              <div className="flex-1 flex flex-col items-center justify-center text-center animate-fadeIn">
+                <div className="w-12 h-12 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center mb-4">
+                  <CheckCircle2 size={22} strokeWidth={2} className="text-green-400" />
+                </div>
+                <p className="text-[18px] font-semibold text-zinc-50 tracking-tight mb-1">You're booked</p>
+                <p className="text-[12px] text-zinc-500">{GUEST_NAME} · Fri Apr 17, 11:00 AM</p>
+              </div>
+            )}
+
+            {/* Animated cursor */}
             <div
-              className="absolute pointer-events-none z-10 transition-transform duration-700 ease-ios"
-              style={{ transform: `translate(${cursorPos.x}px, ${cursorPos.y}px)` }}
+              className={`absolute pointer-events-none z-10 transition-all duration-700 ease-ios ${cursor.visible ? 'opacity-100' : 'opacity-0'}`}
+              style={{ transform: `translate(${cursor.x}px, ${cursor.y}px) scale(${isClicking ? 0.82 : 1})` }}
             >
               <MockupCursor />
             </div>

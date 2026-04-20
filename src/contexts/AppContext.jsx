@@ -145,6 +145,7 @@ export function AppProvider({ children }) {
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [plan, setPlan] = useState('free') // 'free' | 'pro'
+  const [role, setRole] = useState('user') // 'user' | 'admin'
   const [logoUrl, setLogoUrl] = useState(null)
   const [logoIsDark, setLogoIsDark] = useState(true)
 
@@ -155,9 +156,10 @@ export function AppProvider({ children }) {
   const [profileLoaded, setProfileLoaded] = useState(false)
 
   async function fetchPlan(userId) {
-    if (!userId) { setPlan('free'); setLogoUrl(null); setProfileLoaded(true); return }
-    const { data } = await supabase.from('profiles').select('plan, logo_url, logo_is_dark, connected_calendars, google_refresh_token, settings').eq('id', userId).single()
+    if (!userId) { setPlan('free'); setRole('user'); setLogoUrl(null); setProfileLoaded(true); return }
+    const { data } = await supabase.from('profiles').select('plan, role, logo_url, logo_is_dark, connected_calendars, google_refresh_token, settings').eq('id', userId).single()
     setPlan(data?.plan ?? 'free')
+    setRole(data?.role ?? 'user')
     setLogoUrl(data?.logo_url ?? null)
     setLogoIsDark(data?.logo_is_dark ?? true)
     // Restore settings from Supabase (cross-device sync)
@@ -280,8 +282,11 @@ export function AppProvider({ children }) {
   const signOut = useCallback(() => {
     setUser(null) // clear immediately so UI redirects right away
     setPlan('free')
+    setRole('user')
     supabase.auth.signOut().catch(err => console.error('signOut error:', err))
   }, [])
+
+  const isAdmin = role === 'admin'
 
   // Supabase-backed
   const [productions, setProductions] = useState([])
@@ -1155,6 +1160,8 @@ export function AppProvider({ children }) {
       // Plan
       plan, isProPlan, canAddProject, canAddRoom, canAddBookingPage,
       FREE_PROJECT_LIMIT, FREE_ROOM_LIMIT, FREE_BOOKING_PAGE_LIMIT,
+      // Role
+      role, isAdmin,
       // State
       productions, slots, effectiveSlots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, setGoogleAccessToken,

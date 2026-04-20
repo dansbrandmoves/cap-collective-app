@@ -14,6 +14,7 @@ import { TermsPage } from './pages/TermsPage'
 import { BillingPage } from './pages/BillingPage'
 import { BookingPages } from './pages/BookingPages'
 import { BookingPageView } from './pages/BookingPageView'
+import { AdminDashboard } from './pages/AdminDashboard'
 import { PageLoader } from './components/ui/PageLoader'
 
 function LoadingScreen() {
@@ -63,6 +64,7 @@ function AppRoutes() {
         <Route path="/calendars" element={<CalendarSettings />} />
         <Route path="/booking-pages" element={<BookingPages />} />
         <Route path="/billing" element={<BillingPage />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

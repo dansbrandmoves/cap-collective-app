@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
-import { LayoutGrid, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditCard } from 'lucide-react'
+import { LayoutGrid, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditCard, Shield } from 'lucide-react'
 
 // Nav order follows the vision: coordinate (Projects) → share (Booking) →
 // see your time (Availability) → configure (Settings). Inbox is intentionally
@@ -14,7 +14,7 @@ const NAV = [
 ]
 
 export function Sidebar({ mobileOpen = false, onMobileClose }) {
-  const { productions, user, signOut, theme, isProPlan } = useApp()
+  const { productions, user, signOut, theme, isProPlan, isAdmin } = useApp()
 
   return (
     <>
@@ -107,6 +107,21 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
               >
                 <CreditCard size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
                 <span>Billing</span>
+              </NavLink>
+            )}
+
+            {isAdmin && (
+              <NavLink
+                to="/admin"
+                onClick={onMobileClose}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    isActive ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-zinc-400 hover:text-amber-400 hover:bg-amber-500/5 border border-transparent'
+                  }`
+                }
+              >
+                <Shield size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
+                <span>Admin</span>
               </NavLink>
             )}
 

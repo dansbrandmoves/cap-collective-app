@@ -446,6 +446,7 @@ function RoomCalendarPanel({ production, room, pendingCount, onShare }) {
           availabilityRules={availabilityRules}
           prefixRules={prefixRules}
           isOwner={true}
+          roomId={room.id}
           slotStates={slotStates}
           dateRequests={visibleDateRequests}
           sharedAvailability={sharedAvailability}

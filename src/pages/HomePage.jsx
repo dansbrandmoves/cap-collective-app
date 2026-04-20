@@ -76,15 +76,39 @@ const PHASES = [
   { name: 'success',           duration: 2400 },
 ]
 
-const GUEST_NAME = 'Sarah Chen'
+// Rotates each loop so no one identifier becomes the face of Coordie
+const GUEST_NAMES = [
+  'Sarah Chen',
+  'Amara Okafor',
+  'Diego Rivera',
+  'Priya Patel',
+  'Zainab Ali',
+  'Leo Martinez',
+  'Mei Tanaka',
+  'Noah Kim',
+]
 const SELECTED_SLOT_IDX = 4 // "11:00 AM"
 
 function HeroBookingMockup() {
   const [phaseIdx, setPhaseIdx] = useState(0)
   const phase = PHASES[phaseIdx].name
 
+  // Random guest name each cycle — initial pick is random too, never repeats immediately
+  const [nameIdx, setNameIdx] = useState(() => Math.floor(Math.random() * GUEST_NAMES.length))
+  const guestName = GUEST_NAMES[nameIdx]
+
   useEffect(() => {
-    const t = setTimeout(() => setPhaseIdx(i => (i + 1) % PHASES.length), PHASES[phaseIdx].duration)
+    const t = setTimeout(() => {
+      const next = (phaseIdx + 1) % PHASES.length
+      setPhaseIdx(next)
+      if (next === 0) {
+        setNameIdx(prev => {
+          let pick = Math.floor(Math.random() * GUEST_NAMES.length)
+          if (pick === prev) pick = (pick + 1) % GUEST_NAMES.length
+          return pick
+        })
+      }
+    }, PHASES[phaseIdx].duration)
     return () => clearTimeout(t)
   }, [phaseIdx])
 
@@ -99,15 +123,15 @@ function HeroBookingMockup() {
   const [typedChars, setTypedChars] = useState(0)
   useEffect(() => {
     if (phase !== 'typing-name') {
-      setTypedChars(showForm && phaseIdx > 9 ? GUEST_NAME.length : 0)
+      setTypedChars(showForm && phaseIdx > 9 ? guestName.length : 0)
       return
     }
     setTypedChars(0)
     const start = Date.now()
     const tick = setInterval(() => {
-      const chars = Math.min(GUEST_NAME.length, Math.floor((Date.now() - start) / 150))
+      const chars = Math.min(guestName.length, Math.floor((Date.now() - start) / 150))
       setTypedChars(chars)
-      if (chars >= GUEST_NAME.length) clearInterval(tick)
+      if (chars >= guestName.length) clearInterval(tick)
     }, 70)
     return () => clearInterval(tick)
   }, [phase, phaseIdx, showForm])
@@ -240,8 +264,8 @@ function HeroBookingMockup() {
                   className={`w-full flex items-center bg-white/[0.03] border rounded-lg px-3 py-2.5 text-[13px] text-zinc-100 transition-all
                     ${phase === 'cursor-to-name' || phase === 'typing-name' ? 'border-accent/50 shadow-[0_0_0_2px_rgba(139,92,246,0.12)]' : 'border-white/10'}`}
                 >
-                  <span>{GUEST_NAME.slice(0, typedChars)}</span>
-                  {phase === 'typing-name' && typedChars < GUEST_NAME.length && (
+                  <span>{guestName.slice(0, typedChars)}</span>
+                  {phase === 'typing-name' && typedChars < guestName.length && (
                     <span className="inline-block w-px h-4 bg-zinc-300 ml-0.5 animate-pulse" />
                   )}
                   {typedChars === 0 && phase !== 'typing-name' && (
@@ -270,7 +294,7 @@ function HeroBookingMockup() {
                   <CheckCircle2 size={22} strokeWidth={2} className="text-green-400" />
                 </div>
                 <p className="text-[18px] font-semibold text-zinc-50 tracking-tight mb-1">You're booked</p>
-                <p className="text-[12px] text-zinc-500">{GUEST_NAME} · Fri Apr 17, 11:00 AM</p>
+                <p className="text-[12px] text-zinc-500">{guestName} · Fri Apr 17, 11:00 AM</p>
               </div>
             )}
 

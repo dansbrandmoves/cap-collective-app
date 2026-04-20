@@ -14,13 +14,13 @@ export function Inbox() {
   const [filter, setFilter] = useState('active')
 
   useEffect(() => {
-    const allGroupIds = productions.flatMap(p => p.groups.map(g => g.id))
-    if (!allGroupIds.length) { setLoading(false); return }
+    const allRoomIds = productions.flatMap(p => p.rooms.map(r => r.id))
+    if (!allRoomIds.length) { setLoading(false); return }
 
     const query = supabase
       .from('date_requests')
       .select('*')
-      .in('group_id', allGroupIds)
+      .in('room_id', allRoomIds)
       .order('created_at', { ascending: false })
 
     if (filter === 'active') query.neq('status', 'archived')
@@ -32,14 +32,14 @@ export function Inbox() {
     })
   }, [productions, filter])
 
-  const groupToProduction = {}
-  const groupNames = {}
-  const groupTokens = {}
+  const roomToProduction = {}
+  const roomNames = {}
+  const roomTokens = {}
   productions.forEach(p => {
-    p.groups.forEach(g => {
-      groupToProduction[g.id] = p
-      groupNames[g.id] = g.name
-      groupTokens[g.id] = g.openToken
+    p.rooms.forEach(r => {
+      roomToProduction[r.id] = p
+      roomNames[r.id] = r.name
+      roomTokens[r.id] = r.openToken
     })
   })
 
@@ -56,8 +56,8 @@ export function Inbox() {
   }
 
   function handleOpenRoom(req) {
-    const token = groupTokens[req.group_id]
-    const prod = groupToProduction[req.group_id]
+    const token = roomTokens[req.room_id]
+    const prod = roomToProduction[req.room_id]
     if (token) navigate(`/room/${token}`)
     else if (prod) navigate(`/project/${prod.id}`)
   }
@@ -118,8 +118,8 @@ export function Inbox() {
       ) : (
         <div className="space-y-3">
           {requests.map(req => {
-            const prod = groupToProduction[req.group_id]
-            const groupName = groupNames[req.group_id]
+            const prod = roomToProduction[req.room_id]
+            const roomName = roomNames[req.room_id]
             const dates = formatDates(req.dates)
             const isArchived = req.status === 'archived'
 
@@ -138,7 +138,7 @@ export function Inbox() {
                         onClick={() => navigate(`/project/${prod.id}`)}
                         className="text-[12px] text-zinc-500 hover:text-zinc-200 transition-colors"
                       >
-                        {prod.name} &middot; {groupName}
+                        {prod.name} &middot; {roomName}
                       </button>
                     )}
                   </div>

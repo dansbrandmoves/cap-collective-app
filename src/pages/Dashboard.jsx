@@ -66,7 +66,7 @@ function ProjectCard({ production }) {
         )}
         <div className="flex items-center gap-1.5 text-[13px] text-zinc-400">
           <Users size={13} strokeWidth={1.75} className="text-zinc-500" />
-          {production.groups.length} group{production.groups.length !== 1 ? 's' : ''}
+          {production.rooms.length} room{production.rooms.length !== 1 ? 's' : ''}
         </div>
       </div>
     </div>

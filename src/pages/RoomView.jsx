@@ -51,16 +51,16 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
   )
 }
 
-function NotesTab({ productionId, group, guestName }) {
+function NotesTab({ productionId, room, guestName }) {
   const { updateSharedNotes } = useApp()
-  const [value, setValue] = useState(group.room.sharedNotes)
+  const [value, setValue] = useState(room.room.sharedNotes)
   const [saved, setSaved] = useState(true)
   const timerRef = useRef(null)
   const pendingRef = useRef(false)
 
   useEffect(() => {
-    if (!pendingRef.current) setValue(group.room.sharedNotes)
-  }, [group.room.sharedNotes])
+    if (!pendingRef.current) setValue(room.room.sharedNotes)
+  }, [room.room.sharedNotes])
 
   function handleChange(e) {
     setValue(e.target.value)
@@ -68,7 +68,7 @@ function NotesTab({ productionId, group, guestName }) {
     pendingRef.current = true
     clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
-      updateSharedNotes(productionId, group.id, e.target.value)
+      updateSharedNotes(productionId, room.id, e.target.value)
       setSaved(true)
       pendingRef.current = false
     }, 800)
@@ -195,7 +195,7 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
   )
 }
 
-function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots, projectBusinessHours, guestSlotSelection, ownerCalendarEvents, ownerConnectedCalendars, ownerId, guestCalendarEnabled }) {
+function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots, projectBusinessHours, guestSlotSelection, ownerCalendarEvents, ownerConnectedCalendars, ownerId, guestCalendarEnabled }) {
   const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, businessHours } = useApp()
   const effectiveCalendarEvents = isOwner ? calendarEvents : ownerCalendarEvents
   const effectiveConnectedCalendars = isOwner ? connectedCalendars : ownerConnectedCalendars
@@ -215,28 +215,26 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
     try { sessionStorage.removeItem('coordie-gcal') } catch (e) { /* */ }
   }
 
-  // Fetch overlap data so the calendar can show who's free at a glance
   useEffect(() => {
-    if (!groupId) return
-    supabase.from('date_requests').select('*').eq('group_id', groupId)
+    if (!roomId) return
+    supabase.from('date_requests').select('*').eq('room_id', roomId)
       .then(({ data }) => setDateRequests(data || []))
-    supabase.from('shared_availability').select('*').eq('group_id', groupId)
+    supabase.from('shared_availability').select('*').eq('room_id', roomId)
       .then(({ data }) => setSharedAvailability(data || []))
 
-    // Live updates when guests share new availability
     const channel = supabase
-      .channel(`room-overlap-${groupId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'date_requests', filter: `group_id=eq.${groupId}` }, () => {
-        supabase.from('date_requests').select('*').eq('group_id', groupId)
+      .channel(`room-overlap-${roomId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'date_requests', filter: `room_id=eq.${roomId}` }, () => {
+        supabase.from('date_requests').select('*').eq('room_id', roomId)
           .then(({ data }) => setDateRequests(data || []))
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_availability', filter: `group_id=eq.${groupId}` }, () => {
-        supabase.from('shared_availability').select('*').eq('group_id', groupId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_availability', filter: `room_id=eq.${roomId}` }, () => {
+        supabase.from('shared_availability').select('*').eq('room_id', roomId)
           .then(({ data }) => setSharedAvailability(data || []))
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [groupId])
+  }, [roomId])
 
   return (
     <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
@@ -264,9 +262,9 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
         slotStates={slotStates}
         businessHours={projectBusinessHours || businessHours}
         guestSlotSelection={guestSlotSelection}
-        groupId={groupId}
+        roomId={roomId}
         guestName={guestName}
-        onRequestSubmit={(gId, data) => createDateRequest(gId, { ...data, ownerId })}
+        onRequestSubmit={(rId, data) => createDateRequest(rId, { ...data, ownerId })}
         dateRequests={dateRequests}
         sharedAvailability={sharedAvailability}
         guestEvents={guestEvents}
@@ -277,7 +275,7 @@ function AvailabilityTab({ isOwner, availabilityRules, groupId, guestName, slots
 
 export function RoomView() {
   const { token } = useParams()
-  const { getProduction, getGroup, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions } = useApp()
+  const { getProduction, getRoom, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions } = useApp()
   const [activeTab, setActiveTab] = useState('Availability')
   const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)
@@ -372,11 +370,11 @@ export function RoomView() {
 
   useEffect(() => {
     if (!resolved) return
-    const { productionId, groupId } = resolved
+    const { productionId, roomId } = resolved
     const channel = supabase
-      .channel(`room-${groupId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_notes', filter: `group_id=eq.${groupId}` },
-        () => refreshRoom(productionId, groupId))
+      .channel(`room-${roomId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_notes', filter: `room_id=eq.${roomId}` },
+        () => refreshRoom(productionId, roomId))
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [resolved, refreshRoom])
@@ -394,10 +392,10 @@ export function RoomView() {
     )
   }
 
-  const { productionId, groupId, mode } = resolved
-  const group = getGroup(productionId, groupId)
+  const { productionId, roomId, mode } = resolved
+  const room = getRoom(productionId, roomId)
 
-  if (!production || !group) {
+  if (!production || !room) {
     // If productions state is empty, the Supabase fetch hasn't completed yet (or failed mid-load).
     // Show a loading state instead of the misleading "room gone" message — the production may arrive
     // a moment later once the query resolves. Previously this race caused valid rooms to flash
@@ -442,7 +440,7 @@ export function RoomView() {
           )}
           <div className="h-4 w-px bg-white/10 flex-shrink-0" />
           <div className="min-w-0">
-            <span className="text-[15px] font-semibold text-zinc-100 truncate tracking-tight">{group.name}</span>
+            <span className="text-[15px] font-semibold text-zinc-100 truncate tracking-tight">{room.name}</span>
             <span className="text-zinc-600 mx-1.5 text-sm hidden sm:inline">·</span>
             <span className="text-[13px] text-zinc-500 hidden sm:inline truncate">{production.name}</span>
           </div>
@@ -468,13 +466,13 @@ export function RoomView() {
       </div>
 
       {activeTab === 'Notes' && (
-        <NotesTab productionId={productionId} group={group} guestName={guestName} />
+        <NotesTab productionId={productionId} room={room} guestName={guestName} />
       )}
       {activeTab === 'Availability' && (
         <AvailabilityTab
           isOwner={isOwner}
           availabilityRules={availabilityRules}
-          groupId={groupId}
+          roomId={roomId}
           guestName={guestName}
           slots={slots}
           projectBusinessHours={production?.availability_config?.businessHours}

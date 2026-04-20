@@ -58,7 +58,7 @@ function saveToStorage(data) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)) } catch { /* full */ }
 }
 
-function buildProductions(prods, grps, notes, msgs) {
+function buildProductions(prods, rms, notes, msgs) {
   return (prods || []).map(p => ({
     id: p.id,
     name: p.name,
@@ -69,20 +69,20 @@ function buildProductions(prods, grps, notes, msgs) {
     ownerId: p.owner_id,
     availability_config: p.availability_config || null,
     createdAt: p.created_at,
-    groups: (grps || [])
-      .filter(g => g.production_id === p.id)
-      .map(g => ({
-        id: g.id,
-        productionId: g.production_id,
-        name: g.name,
-        accessMode: g.access_mode || 'open_link',
-        openToken: g.open_token || null,
+    rooms: (rms || [])
+      .filter(r => r.production_id === p.id)
+      .map(r => ({
+        id: r.id,
+        productionId: r.production_id,
+        name: r.name,
+        accessMode: r.access_mode || 'open_link',
+        openToken: r.open_token || null,
         members: [],
         room: {
-          sharedNotes: (notes || []).find(n => n.group_id === g.id)?.content
-            ?? `# ${g.name} — Shared Notes\n\nAdd shared context, decisions, and plans here.`,
+          sharedNotes: (notes || []).find(n => n.room_id === r.id)?.content
+            ?? `# ${r.name} — Shared Notes\n\nAdd shared context, decisions, and plans here.`,
           messages: (msgs || [])
-            .filter(m => m.group_id === g.id)
+            .filter(m => m.room_id === r.id)
             .map(m => ({
               id: m.id,
               senderId: m.sender_id,
@@ -105,15 +105,15 @@ async function seedSupabase(ownerId) {
       owner_id: ownerId,
     })
     for (const g of p.groups) {
-      await supabase.from('groups').upsert({
+      await supabase.from('rooms').upsert({
         id: g.id, production_id: p.id, name: g.name,
         access_mode: g.accessMode || 'open_link',
         open_token: g.openToken || nanoid(8),
       })
-      await supabase.from('shared_notes').upsert({ group_id: g.id, content: g.room.sharedNotes })
+      await supabase.from('shared_notes').upsert({ room_id: g.id, content: g.room.sharedNotes })
       for (const m of g.room.messages) {
         await supabase.from('messages').upsert({
-          id: m.id, group_id: g.id, sender_id: m.senderId,
+          id: m.id, room_id: g.id, sender_id: m.senderId,
           sender_name: m.senderName, text: m.text,
           timestamp: m.timestamp, read: m.read,
         })
@@ -128,14 +128,14 @@ async function fetchAll(ownerId) {
     ? supabase.from('productions').select('*').eq('owner_id', ownerId).order('created_at')
     : supabase.from('productions').select('*').order('created_at')
 
-  const [{ data: prods }, { data: grps }, { data: notes }, { data: msgs }, { data: members }] = await Promise.all([
+  const [{ data: prods }, { data: rms }, { data: notes }, { data: msgs }, { data: members }] = await Promise.all([
     prodQuery,
-    supabase.from('groups').select('*'),
+    supabase.from('rooms').select('*'),
     supabase.from('shared_notes').select('*'),
     supabase.from('messages').select('*').order('timestamp'),
-    supabase.from('group_members').select('*'),
+    supabase.from('room_members').select('*'),
   ])
-  return { prods, grps, notes, msgs, members }
+  return { prods, rms, notes, msgs, members }
 }
 
 export function AppProvider({ children }) {
@@ -149,7 +149,7 @@ export function AppProvider({ children }) {
   const [logoIsDark, setLogoIsDark] = useState(true)
 
   const FREE_PROJECT_LIMIT = 1
-  const FREE_GROUP_LIMIT = 2
+  const FREE_ROOM_LIMIT = 2
   const FREE_BOOKING_PAGE_LIMIT = 1
 
   const [profileLoaded, setProfileLoaded] = useState(false)
@@ -285,7 +285,7 @@ export function AppProvider({ children }) {
 
   // Supabase-backed
   const [productions, setProductions] = useState([])
-  const [groupMembers, setGroupMembers] = useState([])
+  const [roomMembers, setRoomMembers] = useState([])
   const [bookingPages, setBookingPages] = useState([])
 
   const canAddProject = useCallback(() => {
@@ -293,11 +293,11 @@ export function AppProvider({ children }) {
     return productions.length < FREE_PROJECT_LIMIT
   }, [isProPlan, productions])
 
-  const canAddGroup = useCallback((productionId) => {
+  const canAddRoom = useCallback((productionId) => {
     if (isProPlan) return true
     const prod = productions.find(p => p.id === productionId)
     if (!prod) return true
-    return prod.groups.length < FREE_GROUP_LIMIT
+    return prod.rooms.length < FREE_ROOM_LIMIT
   }, [isProPlan, productions])
 
   const canAddBookingPage = useCallback(() => {
@@ -423,18 +423,18 @@ export function AppProvider({ children }) {
   }, [bookingPages])
 
   const recentNotifications = useMemo(() => {
-    const messageNotifs = productions.flatMap(p => p.groups.flatMap(g =>
-      g.room.messages.map(m => ({
+    const messageNotifs = productions.flatMap(p => p.rooms.flatMap(r =>
+      r.room.messages.map(m => ({
         id: `msg-${m.id}`,
         type: 'message',
         senderName: m.senderName,
         text: m.text,
         timestamp: m.timestamp,
         productionName: p.name,
-        groupName: g.name,
-        openToken: g.openToken,
+        roomName: r.name,
+        openToken: r.openToken,
         productionId: p.id,
-        groupId: g.id,
+        roomId: r.id,
       }))
     ))
 
@@ -457,10 +457,10 @@ export function AppProvider({ children }) {
         text: `Booked ${page?.name || 'a meeting'}${when ? ' — ' + when : ''}`,
         timestamp: b.created_at,
         productionName: page?.name || 'Booking',
-        groupName: null,
+        roomName: null,
         openToken: null,
         productionId: null,
-        groupId: null,
+        roomId: null,
       }
     })
 
@@ -474,22 +474,22 @@ export function AppProvider({ children }) {
     return recentNotifications.filter(n => new Date(n.timestamp) > new Date(notificationsLastSeen)).length
   }, [recentNotifications, notificationsLastSeen])
 
-  // Pending request counts per group (for notifications)
-  const [pendingRequestCounts, setPendingRequestCounts] = useState({}) // { groupId: count }
+  // Pending request counts per room (for notifications)
+  const [pendingRequestCounts, setPendingRequestCounts] = useState({}) // { roomId: count }
 
   // Fetch pending counts once productions are loaded
   useEffect(() => {
     if (!productions.length) return
-    const allGroupIds = productions.flatMap(p => p.groups.map(g => g.id))
-    if (!allGroupIds.length) return
+    const allRoomIds = productions.flatMap(p => p.rooms.map(r => r.id))
+    if (!allRoomIds.length) return
     supabase
       .from('date_requests')
-      .select('group_id')
+      .select('room_id')
       .eq('status', 'pending')
-      .in('group_id', allGroupIds)
+      .in('room_id', allRoomIds)
       .then(({ data }) => {
         const counts = {}
-        ;(data || []).forEach(r => { counts[r.group_id] = (counts[r.group_id] || 0) + 1 })
+        ;(data || []).forEach(r => { counts[r.room_id] = (counts[r.room_id] || 0) + 1 })
         setPendingRequestCounts(counts)
       })
   }, [productions])
@@ -500,13 +500,13 @@ export function AppProvider({ children }) {
     const channel = supabase
       .channel('date-requests-notify')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'date_requests' }, (payload) => {
-        const groupId = payload.new.group_id
-        setPendingRequestCounts(prev => ({ ...prev, [groupId]: (prev[groupId] || 0) + 1 }))
+        const roomId = payload.new.room_id
+        setPendingRequestCounts(prev => ({ ...prev, [roomId]: (prev[roomId] || 0) + 1 }))
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'date_requests' }, (payload) => {
         if (payload.old.status === 'pending' && payload.new.status !== 'pending') {
-          const groupId = payload.new.group_id
-          setPendingRequestCounts(prev => ({ ...prev, [groupId]: Math.max(0, (prev[groupId] || 0) - 1) }))
+          const roomId = payload.new.room_id
+          setPendingRequestCounts(prev => ({ ...prev, [roomId]: Math.max(0, (prev[roomId] || 0) - 1) }))
         }
       })
       .subscribe()
@@ -522,10 +522,10 @@ export function AppProvider({ children }) {
         const msg = payload.new
         setProductions(prev => prev.map(p => ({
           ...p,
-          groups: p.groups.map(g =>
-            g.id === msg.group_id
-              ? { ...g, room: { ...g.room, messages: [...g.room.messages, { id: msg.id, senderId: msg.sender_id, senderName: msg.sender_name, text: msg.text, timestamp: msg.timestamp, read: msg.read }] } }
-              : g
+          rooms: p.rooms.map(r =>
+            r.id === msg.room_id
+              ? { ...r, room: { ...r.room, messages: [...r.room.messages, { id: msg.id, senderId: msg.sender_id, senderName: msg.sender_name, text: msg.text, timestamp: msg.timestamp, read: msg.read }] } }
+              : r
           ),
         })))
       })
@@ -536,7 +536,7 @@ export function AppProvider({ children }) {
   const getPendingRequestCount = useCallback((productionId) => {
     const prod = productions.find(p => p.id === productionId)
     if (!prod) return 0
-    return prod.groups.reduce((sum, g) => sum + (pendingRequestCounts[g.id] || 0), 0)
+    return prod.rooms.reduce((sum, r) => sum + (pendingRequestCounts[r.id] || 0), 0)
   }, [productions, pendingRequestCounts])
 
   const getTotalPendingRequests = useCallback(() => {
@@ -588,8 +588,8 @@ export function AppProvider({ children }) {
       : Promise.resolve({ data: [] })
 
     Promise.all([dataPromise, bookingPromise])
-      .then(async ([{ prods, grps, notes, msgs, members }, { data: bPages }]) => {
-        console.log('[Coordie] Fetched:', { prods: prods?.length || 0, grps: grps?.length || 0, bookingPages: bPages?.length || 0 })
+      .then(async ([{ prods, rms, notes, msgs, members }, { data: bPages }]) => {
+        console.log('[Coordie] Fetched:', { prods: prods?.length || 0, rooms: rms?.length || 0, bookingPages: bPages?.length || 0 })
         setBookingPages(bPages || [])
         if (!prods?.length && ownerId) {
           // Only seed if this is a brand new user — check if any productions exist at all
@@ -597,25 +597,25 @@ export function AppProvider({ children }) {
           if (count === 0) {
             await seedSupabase(ownerId)
             const fresh = await fetchAll(ownerId)
-            setProductions(buildProductions(fresh.prods, fresh.grps, fresh.notes, fresh.msgs))
-            setGroupMembers(fresh.members || [])
+            setProductions(buildProductions(fresh.prods, fresh.rms, fresh.notes, fresh.msgs))
+            setRoomMembers(fresh.members || [])
           } else {
             // User just has no productions yet — that's fine, show empty state
             setProductions([])
-            setGroupMembers(members || [])
+            setRoomMembers(members || [])
           }
         } else {
-          // Backfill any groups missing an open_token
-          const missing = (grps || []).filter(g => !g.open_token)
+          // Backfill any rooms missing an open_token
+          const missing = (rms || []).filter(r => !r.open_token)
           if (missing.length) {
-            await Promise.all(missing.map(g => {
+            await Promise.all(missing.map(r => {
               const token = nanoid(8)
-              g.open_token = token
-              return supabase.from('groups').update({ open_token: token }).eq('id', g.id)
+              r.open_token = token
+              return supabase.from('rooms').update({ open_token: token }).eq('id', r.id)
             }))
           }
-          setProductions(buildProductions(prods, grps, notes, msgs))
-          setGroupMembers(members || [])
+          setProductions(buildProductions(prods, rms, notes, msgs))
+          setRoomMembers(members || [])
         }
       })
       .catch(err => {
@@ -775,8 +775,22 @@ export function AppProvider({ children }) {
       businessHours,
       customSlots: availabilityMode === 'slots' ? effectiveSlots : undefined,
     }
+    const productionId = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + nanoid(6)
+    const defaultToken = nanoid(8)
+    const defaultRoom = {
+      id: `room-${Date.now()}`,
+      productionId,
+      name: data.name,
+      accessMode: 'open_link',
+      openToken: defaultToken,
+      members: [],
+      room: {
+        sharedNotes: `# ${data.name} — Shared Notes\n\nAdd shared context, decisions, and plans here.`,
+        messages: [],
+      },
+    }
     const production = {
-      id: data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + nanoid(6),
+      id: productionId,
       name: data.name,
       description: data.description ?? '',
       startDate: data.startDate || '',
@@ -785,11 +799,11 @@ export function AppProvider({ children }) {
       ownerId,
       availability_config: defaultAvailConfig,
       createdAt: new Date().toISOString(),
-      groups: [],
+      rooms: [defaultRoom],
     }
     setProductions(prev => [...prev, production])
     const { error } = await supabase.from('productions').insert({
-      id: production.id, name: production.name, description: production.description,
+      id: productionId, name: production.name, description: production.description,
       start_date: production.startDate, end_date: production.endDate,
       owner_notes: production.ownerNotes, created_at: production.createdAt,
       owner_id: ownerId,
@@ -797,10 +811,13 @@ export function AppProvider({ children }) {
     })
     if (error) {
       console.error('createProduction failed:', error)
-      // Remove from local state if DB insert failed
-      setProductions(prev => prev.filter(p => p.id !== production.id))
+      setProductions(prev => prev.filter(p => p.id !== productionId))
+      return productionId
     }
-    return production.id
+    // Create the default room in DB
+    await supabase.from('rooms').insert({ id: defaultRoom.id, production_id: productionId, name: defaultRoom.name, access_mode: 'open_link', open_token: defaultToken })
+    await supabase.from('shared_notes').insert({ room_id: defaultRoom.id, content: defaultRoom.room.sharedNotes })
+    return productionId
   }, [user?.id])
 
   const updateProduction = useCallback(async (productionId, updates) => {
@@ -827,21 +844,18 @@ export function AppProvider({ children }) {
   const deleteProduction = useCallback(async (productionId) => {
     const prod = productions.find(p => p.id === productionId)
     if (!prod) return
-    // Capture group IDs before clearing state
-    const groupIds = prod.groups.map(g => g.id)
-    // Remove from UI immediately
+    const roomIds = prod.rooms.map(r => r.id)
     setProductions(prev => prev.filter(p => p.id !== productionId))
-    // Delete from DB — use group IDs from Supabase directly as fallback
     try {
-      const { data: dbGroups } = await supabase.from('groups').select('id').eq('production_id', productionId)
-      const allGroupIds = [...new Set([...groupIds, ...(dbGroups || []).map(g => g.id)])]
-      if (allGroupIds.length) {
-        await supabase.from('date_requests').delete().in('group_id', allGroupIds)
-        await supabase.from('shared_availability').delete().in('group_id', allGroupIds)
-        await supabase.from('messages').delete().in('group_id', allGroupIds)
-        await supabase.from('shared_notes').delete().in('group_id', allGroupIds)
-        await supabase.from('group_members').delete().in('group_id', allGroupIds)
-        await supabase.from('groups').delete().in('id', allGroupIds)
+      const { data: dbRooms } = await supabase.from('rooms').select('id').eq('production_id', productionId)
+      const allRoomIds = [...new Set([...roomIds, ...(dbRooms || []).map(r => r.id)])]
+      if (allRoomIds.length) {
+        await supabase.from('date_requests').delete().in('room_id', allRoomIds)
+        await supabase.from('shared_availability').delete().in('room_id', allRoomIds)
+        await supabase.from('messages').delete().in('room_id', allRoomIds)
+        await supabase.from('shared_notes').delete().in('room_id', allRoomIds)
+        await supabase.from('room_members').delete().in('room_id', allRoomIds)
+        await supabase.from('rooms').delete().in('id', allRoomIds)
       }
       const { error } = await supabase.from('productions').delete().eq('id', productionId)
       if (error) console.error('deleteProduction:', error)
@@ -850,11 +864,11 @@ export function AppProvider({ children }) {
     }
   }, [productions])
 
-  // --- Groups ---
-  const createGroup = useCallback(async (productionId, name) => {
+  // --- Rooms ---
+  const createRoom = useCallback(async (productionId, name) => {
     const token = nanoid(8)
-    const group = {
-      id: `grp-${Date.now()}`,
+    const room = {
+      id: `room-${Date.now()}`,
       productionId,
       name,
       accessMode: 'open_link',
@@ -865,106 +879,106 @@ export function AppProvider({ children }) {
         messages: [],
       },
     }
-    setProductions(prev => prev.map(p => p.id === productionId ? { ...p, groups: [...p.groups, group] } : p))
-    const { error: grpErr } = await supabase.from('groups').insert({ id: group.id, production_id: productionId, name, access_mode: 'open_link', open_token: token })
-    if (grpErr) console.error('createGroup failed:', grpErr)
-    const { error: noteErr } = await supabase.from('shared_notes').insert({ group_id: group.id, content: group.room.sharedNotes })
-    if (noteErr) console.error('createGroup notes failed:', noteErr)
-    return group.id
+    setProductions(prev => prev.map(p => p.id === productionId ? { ...p, rooms: [...p.rooms, room] } : p))
+    const { error: rmErr } = await supabase.from('rooms').insert({ id: room.id, production_id: productionId, name, access_mode: 'open_link', open_token: token })
+    if (rmErr) console.error('createRoom failed:', rmErr)
+    const { error: noteErr } = await supabase.from('shared_notes').insert({ room_id: room.id, content: room.room.sharedNotes })
+    if (noteErr) console.error('createRoom notes failed:', noteErr)
+    return room.id
   }, [])
 
-  const updateGroupName = useCallback(async (productionId, groupId, name) => {
+  const updateRoomName = useCallback(async (productionId, roomId, name) => {
     setProductions(prev => prev.map(p => p.id === productionId
-      ? { ...p, groups: p.groups.map(g => g.id === groupId ? { ...g, name } : g) }
+      ? { ...p, rooms: p.rooms.map(r => r.id === roomId ? { ...r, name } : r) }
       : p))
-    const { error } = await supabase.from('groups').update({ name }).eq('id', groupId)
-    if (error) console.error('updateGroupName:', error)
+    const { error } = await supabase.from('rooms').update({ name }).eq('id', roomId)
+    if (error) console.error('updateRoomName:', error)
   }, [])
 
-  const deleteGroup = useCallback(async (productionId, groupId) => {
-    await supabase.from('date_requests').delete().eq('group_id', groupId)
-    await supabase.from('messages').delete().eq('group_id', groupId)
-    await supabase.from('shared_notes').delete().eq('group_id', groupId)
-    await supabase.from('group_members').delete().eq('group_id', groupId)
-    const { error } = await supabase.from('groups').delete().eq('id', groupId)
-    if (error) { console.error('deleteGroup:', error); return }
+  const deleteRoom = useCallback(async (productionId, roomId) => {
+    await supabase.from('date_requests').delete().eq('room_id', roomId)
+    await supabase.from('messages').delete().eq('room_id', roomId)
+    await supabase.from('shared_notes').delete().eq('room_id', roomId)
+    await supabase.from('room_members').delete().eq('room_id', roomId)
+    const { error } = await supabase.from('rooms').delete().eq('id', roomId)
+    if (error) { console.error('deleteRoom:', error); return }
     setProductions(prev => prev.map(p => p.id === productionId
-      ? { ...p, groups: p.groups.filter(g => g.id !== groupId) }
+      ? { ...p, rooms: p.rooms.filter(r => r.id !== roomId) }
       : p))
   }, [])
 
-  const updateGroupAccessMode = useCallback((groupId, mode) => {
+  const updateRoomAccessMode = useCallback((roomId, mode) => {
     setProductions(prev => prev.map(p => ({
       ...p,
-      groups: p.groups.map(g => g.id === groupId ? { ...g, accessMode: mode } : g),
+      rooms: p.rooms.map(r => r.id === roomId ? { ...r, accessMode: mode } : r),
     })))
-    supabase.from('groups').update({ access_mode: mode }).eq('id', groupId)
-      .then(({ error }) => { if (error) console.error('updateGroupAccessMode:', error) })
+    supabase.from('rooms').update({ access_mode: mode }).eq('id', roomId)
+      .then(({ error }) => { if (error) console.error('updateRoomAccessMode:', error) })
   }, [])
 
-  // --- Group Members ---
-  const addGroupMember = useCallback((groupId, { name, email }) => {
+  // --- Room Members ---
+  const addRoomMember = useCallback((roomId, { name, email }) => {
     const token = nanoid(8)
-    const finalMember = { id: `mem-${Date.now()}`, groupId, group_id: groupId, name, email: email || '', inviteToken: token, invite_token: token }
-    setGroupMembers(prev => [...prev, finalMember])
-    supabase.from('group_members').insert({ id: finalMember.id, group_id: groupId, name, email: email || '', invite_token: token })
-      .then(({ error }) => { if (error) console.error('addGroupMember:', error) })
+    const finalMember = { id: `mem-${Date.now()}`, roomId, room_id: roomId, name, email: email || '', inviteToken: token, invite_token: token }
+    setRoomMembers(prev => [...prev, finalMember])
+    supabase.from('room_members').insert({ id: finalMember.id, room_id: roomId, name, email: email || '', invite_token: token })
+      .then(({ error }) => { if (error) console.error('addRoomMember:', error) })
     return finalMember
   }, [])
 
-  const removeGroupMember = useCallback((memberId) => {
-    setGroupMembers(prev => prev.filter(m => m.id !== memberId))
-    supabase.from('group_members').delete().eq('id', memberId)
-      .then(({ error }) => { if (error) console.error('removeGroupMember:', error) })
+  const removeRoomMember = useCallback((memberId) => {
+    setRoomMembers(prev => prev.filter(m => m.id !== memberId))
+    supabase.from('room_members').delete().eq('id', memberId)
+      .then(({ error }) => { if (error) console.error('removeRoomMember:', error) })
   }, [])
 
-  // Resolve a token to { productionId, groupId, mode, memberName }
+  // Resolve a token to { productionId, roomId, mode, memberName }
   const resolveToken = useCallback(async (token) => {
-    const [{ data: groupRows }, { data: memberRows }] = await Promise.all([
-      supabase.from('groups').select('id, production_id, access_mode').eq('open_token', token).limit(1),
-      supabase.from('group_members').select('id, group_id, name').eq('invite_token', token).limit(1),
+    const [{ data: roomRows }, { data: memberRows }] = await Promise.all([
+      supabase.from('rooms').select('id, production_id, access_mode').eq('open_token', token).limit(1),
+      supabase.from('room_members').select('id, room_id, name').eq('invite_token', token).limit(1),
     ])
-    const groupRow = groupRows?.[0] ?? null
+    const roomRow = roomRows?.[0] ?? null
     const memberRow = memberRows?.[0] ?? null
-    if (groupRow) {
-      return { productionId: groupRow.production_id, groupId: groupRow.id, mode: 'open_link', memberName: null }
+    if (roomRow) {
+      return { productionId: roomRow.production_id, roomId: roomRow.id, mode: 'open_link', memberName: null }
     }
     if (memberRow) {
-      const { data: grp } = await supabase.from('groups').select('production_id').eq('id', memberRow.group_id).single()
-      return { productionId: grp?.production_id, groupId: memberRow.group_id, mode: 'invite_only', memberName: memberRow.name }
+      const { data: rm } = await supabase.from('rooms').select('production_id').eq('id', memberRow.room_id).single()
+      return { productionId: rm?.production_id, roomId: memberRow.room_id, mode: 'invite_only', memberName: memberRow.name }
     }
     return null
   }, [])
 
-  // --- Room ---
-  const updateSharedNotes = useCallback((productionId, groupId, notes) => {
+  // --- Room Content ---
+  const updateSharedNotes = useCallback((productionId, roomId, notes) => {
     setProductions(prev => prev.map(p => p.id === productionId
-      ? { ...p, groups: p.groups.map(g => g.id === groupId ? { ...g, room: { ...g.room, sharedNotes: notes } } : g) }
+      ? { ...p, rooms: p.rooms.map(r => r.id === roomId ? { ...r, room: { ...r.room, sharedNotes: notes } } : r) }
       : p))
-    supabase.from('shared_notes').upsert({ group_id: groupId, content: notes })
+    supabase.from('shared_notes').upsert({ room_id: roomId, content: notes })
       .then(({ error }) => { if (error) console.error('updateSharedNotes:', error) })
   }, [])
 
-  const refreshRoom = useCallback(async (productionId, groupId) => {
+  const refreshRoom = useCallback(async (productionId, roomId) => {
     const [{ data: msgs }, { data: note }] = await Promise.all([
-      supabase.from('messages').select('*').eq('group_id', groupId).order('timestamp'),
-      supabase.from('shared_notes').select('*').eq('group_id', groupId).single(),
+      supabase.from('messages').select('*').eq('room_id', roomId).order('timestamp'),
+      supabase.from('shared_notes').select('*').eq('room_id', roomId).single(),
     ])
     setProductions(prev => prev.map(p => p.id === productionId
       ? {
           ...p,
-          groups: p.groups.map(g => g.id === groupId
+          rooms: p.rooms.map(r => r.id === roomId
             ? {
-                ...g,
+                ...r,
                 room: {
-                  sharedNotes: note?.content ?? g.room.sharedNotes,
+                  sharedNotes: note?.content ?? r.room.sharedNotes,
                   messages: (msgs || []).map(m => ({
                     id: m.id, senderId: m.sender_id, senderName: m.sender_name,
                     text: m.text, timestamp: m.timestamp, read: m.read,
                   })),
                 },
               }
-            : g),
+            : r),
         }
       : p))
   }, [])
@@ -1065,10 +1079,10 @@ export function AppProvider({ children }) {
   }, [])
 
   // --- Date Requests ---
-  const createDateRequest = useCallback(async (groupId, { requesterName, requesterEmail, dates, message, ownerId, slotMap }) => {
+  const createDateRequest = useCallback(async (roomId, { requesterName, requesterEmail, dates, message, ownerId, slotMap }) => {
     const request = {
       id: `dr-${Date.now()}`,
-      group_id: groupId,
+      room_id: roomId,
       requester_name: requesterName,
       requester_email: requesterEmail || '',
       dates: dates,
@@ -1079,14 +1093,13 @@ export function AppProvider({ children }) {
     const { error } = await supabase.from('date_requests').insert(request)
     if (error) { console.error('createDateRequest:', error); return false }
 
-    // Find group + production names for the notification email
-    let groupName = '', productionName = ''
+    // Find room + production names for the notification email
+    let roomName = '', productionName = ''
     for (const p of productions) {
-      const g = p.groups.find(g => g.id === groupId)
-      if (g) { groupName = g.name; productionName = p.name; break }
+      const r = p.rooms.find(r => r.id === roomId)
+      if (r) { roomName = r.name; productionName = p.name; break }
     }
 
-    // Notify the owner via email (fire-and-forget — don't block on failure)
     supabase.functions.invoke('notify-date-request', {
       body: {
         requesterName,
@@ -1095,22 +1108,22 @@ export function AppProvider({ children }) {
         slotMap: slotMap || null,
         slots: slots.map(s => ({ id: s.id, name: s.name, startTime: s.startTime, endTime: s.endTime })),
         message: message || '',
-        groupName,
+        groupName: roomName,
         productionName,
         ownerEmail: user?.email ?? null,
         ownerId: ownerId ?? null,
-        groupId,
+        groupId: roomId,
       },
     }).catch(err => console.warn('Date request email notification failed:', err))
 
     return true
   }, [productions, user?.email])
 
-  const fetchDateRequests = useCallback(async (groupId) => {
+  const fetchDateRequests = useCallback(async (roomId) => {
     const { data, error } = await supabase
       .from('date_requests')
       .select('*')
-      .eq('group_id', groupId)
+      .eq('room_id', roomId)
       .order('created_at', { ascending: false })
     if (error) { console.error('fetchDateRequests:', error); return [] }
     return data || []
@@ -1124,24 +1137,24 @@ export function AppProvider({ children }) {
 
   // --- Helpers ---
   const getProduction = useCallback((id) => productions.find(p => p.id === id), [productions])
-  const getGroup = useCallback((productionId, groupId) => { const p = productions.find(p => p.id === productionId); return p?.groups.find(g => g.id === groupId) }, [productions])
-  const getGroupByToken = useCallback((token) => {
+  const getRoom = useCallback((productionId, roomId) => { const p = productions.find(p => p.id === productionId); return p?.rooms.find(r => r.id === roomId) }, [productions])
+  const getRoomByToken = useCallback((token) => {
     for (const p of productions) {
-      const g = p.groups.find(g => g.openToken === token)
-      if (g) return { production: p, group: g }
+      const r = p.rooms.find(r => r.openToken === token)
+      if (r) return { production: p, room: r }
     }
     return null
   }, [productions])
   const getRoomLink = useCallback((token) => `${window.location.origin}/room/${token}`, [])
-  const getMembersForGroup = useCallback((groupId) => groupMembers.filter(m => m.group_id === groupId || m.groupId === groupId), [groupMembers])
+  const getMembersForRoom = useCallback((roomId) => roomMembers.filter(m => m.room_id === roomId || m.roomId === roomId), [roomMembers])
 
   return (
     <AppContext.Provider value={{
       // Auth
       user, authLoading, isOwner, signOut,
       // Plan
-      plan, isProPlan, canAddProject, canAddGroup, canAddBookingPage,
-      FREE_PROJECT_LIMIT, FREE_GROUP_LIMIT, FREE_BOOKING_PAGE_LIMIT,
+      plan, isProPlan, canAddProject, canAddRoom, canAddBookingPage,
+      FREE_PROJECT_LIMIT, FREE_ROOM_LIMIT, FREE_BOOKING_PAGE_LIMIT,
       // State
       productions, slots, effectiveSlots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, setGoogleAccessToken,
@@ -1149,7 +1162,7 @@ export function AppProvider({ children }) {
       calendarSyncing, setCalendarSyncing,
       lastSynced,
       loading,
-      groupMembers,
+      roomMembers,
       // Theme
       theme, toggleTheme,
       // Slot States (customizable)
@@ -1163,10 +1176,10 @@ export function AppProvider({ children }) {
       addConnectedCalendar, updateCalendarRole, updateCalendarDefaultState, removeConnectedCalendar, replaceCalendarEvents,
       // Productions
       createProduction, updateProduction, updateProductionNotes, deleteProduction,
-      // Groups
-      createGroup, updateGroupName, deleteGroup, updateGroupAccessMode,
-      // Group Members
-      addGroupMember, removeGroupMember,
+      // Rooms
+      createRoom, updateRoomName, deleteRoom, updateRoomAccessMode,
+      // Room Members
+      addRoomMember, removeRoomMember,
       // Room
       updateSharedNotes, refreshRoom,
       // Booking Pages
@@ -1187,7 +1200,7 @@ export function AppProvider({ children }) {
       // Branding
       logoUrl, logoIsDark, setLogoIsDark, uploadLogo, removeLogo,
       // Helpers
-      getProduction, getGroup, getGroupByToken, getRoomLink, getMembersForGroup, resolveToken,
+      getProduction, getRoom, getRoomByToken, getRoomLink, getMembersForRoom, resolveToken,
     }}>
       {children}
     </AppContext.Provider>

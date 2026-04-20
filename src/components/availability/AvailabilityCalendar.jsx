@@ -15,7 +15,7 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
 
 export function AvailabilityCalendar({
   slots, calendarEvents, connectedCalendars, availabilityRules = [], prefixRules = [],
-  isOwner = false, slotStates: slotStatesProp, groupId, guestName, onRequestSubmit,
+  isOwner = false, slotStates: slotStatesProp, roomId, guestName, onRequestSubmit,
   dateRequests = [], sharedAvailability = [], businessHours = null, guestSlotSelection = false,
   guestEvents = null,
 }) {
@@ -35,8 +35,8 @@ export function AvailabilityCalendar({
   const [slotPickerDate, setSlotPickerDate] = useState(null) // date string showing slot picker
   const [showRequestModal, setShowRequestModal] = useState(false)
   const [inspectedDate, setInspectedDate] = useState(null) // owner inspecting a day for overlap + scheduling
-  const isSelectionMode = !isOwner && !!groupId
-  const isOwnerRoomContext = isOwner && !!groupId
+  const isSelectionMode = !isOwner && !!roomId
+  const isOwnerRoomContext = isOwner && !!roomId
 
   function handleDayClick(date) {
     if (isSelectionMode) {
@@ -83,8 +83,8 @@ export function AvailabilityCalendar({
   function clearSelection() { setSelectedDates([]) }
 
   async function handleRequestSubmit(data) {
-    if (!onRequestSubmit || !groupId) return false
-    const success = await onRequestSubmit(groupId, data)
+    if (!onRequestSubmit || !roomId) return false
+    const success = await onRequestSubmit(roomId, data)
     if (success) { setSelectedDates([]); setShowRequestModal(false) }
     return success
   }
@@ -353,7 +353,7 @@ export function AvailabilityCalendar({
       {inspectedDate && isOwnerRoomContext && (
         <DayInspectorPanel
           dateStr={inspectedDate}
-          groupId={groupId}
+          roomId={roomId}
           slots={slots}
           dateRequests={dateRequests.filter(r => r.dates?.includes(inspectedDate) && r.status !== 'declined' && r.status !== 'archived')}
           sharedAvailability={sharedAvailability.filter(a => a.date === inspectedDate && a.is_available)}
@@ -365,9 +365,9 @@ export function AvailabilityCalendar({
 }
 
 /* ── Day Inspector: owner-only panel with overlap + Schedule in Google Calendar ── */
-function DayInspectorPanel({ dateStr, groupId, slots = [], dateRequests, sharedAvailability, onClose }) {
-  const { getMembersForGroup } = useApp()
-  const members = useMemo(() => getMembersForGroup(groupId || ''), [getMembersForGroup, groupId])
+function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAvailability, onClose }) {
+  const { getMembersForRoom } = useApp()
+  const members = useMemo(() => getMembersForRoom(roomId || ''), [getMembersForRoom, roomId])
 
   const dateObj = useMemo(() => new Date(dateStr + 'T00:00:00'), [dateStr])
 

@@ -41,7 +41,7 @@ export function NotificationsDropdown() {
       navigate('/booking-pages')
     } else if (notif.openToken) {
       navigate(`/room/${notif.openToken}`)
-    } else if (notif.productionId && notif.groupId) {
+    } else if (notif.productionId && notif.roomId) {
       navigate(`/project/${notif.productionId}`)
     }
   }
@@ -118,10 +118,10 @@ export function NotificationsDropdown() {
                         <span className="text-[11px] text-zinc-600 flex-shrink-0 ml-auto">{timeAgo(notif.timestamp)}</span>
                       </div>
                       <p className="text-[13px] text-zinc-400 truncate leading-snug">{notif.text}</p>
-                      {(notif.productionName || notif.groupName) && (
+                      {(notif.productionName || notif.roomName) && (
                         <p className="text-[11px] text-zinc-600 mt-0.5 truncate">
                           {notif.productionName}
-                          {notif.groupName && <> &middot; {notif.groupName}</>}
+                          {notif.roomName && <> &middot; {notif.roomName}</>}
                         </p>
                       )}
                     </div>

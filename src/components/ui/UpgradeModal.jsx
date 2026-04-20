@@ -4,7 +4,7 @@ import { supabase } from '../../utils/supabase'
 import { useState } from 'react'
 
 export function UpgradeModal({ onClose, reason }) {
-  const { FREE_PROJECT_LIMIT, FREE_GROUP_LIMIT } = useApp()
+  const { FREE_PROJECT_LIMIT, FREE_ROOM_LIMIT } = useApp()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -68,7 +68,7 @@ export function UpgradeModal({ onClose, reason }) {
               </li>
               <li className="flex items-center gap-1.5">
                 <Check size={12} strokeWidth={2.5} className="flex-shrink-0 text-zinc-600" />
-                {FREE_GROUP_LIMIT} groups per project
+                {FREE_ROOM_LIMIT} rooms per project
               </li>
               <li className="flex items-center gap-1.5">
                 <Check size={12} strokeWidth={2.5} className="flex-shrink-0 text-zinc-600" />
@@ -91,7 +91,7 @@ export function UpgradeModal({ onClose, reason }) {
               </li>
               <li className="flex items-center gap-1.5">
                 <Check size={12} strokeWidth={2.5} className="flex-shrink-0 text-accent" />
-                Unlimited groups
+                Unlimited rooms
               </li>
               <li className="flex items-center gap-1.5">
                 <Check size={12} strokeWidth={2.5} className="flex-shrink-0 text-accent" />

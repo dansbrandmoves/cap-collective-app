@@ -5,7 +5,7 @@ import { useApp } from '../contexts/AppContext'
 import { supabase } from '../utils/supabase'
 
 export function BillingPage() {
-  const { plan, isProPlan, user, FREE_PROJECT_LIMIT, FREE_GROUP_LIMIT } = useApp()
+  const { plan, isProPlan, user, FREE_PROJECT_LIMIT, FREE_ROOM_LIMIT } = useApp()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [searchParams] = useSearchParams()
@@ -89,7 +89,7 @@ export function BillingPage() {
             </div>
             <div className="flex items-center gap-2 text-sm text-zinc-500">
               <Check size={14} strokeWidth={2} className="text-zinc-600 flex-shrink-0" />
-              {FREE_GROUP_LIMIT} groups per project
+              {FREE_ROOM_LIMIT} rooms per project
             </div>
             <div className="flex items-center gap-2 text-sm text-zinc-500">
               <Check size={14} strokeWidth={2} className="text-zinc-600 flex-shrink-0" />
@@ -114,7 +114,7 @@ export function BillingPage() {
               <ul className="space-y-2 mb-5">
                 {[
                   'Unlimited projects',
-                  'Unlimited groups per project',
+                  'Unlimited rooms per project',
                   'Priority support',
                 ].map(f => (
                   <li key={f} className="flex items-center gap-2 text-sm text-zinc-300">

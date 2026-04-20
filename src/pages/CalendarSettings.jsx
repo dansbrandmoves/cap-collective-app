@@ -288,6 +288,8 @@ export function CalendarSettings() {
             <p className="text-xs text-zinc-500 mt-0.5">
               {connected
                 ? `Connected · Last synced ${formatLastSynced(lastSynced)}`
+                : connectedCalendars.length > 0
+                ? <span className="text-amber-400">Connection expired — reconnect to resume syncing.</span>
                 : 'Connect once — stays synced automatically.'}
             </p>
           </div>
@@ -304,7 +306,9 @@ export function CalendarSettings() {
                 <Button variant="secondary" size="sm" onClick={handleDisconnect}>Disconnect</Button>
               </>
             ) : (
-              <Button size="sm" onClick={handleConnect} disabled={!configured}>Connect</Button>
+              <Button size="sm" onClick={handleConnect} disabled={!configured}>
+                {connectedCalendars.length > 0 ? 'Reconnect' : 'Connect'}
+              </Button>
             )}
           </div>
         </div>

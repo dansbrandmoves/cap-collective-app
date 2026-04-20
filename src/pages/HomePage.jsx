@@ -42,21 +42,91 @@ const HOW_IT_WORKS = [
   { step: '04', title: 'Coordinate together', desc: 'Guests view availability, request dates, and message you — all without creating an account.' },
 ]
 
-// busy=true means guest's calendar shows them busy — slot dims
-const HERO_SLOTS = [
-  { time: '9:00 AM',  busy: false },
-  { time: '9:30 AM',  busy: true  },
-  { time: '10:00 AM', busy: true  },
-  { time: '10:30 AM', busy: false },
-  { time: '11:00 AM', busy: false },
-  { time: '1:00 PM',  busy: false },
-  { time: '1:30 PM',  busy: true  },
-  { time: '2:00 PM',  busy: false },
+// Each persona picks a different day, with different owner-available slots
+// and a different guest-busy pattern. `slots` are the slots the owner offers
+// that day; `busy` means this guest's own calendar conflicts.
+const PERSONAS = [
+  {
+    name: 'Sarah Chen',     day: 17, selectedIdx: 4,
+    slots: [
+      { time: '9:00 AM',  busy: false },
+      { time: '9:30 AM',  busy: true  },
+      { time: '10:00 AM', busy: true  },
+      { time: '10:30 AM', busy: false },
+      { time: '11:00 AM', busy: false },
+      { time: '1:00 PM',  busy: false },
+      { time: '1:30 PM',  busy: true  },
+      { time: '2:00 PM',  busy: false },
+    ],
+  },
+  {
+    name: 'Amara Okafor',   day: 22, selectedIdx: 5,
+    slots: [
+      { time: '10:00 AM', busy: false },
+      { time: '10:30 AM', busy: false },
+      { time: '11:00 AM', busy: true  },
+      { time: '11:30 AM', busy: true  },
+      { time: '12:00 PM', busy: false },
+      { time: '2:00 PM',  busy: false },
+      { time: '2:30 PM',  busy: false },
+      { time: '3:00 PM',  busy: true  },
+    ],
+  },
+  {
+    name: 'Diego Rivera',   day: 8,  selectedIdx: 2,
+    slots: [
+      { time: '8:00 AM',  busy: true  },
+      { time: '8:30 AM',  busy: false },
+      { time: '9:00 AM',  busy: false },
+      { time: '9:30 AM',  busy: true  },
+      { time: '10:00 AM', busy: false },
+      { time: '10:30 AM', busy: true  },
+      { time: '11:00 AM', busy: false },
+    ],
+  },
+  {
+    name: 'Priya Patel',    day: 15, selectedIdx: 4,
+    slots: [
+      { time: '12:00 PM', busy: false },
+      { time: '12:30 PM', busy: true  },
+      { time: '1:00 PM',  busy: true  },
+      { time: '1:30 PM',  busy: false },
+      { time: '2:00 PM',  busy: false },
+      { time: '2:30 PM',  busy: false },
+      { time: '3:00 PM',  busy: true  },
+      { time: '3:30 PM',  busy: false },
+    ],
+  },
+  {
+    name: 'Zainab Ali',     day: 24, selectedIdx: 1,
+    slots: [
+      { time: '9:00 AM',  busy: false },
+      { time: '9:30 AM',  busy: false },
+      { time: '10:00 AM', busy: true  },
+      { time: '11:00 AM', busy: true  },
+      { time: '11:30 AM', busy: false },
+      { time: '12:00 PM', busy: false },
+    ],
+  },
+  {
+    name: 'Mei Tanaka',     day: 10, selectedIdx: 1,
+    slots: [
+      { time: '10:30 AM', busy: true  },
+      { time: '11:00 AM', busy: false },
+      { time: '11:30 AM', busy: false },
+      { time: '1:00 PM',  busy: true  },
+      { time: '1:30 PM',  busy: true  },
+      { time: '2:00 PM',  busy: false },
+      { time: '2:30 PM',  busy: false },
+    ],
+  },
 ]
 
-const HERO_FREE_INDICES = HERO_SLOTS
-  .map((s, i) => s.busy ? -1 : i)
-  .filter(i => i >= 0)
+// April 2026 day labels (April 1 is a Wednesday)
+function weekdayLabel(day, format = 'long') {
+  const d = new Date(2026, 3, day)
+  return d.toLocaleDateString('en-US', { weekday: format })
+}
 
 // Phase sequence: fully-scripted booking flow demo
 // idle → click-date → click-connect → click-slot → form → type → submit → success → loop
@@ -76,35 +146,26 @@ const PHASES = [
   { name: 'success',           duration: 2400 },
 ]
 
-// Rotates each loop so no one identifier becomes the face of Coordie
-const GUEST_NAMES = [
-  'Sarah Chen',
-  'Amara Okafor',
-  'Diego Rivera',
-  'Priya Patel',
-  'Zainab Ali',
-  'Leo Martinez',
-  'Mei Tanaka',
-  'Noah Kim',
-]
-const SELECTED_SLOT_IDX = 4 // "11:00 AM"
-
 function HeroBookingMockup() {
   const [phaseIdx, setPhaseIdx] = useState(0)
   const phase = PHASES[phaseIdx].name
 
-  // Random guest name each cycle — initial pick is random too, never repeats immediately
-  const [nameIdx, setNameIdx] = useState(() => Math.floor(Math.random() * GUEST_NAMES.length))
-  const guestName = GUEST_NAMES[nameIdx]
+  // Random persona each cycle — different name, day, slots, busy pattern
+  const [personaIdx, setPersonaIdx] = useState(() => Math.floor(Math.random() * PERSONAS.length))
+  const persona = PERSONAS[personaIdx]
+  const guestName = persona.name
+  const slots = persona.slots
+  const selectedSlotIdx = persona.selectedIdx
+  const pickedDay = persona.day
 
   useEffect(() => {
     const t = setTimeout(() => {
       const next = (phaseIdx + 1) % PHASES.length
       setPhaseIdx(next)
       if (next === 0) {
-        setNameIdx(prev => {
-          let pick = Math.floor(Math.random() * GUEST_NAMES.length)
-          if (pick === prev) pick = (pick + 1) % GUEST_NAMES.length
+        setPersonaIdx(prev => {
+          let pick = Math.floor(Math.random() * PERSONAS.length)
+          if (pick === prev) pick = (pick + 1) % PERSONAS.length
           return pick
         })
       }
@@ -163,7 +224,7 @@ function HeroBookingMockup() {
               {Array.from({ length: 35 }, (_, i) => {
                 const day = i - 2
                 const inMonth = day >= 1 && day <= 30
-                const isThisDate = day === 17
+                const isThisDate = day === pickedDay
                 const isSelected = isThisDate && isDateSelected
                 const isToday = day === 12
                 const hasFree = inMonth && isConnected && [2,3,8,9,10,15,16,17,21,22,23,24,28,29,30].includes(day)
@@ -194,8 +255,8 @@ function HeroBookingMockup() {
           {/* RIGHT — dynamic content by phase */}
           <div className="relative px-6 sm:px-8 py-7 sm:py-9 flex flex-col min-h-[400px]">
             <div className="mb-4">
-              <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Friday</p>
-              <p className="text-2xl font-semibold text-zinc-100 tracking-tight leading-none mt-0.5">17</p>
+              <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{weekdayLabel(pickedDay, 'long')}</p>
+              <p className="text-2xl font-semibold text-zinc-100 tracking-tight leading-none mt-0.5">{pickedDay}</p>
             </div>
 
             {/* Slot list view (phases 0-7) */}
@@ -219,9 +280,9 @@ function HeroBookingMockup() {
                 </div>
 
                 <div className="space-y-1.5 flex-1">
-                  {HERO_SLOTS.map((slot, i) => {
-                    const isThisSlotSelected = i === SELECTED_SLOT_IDX && isSlotSelected
-                    const isClickFlash = i === SELECTED_SLOT_IDX && phase === 'click-slot' && !isThisSlotSelected
+                  {slots.map((slot, i) => {
+                    const isThisSlotSelected = i === selectedSlotIdx && isSlotSelected
+                    const isClickFlash = i === selectedSlotIdx && phase === 'click-slot' && !isThisSlotSelected
                     const showBusy = isConnected && slot.busy
                     return (
                       <div key={slot.time}
@@ -254,8 +315,8 @@ function HeroBookingMockup() {
                 <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 mb-5">
                   <div className="w-2 h-2 rounded-full bg-accent" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-semibold text-zinc-100">11:00 AM</p>
-                    <p className="text-[10px] text-zinc-500">30 minutes · Friday, April 17</p>
+                    <p className="text-[12px] font-semibold text-zinc-100">{slots[selectedSlotIdx].time}</p>
+                    <p className="text-[10px] text-zinc-500">30 minutes · {weekdayLabel(pickedDay, 'long')}, April {pickedDay}</p>
                   </div>
                 </div>
 
@@ -294,7 +355,7 @@ function HeroBookingMockup() {
                   <CheckCircle2 size={22} strokeWidth={2} className="text-green-400" />
                 </div>
                 <p className="text-[18px] font-semibold text-zinc-50 tracking-tight mb-1">You're booked</p>
-                <p className="text-[12px] text-zinc-500">{guestName} · Fri Apr 17, 11:00 AM</p>
+                <p className="text-[12px] text-zinc-500">{guestName} · {weekdayLabel(pickedDay, 'short')} Apr {pickedDay}, {slots[selectedSlotIdx].time}</p>
               </div>
             )}
 

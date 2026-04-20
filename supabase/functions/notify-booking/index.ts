@@ -68,15 +68,15 @@ function buildEmailHtml(opts: {
     guestEmail || guestMessage
       ? `
     <tr>
-      <td style="padding:0 0 28px 0;">
+      <td style="padding:0 0 32px 0;">
         ${
           guestEmail
-            ? `<p style="margin:0 0 6px 0;color:#52525b;font-size:14px;line-height:1.5;">Guest <span style="color:#18181b;">${escapeHtml(guestEmail)}</span></p>`
+            ? `<p class="text-secondary" style="margin:0 0 16px 0;color:#52525b;font-size:14px;line-height:1.5;">Guest <span class="text-primary" style="color:#18181b;">${escapeHtml(guestEmail)}</span></p>`
             : ""
         }
         ${
           guestMessage
-            ? `<p style="margin:10px 0 0 0;padding:14px 16px;background:#fafafa;border:1px solid #e4e4e7;border-radius:12px;color:#3f3f46;font-size:14px;font-style:italic;line-height:1.55;">&ldquo;${escapeHtml(
+            ? `<p class="quote" style="margin:0;padding:4px 0 4px 16px;border-left:3px solid #d4d4d8;color:#52525b;font-size:15px;font-style:italic;line-height:1.6;">&ldquo;${escapeHtml(
                 guestMessage,
               )}&rdquo;</p>`
             : ""
@@ -111,72 +111,63 @@ function buildEmailHtml(opts: {
     }
 
     @media (prefers-color-scheme: dark) {
-      .email-bg { background: #0a0a0b !important; }
-      .email-card { background: #131316 !important; border-color: rgba(255,255,255,0.08) !important; }
       .text-primary { color: #f4f4f5 !important; }
       .text-secondary { color: #a1a1aa !important; }
       .text-muted { color: #71717a !important; }
-      .event-card { background: #1c1c20 !important; border-color: rgba(255,255,255,0.06) !important; }
-      .message-card { background: #1c1c20 !important; border-color: rgba(255,255,255,0.06) !important; color: #d4d4d8 !important; }
+      .accent-date { color: #a78bfa !important; }
+      .quote { border-left-color: #3f3f46 !important; color: #a1a1aa !important; }
       .ghost-cta { color: #a1a1aa !important; }
       .divider { background: rgba(255,255,255,0.08) !important; }
       .footer-border { border-color: rgba(255,255,255,0.08) !important; }
     }
 
     @media (max-width: 540px) {
-      .email-card { padding: 28px 22px !important; border-radius: 0 !important; border-left: none !important; border-right: none !important; }
       .title { font-size: 26px !important; }
       .cta-primary { display: block !important; text-align: center !important; margin: 0 0 10px 0 !important; }
       .cta-ghost { display: block !important; text-align: center !important; padding: 12px 0 !important; }
     }
   </style>
 </head>
-<body class="email-bg" style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(guestName)} booked ${pageName ? escapeHtml(pageName) + " " : ""}on ${dateFormatted} at ${timeRange}.</div>
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-bg" style="background:#ffffff;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
     <tr>
-      <td align="center" style="padding:40px 16px;">
-        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" class="email-card" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #e2e2e6;border-radius:20px;padding:40px 36px;">
+      <td align="center" style="padding:40px 20px;">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
 
           <!-- Brand mark -->
           <tr>
-            <td style="padding:0 0 36px 0;">
-              <span class="text-primary" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;letter-spacing:-0.02em;color:#18181b;">coordie</span>
+            <td style="padding:0 0 40px 0;">
+              <span class="text-primary" style="font-size:15px;font-weight:700;letter-spacing:-0.02em;color:#18181b;">coordie</span>
               <span style="display:inline-block;width:3px;height:3px;background:#8b5cf6;border-radius:50%;vertical-align:middle;margin:0 8px 3px 8px;"></span>
-              <span class="text-muted" style="font-size:12px;color:#a1a1aa;font-weight:500;letter-spacing:0.02em;">Booking confirmed</span>
+              <span class="text-muted" style="font-size:12px;color:#71717a;font-weight:500;letter-spacing:0.02em;">Booking confirmed</span>
             </td>
           </tr>
 
           <!-- Title -->
           <tr>
-            <td style="padding:0 0 10px 0;">
+            <td style="padding:0 0 12px 0;">
               <h1 class="title text-primary" style="margin:0;color:#18181b;font-size:30px;font-weight:600;letter-spacing:-0.025em;line-height:1.1;">New booking</h1>
             </td>
           </tr>
           <tr>
-            <td style="padding:0 0 28px 0;">
+            <td style="padding:0 0 32px 0;">
               <p class="text-secondary" style="margin:0;color:#52525b;font-size:15px;line-height:1.55;">
-                <strong style="color:#18181b;font-weight:600;">${escapeHtml(guestName)}</strong> booked a meeting${pageFragment}${durationFragment ? `<span class="text-muted" style="color:#a1a1aa;">${durationFragment}</span>` : ""}.
+                <strong class="text-primary" style="color:#18181b;font-weight:600;">${escapeHtml(guestName)}</strong> booked a meeting${pageFragment}${durationFragment ? `<span class="text-muted" style="color:#71717a;">${durationFragment}</span>` : ""}.
               </p>
             </td>
           </tr>
 
-          <!-- Event card -->
+          <!-- Event detail — typography only, no background -->
           <tr>
-            <td style="padding:0 0 28px 0;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="event-card" style="background:#fafafa;border:1px solid #e4e4e7;border-radius:14px;">
-                <tr>
-                  <td style="padding:18px 22px;">
-                    <p class="text-primary" style="margin:0 0 6px 0;color:#18181b;font-size:17px;font-weight:600;letter-spacing:-0.01em;line-height:1.3;">
-                      ${escapeHtml(dateFormatted)}
-                    </p>
-                    <p class="text-secondary" style="margin:0;color:#52525b;font-size:14px;line-height:1.4;">
-                      ${escapeHtml(timeRange)}
-                    </p>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:0 0 32px 0;">
+              <p class="accent-date" style="margin:0 0 4px 0;color:#8b5cf6;font-size:18px;font-weight:600;letter-spacing:-0.015em;line-height:1.3;">
+                ${escapeHtml(dateFormatted)}
+              </p>
+              <p class="text-secondary" style="margin:0;color:#52525b;font-size:15px;line-height:1.4;">
+                ${escapeHtml(timeRange)}
+              </p>
             </td>
           </tr>
 
@@ -184,14 +175,14 @@ function buildEmailHtml(opts: {
 
           <!-- Divider -->
           <tr>
-            <td style="padding:4px 0 28px 0;">
+            <td style="padding:0 0 32px 0;">
               <div class="divider" style="height:1px;background:#e4e4e7;line-height:1px;font-size:0;">&nbsp;</div>
             </td>
           </tr>
 
           <!-- CTAs -->
           <tr>
-            <td style="padding:0 0 36px 0;">
+            <td style="padding:0 0 40px 0;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td style="padding:0 10px 0 0;">
@@ -211,25 +202,13 @@ function buildEmailHtml(opts: {
 
           <!-- Footer -->
           <tr>
-            <td class="footer-border" style="padding:24px 0 0 0;border-top:1px solid #e4e4e7;">
-              <p class="text-muted" style="margin:0;color:#a1a1aa;font-size:12px;line-height:1.5;">
+            <td class="footer-border" style="padding:20px 0 0 0;border-top:1px solid #e4e4e7;">
+              <p class="text-muted" style="margin:0;color:#71717a;font-size:12px;line-height:1.5;">
                 Sent by Coordie &middot; <a href="https://www.coordie.com" style="color:#8b5cf6;text-decoration:none;font-weight:500;">coordie.com</a>
               </p>
             </td>
           </tr>
         </table>
-
-        <!-- Outer footnote -->
-        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;margin-top:16px;">
-          <tr>
-            <td align="center" style="padding:0 16px;">
-              <p class="text-muted" style="margin:0;color:#a1a1aa;font-size:11px;line-height:1.5;">
-                You're receiving this because someone booked through your Coordie page.
-              </p>
-            </td>
-          </tr>
-        </table>
-
       </td>
     </tr>
   </table>

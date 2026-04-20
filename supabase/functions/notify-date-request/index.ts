@@ -126,8 +126,8 @@ function buildEmailHtml(opts: {
   const messageBlock = message
     ? `
     <tr>
-      <td style="padding:0 0 28px 0;">
-        <p class="message-card" style="margin:0;padding:14px 16px;background:#fafafa;border:1px solid #e4e4e7;border-radius:12px;color:#3f3f46;font-size:14px;font-style:italic;line-height:1.55;">&ldquo;${escapeHtml(message)}&rdquo;</p>
+      <td style="padding:0 0 32px 0;">
+        <p class="quote" style="margin:0;padding:4px 0 4px 16px;border-left:3px solid #d4d4d8;color:#52525b;font-size:15px;font-style:italic;line-height:1.6;">&ldquo;${escapeHtml(message)}&rdquo;</p>
       </td>
     </tr>`
     : "";
@@ -146,51 +146,48 @@ function buildEmailHtml(opts: {
   <style>
     a[x-apple-data-detectors]{color:inherit!important;text-decoration:none!important;font-size:inherit!important;font-family:inherit!important;font-weight:inherit!important;line-height:inherit!important;}
     @media (prefers-color-scheme: dark) {
-      .email-bg{background:#0a0a0b!important;}
-      .email-card{background:#131316!important;border-color:rgba(255,255,255,0.08)!important;}
       .text-primary{color:#f4f4f5!important;}
       .text-secondary{color:#a1a1aa!important;}
       .text-muted{color:#71717a!important;}
-      .message-card{background:#1c1c20!important;border-color:rgba(255,255,255,0.06)!important;color:#d4d4d8!important;}
+      .quote{border-left-color:#3f3f46!important;color:#a1a1aa!important;}
       .ghost-cta{color:#a1a1aa!important;}
       .divider{background:rgba(255,255,255,0.08)!important;}
       .footer-border{border-color:rgba(255,255,255,0.08)!important;}
     }
     @media (max-width: 540px) {
-      .email-card{padding:28px 22px!important;border-radius:0!important;border-left:none!important;border-right:none!important;}
       .title{font-size:26px!important;}
       .cta-primary{display:block!important;text-align:center!important;margin:0 0 10px 0!important;}
       .cta-ghost{display:block!important;text-align:center!important;padding:12px 0!important;}
     }
   </style>
 </head>
-<body class="email-bg" style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(requesterName)} requested ${dates.length} date${dates.length === 1 ? "" : "s"} for ${escapeHtml(productionName)}.</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-bg" style="background:#ffffff;">
-    <tr><td align="center" style="padding:40px 16px;">
-      <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" class="email-card" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #e2e2e6;border-radius:20px;padding:40px 36px;">
-        <tr><td style="padding:0 0 36px 0;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr><td align="center" style="padding:40px 20px;">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+        <tr><td style="padding:0 0 40px 0;">
           <span class="text-primary" style="font-size:15px;font-weight:700;letter-spacing:-0.02em;color:#18181b;">coordie</span>
           <span style="display:inline-block;width:3px;height:3px;background:#8b5cf6;border-radius:50%;vertical-align:middle;margin:0 8px 3px 8px;"></span>
-          <span class="text-muted" style="font-size:12px;color:#a1a1aa;font-weight:500;letter-spacing:0.02em;">Date request</span>
+          <span class="text-muted" style="font-size:12px;color:#71717a;font-weight:500;letter-spacing:0.02em;">Date request</span>
         </td></tr>
-        <tr><td style="padding:0 0 10px 0;">
+        <tr><td style="padding:0 0 12px 0;">
           <h1 class="title text-primary" style="margin:0;color:#18181b;font-size:30px;font-weight:600;letter-spacing:-0.025em;line-height:1.1;">New date request</h1>
         </td></tr>
-        <tr><td style="padding:0 0 28px 0;">
+        <tr><td style="padding:0 0 32px 0;">
           <p class="text-secondary" style="margin:0;color:#52525b;font-size:15px;line-height:1.55;">
-            <strong style="color:#18181b;font-weight:600;">${escapeHtml(requesterName)}</strong>${requesterEmail ? ` <span class="text-muted" style="color:#a1a1aa;">&middot; ${escapeHtml(requesterEmail)}</span>` : ""} requested time for <strong style="color:#18181b;font-weight:600;">${escapeHtml(productionName)}</strong> <span class="text-muted" style="color:#a1a1aa;">&middot; ${escapeHtml(groupName)}</span>.
+            <strong class="text-primary" style="color:#18181b;font-weight:600;">${escapeHtml(requesterName)}</strong>${requesterEmail ? ` <span class="text-muted" style="color:#71717a;">&middot; ${escapeHtml(requesterEmail)}</span>` : ""} requested time for <strong class="text-primary" style="color:#18181b;font-weight:600;">${escapeHtml(productionName)}</strong> <span class="text-muted" style="color:#71717a;">&middot; ${escapeHtml(groupName)}</span>.
           </p>
         </td></tr>
-        <tr><td style="padding:0 0 28px 0;">
-          <p class="text-muted" style="margin:0 0 12px 0;color:#a1a1aa;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">${hasSlotMap ? "Requested dates &amp; slots" : "Requested dates"}</p>
+        <tr><td style="padding:0 0 32px 0;">
+          <p class="text-muted" style="margin:0 0 14px 0;color:#71717a;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;">${hasSlotMap ? "Requested dates &amp; slots" : "Requested dates"}</p>
           <div>${datesBlock}</div>
         </td></tr>
         ${messageBlock}
-        <tr><td style="padding:4px 0 28px 0;">
+        <tr><td style="padding:0 0 32px 0;">
           <div class="divider" style="height:1px;background:#e4e4e7;line-height:1px;font-size:0;">&nbsp;</div>
         </td></tr>
-        <tr><td style="padding:0 0 36px 0;">
+        <tr><td style="padding:0 0 40px 0;">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0">
             <tr>
               <td style="padding:0 10px 0 0;">
@@ -202,8 +199,8 @@ function buildEmailHtml(opts: {
             </tr>
           </table>
         </td></tr>
-        <tr><td class="footer-border" style="padding:24px 0 0 0;border-top:1px solid #e4e4e7;">
-          <p class="text-muted" style="margin:0;color:#a1a1aa;font-size:12px;line-height:1.5;">Sent by Coordie &middot; <a href="https://www.coordie.com" style="color:#8b5cf6;text-decoration:none;font-weight:500;">coordie.com</a></p>
+        <tr><td class="footer-border" style="padding:20px 0 0 0;border-top:1px solid #e4e4e7;">
+          <p class="text-muted" style="margin:0;color:#71717a;font-size:12px;line-height:1.5;">Sent by Coordie &middot; <a href="https://www.coordie.com" style="color:#8b5cf6;text-decoration:none;font-weight:500;">coordie.com</a></p>
         </td></tr>
       </table>
     </td></tr>

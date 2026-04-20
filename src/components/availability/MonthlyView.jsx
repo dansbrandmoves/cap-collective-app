@@ -76,24 +76,40 @@ export function MonthlyView({
               key={i}
               onClick={() => onDayClick(date)}
               disabled={!inMonth}
-              className={`relative min-h-[56px] sm:min-h-[72px] rounded-lg p-1.5 sm:p-2 text-left transition-all duration-200 ease-ios flex flex-col
+              aria-label={overlapCount > 0
+                ? `${date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}. ${overlapCount} ${overlapCount === 1 ? 'request' : 'requests'}: ${[...overlapGuests].join(', ')}`
+                : date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              className={`group/day relative min-h-[56px] sm:min-h-[72px] rounded-lg p-1.5 sm:p-2 text-left transition-all duration-200 ease-ios flex flex-col
                 ${inMonth ? 'hover:ring-1 hover:ring-white/20 cursor-pointer' : 'opacity-20 cursor-default'}
                 ${isSelected ? 'ring-2 ring-accent bg-accent/20' : overlapBg}
                 ${isToday && !isSelected ? 'ring-1 ring-accent/60' : ''}
               `}
             >
-              {/* Overlap count badge — the primary signal */}
+              {/* Request indicator — a calm dot. Count lives in the header chip;
+                  hover the cell for names, click to manage. */}
               {inMonth && overlapCount > 0 && !isSelected && (
-                <div
-                  className={`absolute top-1.5 right-1.5 z-10 flex items-center justify-center rounded-full font-semibold tracking-tight shadow-[0_2px_8px_-2px_rgba(139,92,246,0.6)] ${
-                    overlapCount >= 2
-                      ? 'bg-accent text-white min-w-[18px] h-[18px] px-1 text-[10px] sm:text-[11px]'
-                      : 'bg-accent/90 text-white min-w-[16px] h-4 px-1 text-[10px]'
-                  }`}
-                  title={`${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} free: ${[...overlapGuests].join(', ')}`}
-                >
-                  {overlapCount}
-                </div>
+                <>
+                  <div className="absolute top-1.5 right-1.5 z-10 w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_6px_-1px_rgba(139,92,246,0.8)]" />
+
+                  {/* Custom hover card — replaces the native browser tooltip.
+                      Desktop-only; mobile users use the click flow. */}
+                  <div className="hidden sm:block pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-30 opacity-0 group-hover/day:opacity-100 transition-opacity duration-150 ease-ios">
+                    <div className="bg-surface-950 border border-white/10 shadow-lift rounded-lg px-3 py-2 min-w-[140px] max-w-[220px]">
+                      <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-1.5 whitespace-nowrap">
+                        {isOwner ? `${overlapCount} ${overlapCount === 1 ? 'request' : 'requests'}` : `${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} free`}
+                      </p>
+                      <ul className="space-y-0.5">
+                        {[...overlapGuests].slice(0, 6).map(name => (
+                          <li key={name} className="text-xs text-zinc-200 truncate">{name}</li>
+                        ))}
+                        {overlapGuests.size > 6 && (
+                          <li className="text-[11px] text-zinc-500 pt-0.5">+{overlapGuests.size - 6} more</li>
+                        )}
+                      </ul>
+                      <p className="text-[10px] text-zinc-600 mt-1.5 pt-1.5 border-t border-white/[0.06]">Click to manage</p>
+                    </div>
+                  </div>
+                </>
               )}
 
               <span className={`text-xs font-medium mb-1 flex items-center gap-1.5 ${

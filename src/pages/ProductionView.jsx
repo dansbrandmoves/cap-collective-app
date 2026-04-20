@@ -6,7 +6,7 @@ import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { supabase } from '../utils/supabase'
-import { Lock, Menu, X, Share2, ExternalLink } from 'lucide-react'
+import { Lock, Menu, X, Share2, ExternalLink, Check, Archive, XCircle, Eye, EyeOff } from 'lucide-react'
 
 export function ProductionView() {
   const { id } = useParams()
@@ -357,11 +357,29 @@ function EmptyState({ onCreate }) {
 }
 
 function RoomCalendarPanel({ production, room, pendingCount, onShare }) {
-  const { effectiveSlots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates, businessHours } = useApp()
+  const { effectiveSlots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates, businessHours, updateDateRequestStatus } = useApp()
   const [dateRequests, setDateRequests] = useState([])
   const [sharedAvailability, setSharedAvailability] = useState([])
+  const [hiddenRequesters, setHiddenRequesters] = useState(() => new Set())
+  const [showRequests, setShowRequests] = useState(false)
 
   const config = production.availabilityConfig || production.availability_config
+
+  const pendingRequests = useMemo(
+    () => dateRequests.filter(r => r.status === 'pending'),
+    [dateRequests]
+  )
+
+  // Filter out hidden requesters for the calendar view
+  const visibleDateRequests = useMemo(() => {
+    if (hiddenRequesters.size === 0) return dateRequests
+    return dateRequests.filter(r => !hiddenRequesters.has(r.requester_name))
+  }, [dateRequests, hiddenRequesters])
+
+  async function handleUpdateStatus(requestId, status) {
+    const ok = await updateDateRequestStatus(requestId, status)
+    if (ok) setDateRequests(prev => prev.map(r => r.id === requestId ? { ...r, status } : r))
+  }
 
   const projectSlots = useMemo(() => {
     if (!config) return effectiveSlots
@@ -404,9 +422,12 @@ function RoomCalendarPanel({ production, room, pendingCount, onShare }) {
         <div className="min-w-0 flex items-center gap-2.5">
           <h2 className="text-[18px] font-semibold text-zinc-50 tracking-tight truncate">{room.name}</h2>
           {pendingCount > 0 && (
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20 flex-shrink-0">
+            <button
+              onClick={() => setShowRequests(true)}
+              className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 transition-colors flex-shrink-0"
+            >
               {pendingCount} pending
-            </span>
+            </button>
           )}
         </div>
         <button
@@ -426,12 +447,122 @@ function RoomCalendarPanel({ production, room, pendingCount, onShare }) {
           prefixRules={prefixRules}
           isOwner={true}
           slotStates={slotStates}
-          dateRequests={dateRequests}
+          dateRequests={visibleDateRequests}
           sharedAvailability={sharedAvailability}
           businessHours={config?.businessHours || businessHours}
         />
       </div>
+
+      <PendingRequestsModal
+        isOpen={showRequests}
+        onClose={() => setShowRequests(false)}
+        requests={pendingRequests}
+        allRequests={dateRequests}
+        hiddenRequesters={hiddenRequesters}
+        onToggleRequester={(name) => setHiddenRequesters(prev => {
+          const next = new Set(prev)
+          if (next.has(name)) next.delete(name); else next.add(name)
+          return next
+        })}
+        onUpdateStatus={handleUpdateStatus}
+      />
     </div>
+  )
+}
+
+function PendingRequestsModal({ isOpen, onClose, requests, allRequests, hiddenRequesters, onToggleRequester, onUpdateStatus }) {
+  // Group pending by requester so the filter list is clean
+  const byRequester = useMemo(() => {
+    const map = new Map()
+    for (const r of requests) {
+      if (!map.has(r.requester_name)) map.set(r.requester_name, [])
+      map.get(r.requester_name).push(r)
+    }
+    return [...map.entries()].map(([name, reqs]) => ({ name, reqs }))
+  }, [requests])
+
+  function formatDates(dates) {
+    return (dates || []).map(ds => {
+      const d = new Date(ds + 'T00:00:00')
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }).join(', ')
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Pending requests · ${requests.length}`}>
+      {byRequester.length === 0 ? (
+        <div className="py-6 text-center text-sm text-zinc-500">
+          All caught up. No pending requests.
+        </div>
+      ) : (
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto -mx-1 px-1">
+          {byRequester.map(({ name, reqs }) => {
+            const hidden = hiddenRequesters.has(name)
+            return (
+              <div key={name} className="bg-surface-800/60 border border-white/[0.05] rounded-xl overflow-hidden">
+                {/* Requester header */}
+                <div className="flex items-center gap-3 px-3 py-2.5 border-b border-white/[0.04]">
+                  <div className="w-7 h-7 rounded-full bg-surface-700 flex items-center justify-center text-xs font-semibold text-zinc-200 flex-shrink-0">
+                    {name?.[0]?.toUpperCase() ?? '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-zinc-100 truncate">{name}</p>
+                    <p className="text-[11px] text-zinc-500">{reqs.length} pending</p>
+                  </div>
+                  <button
+                    onClick={() => onToggleRequester(name)}
+                    title={hidden ? 'Show on calendar' : 'Hide from calendar'}
+                    className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-md transition-colors ${
+                      hidden
+                        ? 'bg-surface-700 text-zinc-500 hover:text-zinc-200'
+                        : 'bg-accent/10 text-accent hover:bg-accent/20'
+                    }`}
+                  >
+                    {hidden ? <EyeOff size={11} strokeWidth={2} /> : <Eye size={11} strokeWidth={2} />}
+                    {hidden ? 'Hidden' : 'Showing'}
+                  </button>
+                </div>
+
+                {/* Individual requests */}
+                {reqs.map(req => (
+                  <div key={req.id} className="flex items-center gap-3 px-3 py-2.5 border-b border-white/[0.04] last:border-0">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] text-zinc-200 truncate">{formatDates(req.dates)}</p>
+                      {req.message && (
+                        <p className="text-[11px] text-zinc-500 italic truncate mt-0.5">&ldquo;{req.message}&rdquo;</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => onUpdateStatus(req.id, 'approved')}
+                        title="Approve"
+                        className="p-1.5 rounded-md text-zinc-500 hover:text-green-400 hover:bg-green-500/10 transition-colors"
+                      >
+                        <Check size={13} strokeWidth={2} />
+                      </button>
+                      <button
+                        onClick={() => onUpdateStatus(req.id, 'declined')}
+                        title="Decline"
+                        className="p-1.5 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <XCircle size={13} strokeWidth={2} />
+                      </button>
+                      <button
+                        onClick={() => onUpdateStatus(req.id, 'archived')}
+                        title="Archive"
+                        className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
+                      >
+                        <Archive size={13} strokeWidth={2} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </Modal>
   )
 }
 

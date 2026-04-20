@@ -254,13 +254,30 @@ function HeroBookingMockup() {
 
           {/* RIGHT — dynamic content by phase */}
           <div className="relative px-6 sm:px-8 py-7 sm:py-9 flex flex-col min-h-[400px]">
-            <div className="mb-4">
-              <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{weekdayLabel(pickedDay, 'long')}</p>
-              <p className="text-2xl font-semibold text-zinc-100 tracking-tight leading-none mt-0.5">{pickedDay}</p>
-            </div>
 
-            {/* Slot list view (phases 0-7) */}
-            {!showForm && !showSuccess && (
+            {/* Pre-date-click empty state */}
+            {!isDateSelected && (
+              <div className="flex-1 flex flex-col items-center justify-center text-center animate-fadeIn">
+                <div className="w-10 h-10 rounded-full bg-white/[0.04] border border-white/5 flex items-center justify-center mb-3">
+                  <CalendarDays size={15} strokeWidth={1.5} className="text-zinc-500" />
+                </div>
+                <p className="text-[13px] font-medium text-zinc-300 mb-1">Pick a date</p>
+                <p className="text-[11px] text-zinc-500 leading-relaxed max-w-[180px]">
+                  Open times will appear here.
+                </p>
+              </div>
+            )}
+
+            {/* Day header — only once a date is selected */}
+            {isDateSelected && (
+              <div className="mb-4 animate-fadeIn">
+                <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{weekdayLabel(pickedDay, 'long')}</p>
+                <p className="text-2xl font-semibold text-zinc-100 tracking-tight leading-none mt-0.5">{pickedDay}</p>
+              </div>
+            )}
+
+            {/* Slot list view */}
+            {isDateSelected && !showForm && !showSuccess && (
               <>
                 <div className="h-7 mb-4 flex items-center">
                   {!isConnected ? (

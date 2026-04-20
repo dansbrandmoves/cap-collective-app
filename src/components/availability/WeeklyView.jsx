@@ -79,7 +79,10 @@ export function WeeklyView({
                 <th key={i} className="pb-3 px-0.5 sm:px-1 text-center min-w-[40px] sm:min-w-[80px]">
                   <button
                     onClick={() => onDayClick(day)}
-                    className={`relative text-center w-full rounded-lg py-1 sm:py-1.5 px-1 sm:px-2 transition-colors hover:bg-surface-700
+                    aria-label={overlapCount > 0
+                      ? `${day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}. ${overlapCount} ${overlapCount === 1 ? 'request' : 'requests'}: ${[...overlapGuests].join(', ')}`
+                      : day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    className={`group/weekday relative text-center w-full rounded-lg py-1 sm:py-1.5 px-1 sm:px-2 transition-colors hover:bg-surface-700
                       ${isToday ? 'text-accent' : 'text-zinc-400'}
                       ${isSelected ? 'ring-2 ring-accent bg-accent/10' : ''}
                     `}
@@ -93,21 +96,31 @@ export function WeeklyView({
                     }`}>
                       {day.getDate()}
                     </div>
-                    {/* Fixed-height badge row — always reserves space so all columns stay the same height */}
-                    <div className="h-[18px] mt-1 flex items-center justify-center">
+                    {/* Fixed-height dot row — reserves space so all columns stay the same height */}
+                    <div className="h-[10px] mt-1 flex items-center justify-center">
                       {overlapCount > 0 && (
-                        <div
-                          className={`flex items-center justify-center rounded-full font-semibold shadow-[0_2px_8px_-2px_rgba(139,92,246,0.6)] ${
-                            overlapCount >= 2
-                              ? 'bg-accent text-white min-w-[18px] h-[18px] px-1 text-[10px]'
-                              : 'bg-accent/90 text-white min-w-[16px] h-4 px-1 text-[10px]'
-                          }`}
-                          title={isOwner ? `${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} free: ${[...overlapGuests].join(', ')}` : `${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} available`}
-                        >
-                          {overlapCount}
-                        </div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_6px_-1px_rgba(139,92,246,0.8)]" />
                       )}
                     </div>
+
+                    {/* Hover card with requester names */}
+                    {overlapCount > 0 && (
+                      <div className="hidden sm:block pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1 z-30 opacity-0 group-hover/weekday:opacity-100 transition-opacity duration-150 ease-ios">
+                        <div className="bg-surface-950 border border-white/10 shadow-lift rounded-lg px-3 py-2 min-w-[140px] max-w-[220px] text-left">
+                          <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-1.5 whitespace-nowrap">
+                            {isOwner ? `${overlapCount} ${overlapCount === 1 ? 'request' : 'requests'}` : `${overlapCount} ${overlapCount === 1 ? 'person' : 'people'} free`}
+                          </p>
+                          <ul className="space-y-0.5">
+                            {[...overlapGuests].slice(0, 6).map(name => (
+                              <li key={name} className="text-xs text-zinc-200 truncate">{name}</li>
+                            ))}
+                            {overlapGuests.size > 6 && (
+                              <li className="text-[11px] text-zinc-500 pt-0.5">+{overlapGuests.size - 6} more</li>
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
                   </button>
                 </th>
               )
@@ -148,13 +161,13 @@ export function WeeklyView({
                           onDayClick(day)
                         }
                       }}
-                      title={
+                      aria-label={
                         isGuestBusy ? `You're busy: ${meta.label}` :
                         isOwner && slotCount > 0
                           ? `${slotCount} free: ${[...slotGuests].join(', ')}`
                           : meta.label
                       }
-                      className={`relative w-full rounded-lg py-2 sm:py-3 flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all
+                      className={`group/slot relative w-full rounded-lg py-2 sm:py-3 flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all
                         hover:opacity-90
                         ${isToday ? 'ring-1 ring-accent' : ''}
                         ${isChecked ? 'ring-2 ring-accent' : ''}
@@ -169,21 +182,34 @@ export function WeeklyView({
                         <span
                           className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full"
                           style={{ backgroundColor: slotStates.booked?.color || '#f59e0b' }}
-                          title="You're busy"
                         />
                       )}
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: isChecked ? '#8b5cf6' : meta.color }} />
                       <span className="text-xs font-medium hidden sm:inline" style={{ color: isChecked ? '#8b5cf6' : meta.color }}>
                         {isChecked ? '✓' : meta.label}
                       </span>
-                      {/* Owner: per-slot interest indicator — dot on mobile, count badge on desktop */}
+                      {/* Owner: per-slot interest indicator — calm dot on both mobile and desktop */}
                       {isOwner && slotCount > 0 && (
-                        <>
-                          <span className="sm:hidden absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-accent/75" />
-                          <span className="hidden sm:flex absolute top-0.5 right-0.5 text-[9px] font-bold text-white bg-accent rounded-full leading-none px-1 min-w-[14px] h-[14px] items-center justify-center shadow-[0_1px_4px_rgba(139,92,246,0.5)]">
-                            {slotCount}
-                          </span>
-                        </>
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_6px_-1px_rgba(139,92,246,0.8)]" />
+                      )}
+
+                      {/* Desktop hover card with requester names */}
+                      {isOwner && slotCount > 0 && (
+                        <div className="hidden sm:block pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-30 opacity-0 group-hover/slot:opacity-100 transition-opacity duration-150 ease-ios">
+                          <div className="bg-surface-950 border border-white/10 shadow-lift rounded-lg px-3 py-2 min-w-[140px] max-w-[220px] text-left">
+                            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-1.5 whitespace-nowrap">
+                              {slotCount} {slotCount === 1 ? 'request' : 'requests'}
+                            </p>
+                            <ul className="space-y-0.5">
+                              {[...slotGuests].slice(0, 6).map(name => (
+                                <li key={name} className="text-xs text-zinc-200 truncate">{name}</li>
+                              ))}
+                              {slotGuests.size > 6 && (
+                                <li className="text-[11px] text-zinc-500 pt-0.5">+{slotGuests.size - 6} more</li>
+                              )}
+                            </ul>
+                          </div>
+                        </div>
                       )}
                     </button>
                   </td>

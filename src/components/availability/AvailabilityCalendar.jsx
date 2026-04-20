@@ -372,7 +372,7 @@ function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAv
   const dateObj = useMemo(() => new Date(dateStr + 'T00:00:00'), [dateStr])
 
   // Guest data for this day: name + email (from their request or from group_members).
-  // Only people who said they're free THIS DAY — not everyone in the group.
+  // Only people who said they're free THIS DAY.
   const guestData = useMemo(() => {
     const set = new Set()
     dateRequests.forEach(r => { if (r.requester_name) set.add(r.requester_name) })
@@ -385,7 +385,25 @@ function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAv
     })
   }, [dateRequests, sharedAvailability, members])
 
-  // Selected names (to include as attendees) — default to everyone with an email
+  // Group members who HAVEN'T said they're free — still inviteable if this is
+  // the most convenient day and they didn't respond.
+  const otherMembers = useMemo(() => {
+    const responded = new Set(guestData.map(g => g.name))
+    return members
+      .filter(m => m.name && !responded.has(m.name))
+      .map(m => ({ name: m.name, email: (m.email || '').trim() || null }))
+  }, [guestData, members])
+
+  // Unified email lookup so selectedNames can reference either group
+  const emailByName = useMemo(() => {
+    const map = new Map()
+    guestData.forEach(g => { if (g.email) map.set(g.name, g.email) })
+    otherMembers.forEach(m => { if (m.email && !map.has(m.name)) map.set(m.name, m.email) })
+    return map
+  }, [guestData, otherMembers])
+
+  // Selected names (to include as attendees) — default to everyone who said
+  // they're free AND has an email. Non-responders are opt-in.
   const [selectedNames, setSelectedNames] = useState(() =>
     new Set(guestData.filter(g => g.email).map(g => g.name))
   )
@@ -440,8 +458,8 @@ function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAv
   }, [slots, dateRequests, sharedAvailability, dateStr])
 
   const selectedEmails = useMemo(
-    () => guestData.filter(g => g.email && selectedNames.has(g.name)).map(g => g.email),
-    [guestData, selectedNames]
+    () => [...selectedNames].map(n => emailByName.get(n)).filter(Boolean),
+    [selectedNames, emailByName]
   )
 
   function handleSchedule() {
@@ -450,7 +468,7 @@ function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAv
     const start = `${datePart}T140000`
     const end = `${datePart}T150000`
 
-    const selectedList = guestData.filter(g => selectedNames.has(g.name)).map(g => g.name)
+    const selectedList = [...selectedNames]
     const title = selectedList.length === 1
       ? `Meeting with ${selectedList[0]}`
       : selectedList.length > 1
@@ -458,9 +476,16 @@ function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAv
       : 'Meeting'
 
     const detailsLines = ['Scheduled via Coordie.']
-    if (selectedList.length > 0) {
+    const respondedSet = new Set(guestData.map(g => g.name))
+    const confirmedInvitees = selectedList.filter(n => respondedSet.has(n))
+    const otherInvitees = selectedList.filter(n => !respondedSet.has(n))
+    if (confirmedInvitees.length > 0) {
       detailsLines.push('')
-      detailsLines.push(`Indicated free for ${dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}: ${selectedList.join(', ')}.`)
+      detailsLines.push(`Confirmed free for ${dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}: ${confirmedInvitees.join(', ')}.`)
+    }
+    if (otherInvitees.length > 0) {
+      if (confirmedInvitees.length === 0) detailsLines.push('')
+      detailsLines.push(`Also invited: ${otherInvitees.join(', ')}.`)
     }
 
     const params = new URLSearchParams({
@@ -520,7 +545,7 @@ function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAv
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-6">
-          {guestData.length > 0 ? (
+          {guestData.length > 0 && (
             <>
               <div className="flex items-baseline gap-2 mb-4">
                 <span className="inline-flex items-center justify-center rounded-full bg-accent text-white text-[13px] font-bold min-w-[26px] h-[26px] px-1.5">
@@ -582,51 +607,111 @@ function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAv
                 })}
               </div>
 
-              {slotOverlap.anySlotData && slotOverlap.rows.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-3">By time slot</p>
-                  <div className="space-y-1.5">
-                    {slotOverlap.rows.map(({ slot, freeCount, freeNames }) => {
-                      const total = guestData.length
-                      const pct = total > 0 ? Math.round((freeCount / total) * 100) : 0
-                      const isBest = freeCount === total && freeCount > 0
-                      const isNone = freeCount === 0
-                      return (
-                        <div
-                          key={slot.id}
-                          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-colors ${
-                            isBest
-                              ? 'bg-accent/10 border-accent/30'
-                              : isNone
-                              ? 'bg-white/[0.02] border-white/[0.04] opacity-60'
-                              : 'bg-white/[0.03] border-white/[0.05]'
-                          }`}
-                          title={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : 'No one free'}
-                        >
-                          <div className="w-1.5 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: slot.color || '#8b5cf6' }} />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-[13px] font-medium truncate leading-tight ${isBest ? 'text-zinc-50' : 'text-zinc-200'}`}>{slot.name}</p>
-                            <p className="text-[11px] text-zinc-500 mt-0.5">{slot.startTime}–{slot.endTime}</p>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <div className="w-16 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                              <div
-                                className={`h-full transition-all duration-300 ${isBest ? 'bg-accent' : 'bg-accent/50'}`}
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                            <span className={`text-[12px] font-semibold tabular-nums w-10 text-right ${isBest ? 'text-accent' : isNone ? 'text-zinc-600' : 'text-zinc-300'}`}>
-                              {freeCount}/{total}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
             </>
-          ) : (
+          )}
+
+          {/* Also invite: group members who haven't said they're free. Useful
+              when this is the most convenient day even without a response. */}
+          {otherMembers.length > 0 && (
+            <div className="mb-6">
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-1.5">Also invite</p>
+              <p className="text-[12px] text-zinc-500 mb-3 leading-relaxed">
+                Group members who haven&rsquo;t confirmed — still worth inviting if this works.
+              </p>
+              <div className="space-y-1.5">
+                {otherMembers.map(({ name, email }) => {
+                  const selected = selectedNames.has(name)
+                  const hasEmail = !!email
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={hasEmail ? () => toggleGuest(name) : undefined}
+                      disabled={!hasEmail}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all duration-200 ease-ios text-left ${
+                        !hasEmail
+                          ? 'bg-white/[0.02] border-white/[0.04] opacity-60 cursor-default'
+                          : selected
+                          ? 'bg-accent/10 border-accent/30 hover:bg-accent/15'
+                          : 'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.05] hover:border-white/10'
+                      }`}
+                    >
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold flex-shrink-0 border ${
+                        selected
+                          ? 'bg-accent/20 border-accent/35 text-accent'
+                          : 'bg-white/[0.02] border-white/[0.06] text-zinc-500'
+                      }`}>
+                        {name?.[0]?.toUpperCase() ?? '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] text-zinc-200 truncate leading-tight">{name}</p>
+                        {hasEmail ? (
+                          <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{email}</p>
+                        ) : (
+                          <p className="text-[11px] text-zinc-600 mt-0.5">No email &mdash; add manually in GCal</p>
+                        )}
+                      </div>
+                      {hasEmail && (
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 ease-ios ${
+                          selected
+                            ? 'bg-accent text-white'
+                            : 'border border-white/20 bg-transparent'
+                        }`}>
+                          {selected && <Check size={12} strokeWidth={2.5} />}
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {guestData.length > 0 && slotOverlap.anySlotData && slotOverlap.rows.length > 0 && (
+            <div className="mb-2">
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-3">By time slot</p>
+              <div className="space-y-1.5">
+                {slotOverlap.rows.map(({ slot, freeCount, freeNames }) => {
+                  const total = guestData.length
+                  const pct = total > 0 ? Math.round((freeCount / total) * 100) : 0
+                  const isBest = freeCount === total && freeCount > 0
+                  const isNone = freeCount === 0
+                  return (
+                    <div
+                      key={slot.id}
+                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-colors ${
+                        isBest
+                          ? 'bg-accent/10 border-accent/30'
+                          : isNone
+                          ? 'bg-white/[0.02] border-white/[0.04] opacity-60'
+                          : 'bg-white/[0.03] border-white/[0.05]'
+                      }`}
+                      title={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : 'No one free'}
+                    >
+                      <div className="w-1.5 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: slot.color || '#8b5cf6' }} />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-[13px] font-medium truncate leading-tight ${isBest ? 'text-zinc-50' : 'text-zinc-200'}`}>{slot.name}</p>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">{slot.startTime}–{slot.endTime}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="w-16 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-300 ${isBest ? 'bg-accent' : 'bg-accent/50'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className={`text-[12px] font-semibold tabular-nums w-10 text-right ${isBest ? 'text-accent' : isNone ? 'text-zinc-600' : 'text-zinc-300'}`}>
+                          {freeCount}/{total}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {guestData.length === 0 && otherMembers.length === 0 && (
             <div className="py-8 text-center">
               <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-center mx-auto mb-4">
                 <CalendarPlus size={18} strokeWidth={1.5} className="text-zinc-500" />

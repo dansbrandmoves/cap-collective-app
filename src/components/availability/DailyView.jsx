@@ -90,7 +90,7 @@ export function DailyView({
       </div>
 
       <div className="space-y-3">
-        {slotResults.map(({ slot, state, drivingEvent }) => {
+        {slotResults.map(({ slot, state }) => {
           const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
           const freeGuests = isOwner ? getFreeForSlot(slot.id) : []
           const MAX_SHOWN = 5
@@ -141,13 +141,6 @@ export function DailyView({
                   <Badge variant={STATE_BADGE[state]}>{meta.label}</Badge>
                 )}
               </div>
-
-              {/* Driving event (owner only) */}
-              {!isSlotSelectMode && drivingEvent && (
-                <p className="text-xs text-zinc-600 mt-2 truncate">
-                  <span className="text-zinc-500">↳</span> {drivingEvent.title}
-                </p>
-              )}
 
               {/* Per-slot guest availability (owner only) */}
               {isOwner && freeGuests.length > 0 && (

@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-04-19 (late evening)
-**Last commit on `master` (pushed):** `f3359f5` — "Rooms: guest calendar overlap across Monthly/Weekly/Daily views"
+**Last session ended:** 2026-04-19 (very late evening)
+**Last commit on `master` (pushed):** `d216351` — "Homepage mockup: remove animated cursor"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push)
 
 ---
@@ -33,12 +33,20 @@
 | `82bf0df` | Guest calendar: persist connection in sessionStorage across remounts |
 | `4fea274` | Booking: add visual dot before "busy" label for easier scanning |
 | `f3359f5` | Rooms: guest calendar overlap across Monthly/Weekly/Daily views |
+| `cd2310c` | Rooms: stronger guest-busy signal in Weekly (grayscale) + per-slot dimming in Monthly |
+| `3521b51` | Slot picker popout: dim guest-busy slots with "you're busy" chip |
+| `1feb9ce` | Rooms: busy indicators use settings 'calendar event' color + spacing tweaks |
+| `eb1fdc0` | Rooms: drop 'Share with team' snapshot — keep personal overlay only |
+| `2ce2294` | Calendar connect: clearer copy on what overlay does and how data is handled |
+| `0aca112` | Homepage: single hero mockup of killer feature + standard routing (`/` = marketing/dashboard, `/signin` = auth) |
+| `815bdcd` | Emails: container-less design — no card bg, no quote border, native bg (both notify-booking v11 + notify-date-request v14 deployed) |
+| `d216351` | Homepage hero: scripted 13-phase booking flow demo (click date → connect → slot → form → submit → success) — no cursor, state changes carry the narrative |
 
 ---
 
 ## 📋 Backlog (priority order)
 
-1. **Phase 2 of room overlap: multi-person filter** — when others have shared availability, add a chip-row at top of AvailabilityTab: `Show overlap with: [Me] [Sarah] [Tom]`. Lets guests isolate two-person overlap. Right now the personal calendar overlay (busy/free) is independent of the per-day "N people free" badges.
+1. **Phase 2 of room overlap: multi-person filter** — when others have shared availability, add a chip-row at top of AvailabilityTab: `Show overlap with: [Me] [Sarah] [Tom]`. Lets guests isolate two-person overlap. Right now the personal calendar overlay (busy/free) is independent of the per-day "N people free" badges. **Note:** the `shared_availability` table is still read by the views but no longer written to (we dropped the snapshot-share feature). If/when Phase 2 ships, we'll need a different live data source — see "Why snapshot share was dropped" below.
 2. **Verify slot-request flow E2E in a real room** — toggle `guestSlotSelection`, guest selects date → slots → Send. Confirm owner inbox shows slot chips and DayInspectorPanel renders the "By time slot" heatmap.
 3. **Inbox UI for slot_map** — Inbox list currently shows dates only. Should surface selected slots per date when `slot_map` exists.
 4. **RESEND_API_KEY check** — edge functions silently no-op if key isn't set. Confirm still configured in Supabase → Edge Function Secrets.
@@ -51,6 +59,21 @@
 7. **Real-time subscription on `shared_availability`** in RoomView — currently only `date_requests` live-updates.
 8. **DayInspectorPanel polish** for 10+ guests — may need scroll or "show more" collapse.
 9. **Timezone actually used** — stored in context, but booking page slot times and email timestamps don't yet use it. Wire up when ready.
+
+---
+
+## 🧭 Why snapshot "Share with team" was dropped
+
+When a guest shared their calendar availability, we wrote a snapshot of `freeDates` to `shared_availability`. But the moment their calendar changed (new meeting, cancellation), that snapshot went stale — producing **false positives** ("Sarah's free Wed!" → actually she's not anymore). False positives in coordination are worse than absence.
+
+To do this properly requires offline/refresh-token consent (option 2 or 3 below), which hits the same Google verification gate we already fight with the personal overlay.
+
+**Future options if we revisit:**
+1. **Auto-refresh on revisit** — when guest reopens the room still connected, silently re-fetch and re-push. Simple, no new perms. Stale only between visits.
+2. **Background refresh token + cron** — medium complexity; needs offline consent.
+3. **Calendar push webhooks** — Google pings us on change. Most accurate, most complex, needs verified domain.
+
+**Design instinct:** if we ever bring back multi-person room overlap, consider whether it should be opt-in-per-visit (fresh each time) rather than persisted. And the moment a guest wants to share is a natural **conversion moment** — offer Coordie account signup for live calendar sync.
 
 ---
 
@@ -147,19 +170,21 @@ git push origin master
 
 | File | What's there |
 |---|---|
-| `src/pages/RoomView.jsx` | Guest room. AvailabilityTab owns `guestEvents` (sessionStorage). GuestCalendarPanel = compact chip + Share + Disconnect (no free-days list). Threads `guestEvents` into AvailabilityCalendar. |
+| `src/pages/HomePage.jsx` | Marketing at `/`. Single hero mockup: phase-driven 13-step booking flow demo (no cursor — state changes do the work). |
+| `src/App.jsx` | Routes: `/` = HomePage(visitor)/Dashboard(auth), `/signin` = AuthPage, `/home` → redirects to `/`. Auth gate pattern for protected routes. |
+| `src/pages/RoomView.jsx` | Guest room. AvailabilityTab owns `guestEvents` (sessionStorage). GuestCalendarPanel = compact connect/connected chip + labeled Disconnect (no free-days list, no share button). Threads `guestEvents` into AvailabilityCalendar. |
 | `src/pages/BookingPageView.jsx` | Booking page. Owns `guestEvents` (sessionStorage). TimeSlotPicker dims guest-busy slots (`• busy` chip). MonthCalendar gets green dots on free days. |
 | `src/components/ui/GoogleOAuthGuide.jsx` | Shared animated OAuth guide modal — reused in Room + Booking. |
-| `src/components/availability/AvailabilityCalendar.jsx` | DayInspectorPanel; threads `guestEvents` to all three views. |
-| `src/components/availability/WeeklyView.jsx` | Slot×day grid; owner overlap badges; **guest-busy cells dimmed `opacity-30`**. |
-| `src/components/availability/DailyView.jsx` | Slot cards; owner avatar chips; **guest-busy cards dimmed + `you're busy` chip**. |
-| `src/components/availability/MonthlyView.jsx` | Day-cell overlap badges; **green dot next to date if guest has free time that day**. |
+| `src/components/availability/AvailabilityCalendar.jsx` | DayInspectorPanel; threads `guestEvents` to all three views AND into the slot-picker slide-over popout. |
+| `src/components/availability/WeeklyView.jsx` | Slot×day grid; owner overlap badges; **guest-busy cells = grayscale + opacity-50 + small `booked.color` dot**. |
+| `src/components/availability/DailyView.jsx` | Slot cards; owner avatar chips; **guest-busy cards dimmed + `• you're busy` chip in `booked.color`**. |
+| `src/components/availability/MonthlyView.jsx` | Day-cell overlap badges; **per-slot bars dim when guest is busy**; **green dot next to date if any slot is free**. |
 | `src/contexts/AppContext.jsx` | `fetchPlan()` restores settings from `profiles.settings`. Sync effect writes back on change. `guestCalendarEnabled` defaults to `true`. |
-| `src/pages/CalendarSettings.jsx` | Settings page: Google OAuth, business hours, timezone selector, theme, branding, guestCalendarEnabled toggle. |
-| `src/App.jsx` | Auth gate (`AuthGate`); `LoadingScreen` uses `<PageLoader />`. |
+| `src/pages/CalendarSettings.jsx` | Settings page: Google OAuth, business hours, timezone selector, theme, branding, guestCalendarEnabled toggle. `slotStates.booked.color` is what drives busy-indicator colors across rooms. |
 | `tailwind.config.js` + `src/index.css` | Design tokens + light mode overrides + OAuth guide keyframes |
-| `supabase/functions/notify-date-request/index.ts` | Email v13 — renders slot chips per date when slot_map present |
-| `supabase/functions/notify-shared-availability/index.ts` | v1 live — owner email when guest shares calendar |
+| `supabase/functions/notify-booking/index.ts` | v11 deployed — container-less email design (no card bg, left-accent italic quote). |
+| `supabase/functions/notify-date-request/index.ts` | v14 deployed — same container-less design. Renders slot chips per date when `slot_map` present. |
+| `supabase/functions/notify-shared-availability/index.ts` | v1 still deployed but **no longer called from client** (Share-with-team dropped). Left for potential Phase 2 use. |
 
 ---
 

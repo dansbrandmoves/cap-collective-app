@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '../contexts/AppContext'
 import { CalendarDays, Users, Link2, CheckCircle2, ArrowRight, Inbox, LayoutGrid, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -58,15 +58,6 @@ const HERO_FREE_INDICES = HERO_SLOTS
   .map((s, i) => s.busy ? -1 : i)
   .filter(i => i >= 0)
 
-function MockupCursor() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="#1a1a1a" strokeWidth="1.4"
-      style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))' }}>
-      <path d="M4 4l7.07 17 2.51-7.39L21 11.07z" />
-    </svg>
-  )
-}
-
 // Phase sequence: fully-scripted booking flow demo
 // idle → click-date → click-connect → click-slot → form → type → submit → success → loop
 const PHASES = [
@@ -103,7 +94,6 @@ function HeroBookingMockup() {
   const isSlotSelected = phaseIdx >= 6         // after click-slot
   const showForm       = phaseIdx >= 7 && phaseIdx <= 11
   const showSuccess    = phaseIdx >= 12
-  const isClicking     = phase.startsWith('click-')
 
   // Typing animation: characters appear progressively during the 'typing-name' phase
   const [typedChars, setTypedChars] = useState(0)
@@ -122,46 +112,13 @@ function HeroBookingMockup() {
     return () => clearInterval(tick)
   }, [phase, phaseIdx, showForm])
 
-  // Refs for cursor targets
-  const containerRef = useRef(null)
-  const dateCellRef = useRef(null)
-  const connectBtnRef = useRef(null)
-  const slotRefs = useRef([])
-  const nameInputRef = useRef(null)
-  const submitBtnRef = useRef(null)
-
-  const [cursor, setCursor] = useState({ x: 0, y: 0, visible: false })
-
-  useEffect(() => {
-    let target = null
-    if (phase === 'cursor-to-date' || phase === 'click-date')          target = dateCellRef.current
-    else if (phase === 'cursor-to-connect' || phase === 'click-connect')target = connectBtnRef.current
-    else if (phase === 'cursor-to-slot' || phase === 'click-slot')     target = slotRefs.current[SELECTED_SLOT_IDX]
-    else if (phase === 'form-entering')                                 target = slotRefs.current[SELECTED_SLOT_IDX]
-    else if (phase === 'cursor-to-name' || phase === 'typing-name')    target = nameInputRef.current
-    else if (phase === 'cursor-to-submit' || phase === 'click-submit') target = submitBtnRef.current
-
-    const container = containerRef.current
-    if (target && container) {
-      const t = target.getBoundingClientRect()
-      const c = container.getBoundingClientRect()
-      setCursor({
-        x: t.left - c.left + Math.min(24, t.width / 2),
-        y: t.top - c.top + t.height / 2 - 4,
-        visible: true,
-      })
-    } else {
-      setCursor(c => ({ ...c, visible: false }))
-    }
-  }, [phase, phaseIdx, isConnected, showForm, showSuccess])
-
   return (
     <div className="relative">
       {/* Ambient purple glow behind the card */}
       <div className="absolute -inset-8 sm:-inset-16 pointer-events-none opacity-60"
         style={{ background: 'radial-gradient(ellipse at center, rgb(139 92 246 / 0.16), transparent 70%)' }} />
 
-      <div ref={containerRef} className="relative bg-surface-900 border border-white/[0.08] rounded-3xl shadow-[0_24px_80px_-24px_rgba(0,0,0,0.6)] overflow-hidden">
+      <div className="relative bg-surface-900 border border-white/[0.08] rounded-3xl shadow-[0_24px_80px_-24px_rgba(0,0,0,0.6)] overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-[1.15fr_1fr]">
 
           {/* LEFT — month calendar */}
@@ -191,7 +148,6 @@ function HeroBookingMockup() {
                 return (
                   <div
                     key={i}
-                    ref={isThisDate ? dateCellRef : null}
                     className={`relative aspect-square flex items-center justify-center text-[12px] rounded-full font-medium transition-all duration-300 ease-ios
                       ${!inMonth ? 'text-transparent' :
                         isSelected ? 'bg-accent text-white shadow-[0_3px_10px_-3px_rgb(139_92_246/0.35)]' :
@@ -224,7 +180,6 @@ function HeroBookingMockup() {
                 <div className="h-7 mb-4 flex items-center">
                   {!isConnected ? (
                     <button
-                      ref={connectBtnRef}
                       className={`inline-flex items-center gap-1.5 text-[10px] font-medium text-zinc-200 border border-white/10 rounded-full px-3 py-1.5 transition-all
                         ${phase === 'click-connect' ? 'bg-accent/25 border-accent/50' : 'bg-white/[0.04]'}`}
                     >
@@ -246,7 +201,6 @@ function HeroBookingMockup() {
                     const showBusy = isConnected && slot.busy
                     return (
                       <div key={slot.time}
-                        ref={el => { slotRefs.current[i] = el }}
                         className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-300 ease-ios ${
                           isThisSlotSelected
                             ? 'bg-accent text-white shadow-[0_3px_10px_-3px_rgb(139_92_246/0.3)]'
@@ -283,7 +237,6 @@ function HeroBookingMockup() {
 
                 <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-1.5">Your name</p>
                 <div
-                  ref={nameInputRef}
                   className={`w-full flex items-center bg-white/[0.03] border rounded-lg px-3 py-2.5 text-[13px] text-zinc-100 transition-all
                     ${phase === 'cursor-to-name' || phase === 'typing-name' ? 'border-accent/50 shadow-[0_0_0_2px_rgba(139,92,246,0.12)]' : 'border-white/10'}`}
                 >
@@ -299,7 +252,6 @@ function HeroBookingMockup() {
                 <div className="flex-1" />
 
                 <button
-                  ref={submitBtnRef}
                   className={`w-full mt-5 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[13px] font-semibold transition-all
                     ${phase === 'click-submit'
                       ? 'bg-accent text-white shadow-[0_3px_10px_-3px_rgb(139_92_246/0.35)] scale-[0.99]'
@@ -322,13 +274,6 @@ function HeroBookingMockup() {
               </div>
             )}
 
-            {/* Animated cursor */}
-            <div
-              className={`absolute pointer-events-none z-10 transition-all duration-700 ease-ios ${cursor.visible ? 'opacity-100' : 'opacity-0'}`}
-              style={{ transform: `translate(${cursor.x}px, ${cursor.y}px) scale(${isClicking ? 0.82 : 1})` }}
-            >
-              <MockupCursor />
-            </div>
           </div>
         </div>
       </div>

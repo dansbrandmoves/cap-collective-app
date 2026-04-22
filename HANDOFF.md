@@ -177,6 +177,20 @@ From `profiles`:
 
 ---
 
+## 🔒 Supply Chain Security
+
+`.npmrc` at project root sets `min-release-age=7` — npm won't install packages published fewer than 7 days ago. Lightweight defense against the class of attack that hit litellm and axios in early 2025.
+
+**Rules:**
+- Never `npm update` casually — only intentionally, after a package has been out 7+ days
+- Use `npm ci` in any automated context (not `npm install`)
+- Run `npm audit` periodically
+- `package-lock.json` is committed — keep it that way
+
+Full rationale and package risk profile: `memory/security_supply_chain.md` (in Claude memory).
+
+---
+
 ## 💡 How Daniel works
 
 - Ships fast, iterates on real feedback

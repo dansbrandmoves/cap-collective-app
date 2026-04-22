@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
-import { CalendarCheck, Plus, Copy, Check, Trash2, ChevronDown, ChevronUp, ExternalLink, Pencil, Clock, CalendarRange } from 'lucide-react'
+import { CalendarCheck, Plus, Copy, Check, Trash2, ChevronDown, ChevronUp, ExternalLink, Pencil, Clock, CalendarRange, Code2, X } from 'lucide-react'
 import { PageLoader } from '../components/ui/PageLoader'
 
 const DURATIONS = [15, 30, 45, 60]
@@ -12,6 +12,8 @@ const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, onUpdateBookingStatus, onDeleteBooking }) {
   const [copied, setCopied] = useState(false)
+  const [embedCopied, setEmbedCopied] = useState(false)
+  const [showEmbed, setShowEmbed] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -27,11 +29,18 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   const [loadingBookings, setLoadingBookings] = useState(false)
 
   const link = `${window.location.origin}/book/${page.slug}`
+  const embedCode = `<iframe src="${link}" width="100%" height="700" style="border:none;border-radius:12px;" allowtransparency="true" loading="lazy"></iframe>`
 
   function copyLink() {
     navigator.clipboard.writeText(link)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function copyEmbed() {
+    navigator.clipboard.writeText(embedCode)
+    setEmbedCopied(true)
+    setTimeout(() => setEmbedCopied(false), 2000)
   }
 
   async function toggleExpand() {
@@ -65,6 +74,11 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
               className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
               title="Edit booking page">
               <Pencil size={14} strokeWidth={1.75} />
+            </button>
+            <button onClick={() => setShowEmbed(v => !v)}
+              className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${showEmbed ? 'text-accent bg-accent/10' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/5'}`}
+              title="Embed on website">
+              <Code2 size={14} strokeWidth={1.75} />
             </button>
             <button onClick={copyLink}
               className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
@@ -129,6 +143,27 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
           </button>
         </div>
       </div>
+
+      {showEmbed && (
+        <div className="border-t border-surface-800 px-5 py-4 bg-surface-950/50">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em]">Embed on your website</p>
+            <p className="text-[11px] text-zinc-600">Paste this into any page's HTML</p>
+          </div>
+          <div className="relative">
+            <pre className="bg-surface-900 border border-white/[0.06] rounded-lg px-4 py-3 text-[11px] text-zinc-400 font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-all">
+              {embedCode}
+            </pre>
+            <button
+              onClick={copyEmbed}
+              className="absolute top-2 right-2 flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-surface-800 border border-white/[0.06] text-zinc-400 hover:text-zinc-100 hover:border-white/10 transition-colors"
+            >
+              {embedCopied ? <><Check size={11} strokeWidth={2} className="text-green-400" /> Copied</> : <><Copy size={11} strokeWidth={1.75} /> Copy</>}
+            </button>
+          </div>
+          <p className="text-[11px] text-zinc-600 mt-2">Set <code className="text-zinc-500">height</code> to match your design. 700px works well for most layouts.</p>
+        </div>
+      )}
 
       {expanded && (
         <div className="border-t border-surface-800 px-5 py-3 bg-surface-950/50">

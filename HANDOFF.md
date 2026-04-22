@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-04-20 (big day)
-**Last pushed commit:** `48cd6fe` — "Weekly view calmed; DayInspectorPanel can invite non-responders"
+**Last session ended:** 2026-04-22
+**Last pushed commit:** `0199073` — "Per-booking-page custom logo upload"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push)
 **Google OAuth verification:** submitted, awaiting review (2–4 weeks typical)
 
@@ -15,18 +15,27 @@
 
 ---
 
-## ✅ Shipped this session
+## ✅ Shipped this session (2026-04-22)
 
 | SHA | Summary |
 |---|---|
-| `831f34e` | **Groups → Rooms rename**: DB migration (`groups`→`rooms`, `group_members`→`room_members`, `group_id`→`room_id`), AppContext + all consumer files updated |
-| `dd3844f` | **ProductionView redesign**: room-name header, prominent "Share room" button, gear icon removed, availability settings subsumed into Project Settings modal, rename-via-modal, auto-select + auto-create first room |
-| `da34a88` | **Google Calendar resilience**: edge function only wipes refresh_token on `invalid_grant` (permanent); transient errors (5xx/network/invalid_client) keep the token so next call retries. Settings UI shows amber "Connection expired — reconnect" when calendars exist but refresh token is missing |
-| `0fe96d2` | **Admin dashboard** at `/admin`: role-gated, user list with stats + search, inline Free/Pro and User/Admin toggles. `profiles.role` column (daniel@brandmoves.co bootstrapped as admin). Security-definer RPCs (`admin_list_users`, `admin_update_user`) handle authorization server-side |
-| `20b0195` | **Stripe subscriptions (webhook-less)**: four edge functions — `create-checkout-session`, `verify-checkout-session`, `create-portal-session`, `sync-subscription-status`. Checkout verifies on return via `?session_id`; billing page re-syncs from Stripe on every mount (catches cancels without webhooks). "Manage in Stripe" opens Customer Portal. All deployed with `verify_jwt: false` + in-code `getUser()` check |
-| `770e008` | **Calmer calendar**: number badges → dots on MonthlyView day cells, custom hover cards (desktop) with requester names, "N pending" chip is now a button → opens `PendingRequestsModal` with per-requester visibility filter and inline Approve/Decline/Archive (no trip to Inbox). Hoisted requester filter state so dots update live |
-| `761560a` | DayInspectorPanel restored on day click in RoomCalendarPanel (was regressing to Daily view) — "help me decide" flow back |
-| `48cd6fe` | Weekly view parity: day headers + slot cells converted to dots with hover cards. DayInspectorPanel's meeting creation now has **"Also invite" section** listing room members who haven't responded — useful when this is the most convenient day regardless. GCal event description differentiates "Confirmed free" vs "Also invited" |
+| `579ae91` | **Booking page embed**: `<iframe>` snippet generator in BookingPageCard (Code2 button). `.npmrc` adds `min-release-age=7` supply chain defense. |
+| `9cf9637` | **Zen booking layout**: Desktop right panel is now full-width calendar → slot picker slides in (AnimatePresence step swap) with back button. Mobile: Connect Calendar moved to footer. Embed panel gets Hide logo / Hide description checkboxes (`?logo=0&desc=0`). |
+| `9d32582` | **Light/dark theme for embeds**: `?theme=light` applies `html.light` to the iframe document. Dark/Light toggle in embed panel. Back button crash fixed (`lastDateHeaderRef` — same pattern as `lastSlotRef`). index.css: white-opacity border/bg overrides + ambient-glow + shadow-lift for light mode. |
+| `0199073` | **Per-booking-page logo**: `logo_url` + `logo_is_dark` added to `booking_pages` table. `uploadBookingPageLogo` / `removeBookingPageLogo` in AppContext (resizes to webp, auto-detects light/dark). Upload/replace/remove UI in Edit modal. BookingPageView: page logo → profile logo → Coordie logo fallback chain. |
+
+## ✅ Shipped previously (2026-04-20)
+
+| SHA | Summary |
+|---|---|
+| `831f34e` | **Groups → Rooms rename** |
+| `dd3844f` | **ProductionView redesign** |
+| `da34a88` | **Google Calendar resilience** |
+| `0fe96d2` | **Admin dashboard** |
+| `20b0195` | **Stripe subscriptions (webhook-less)** |
+| `770e008` | **Calmer calendar** (dots + hover cards + PendingRequestsModal) |
+| `761560a` | DayInspectorPanel restored |
+| `48cd6fe` | Weekly view parity + "Also invite" non-responders |
 
 ---
 
@@ -39,6 +48,16 @@
 - **Pending requests modal** (from the chip): grouped by requester with per-person show/hide toggle (filters calendar dots live) + Approve/Decline/Archive inline.
 - **DayInspectorPanel** (click any day with requests): free-people list + "Also invite" non-responders + By-time-slot heatmap + "Schedule in Google Calendar" action.
 - **Roles vs Plans**: `profiles.role` (`user | admin`) is separate from `profiles.plan` (`free | pro`). Stripe only touches `plan`; admin status stays safe.
+
+---
+
+## 🧠 Booking page embed mental model
+
+- Booking pages live at `/book/:slug`. No app shell — full-page standalone, works perfectly as an iframe target.
+- **Embed snippet** generated in BookingPages → card → Code2 button. Checkboxes wire `?logo=0`, `?desc=0`, `?theme=light` into the src URL. Copy button grabs the full `<iframe>` tag.
+- **Theme**: `?theme=light` calls `document.documentElement.classList.add('light')` inside the iframe — isolated from host page. Leverages the full existing `html.light` CSS system. `?theme=dark` forces dark (default). No `auto` mode — owner explicitly picks.
+- **Logo priority**: `page.logo_url` → `ownerLogo` (profile) → Coordie SVG. Auto-detects light/dark from pixel brightness in `resizeImage`. Stored at `logos` bucket: `userId/booking-pages/pageId.webp`.
+- **Booking calendar design decision**: kept simple (available/unavailable days). Intentionally different from rooms heatmap — guest tool vs. owner management tool. Different jobs warrant different UI contracts. Revisit with real guest feedback if needed.
 
 ---
 

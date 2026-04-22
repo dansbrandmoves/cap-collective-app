@@ -290,7 +290,22 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
                 )}
               </div>
             </div>
-            <p className="text-[11px] text-zinc-600 mt-1.5">Replaces the Coordie logo on your booking page. PNG or SVG recommended.</p>
+            {page.logo_url && (
+              <div className="flex items-center gap-2 mt-3">
+                <button type="button"
+                  onClick={() => onEdit(page.id, { logo_is_dark: true })}
+                  className={`rounded-lg px-3 py-2 flex items-center justify-center bg-[#f0f0f0] transition-all ${page.logo_is_dark !== false ? 'ring-2 ring-accent' : 'opacity-40 hover:opacity-70'}`}>
+                  <img src={page.logo_url} alt="" className="max-h-6 max-w-[80px] object-contain" />
+                </button>
+                <button type="button"
+                  onClick={() => onEdit(page.id, { logo_is_dark: false })}
+                  className={`rounded-lg px-3 py-2 flex items-center justify-center bg-[#1a1a1e] border border-white/10 transition-all ${page.logo_is_dark === false ? 'ring-2 ring-accent' : 'opacity-40 hover:opacity-70'}`}>
+                  <img src={page.logo_url} alt="" className="max-h-6 max-w-[80px] object-contain" />
+                </button>
+                <p className="text-[11px] text-zinc-600 ml-1">Pick which background your logo needs</p>
+              </div>
+            )}
+            {!page.logo_url && <p className="text-[11px] text-zinc-600 mt-1.5">PNG or SVG recommended.</p>}
           </div>
 
           <div>

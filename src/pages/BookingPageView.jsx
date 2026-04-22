@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
@@ -319,6 +319,9 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
 /* ── Main Component ── */
 export function BookingPageView() {
   const { slug } = useParams()
+  const [searchParams] = useSearchParams()
+  const hideLogo = searchParams.get('logo') === '0'
+  const hideDesc = searchParams.get('desc') === '0'
   const { resolveBookingSlug, createBooking } = useApp()
 
   const [page, setPage] = useState(null)
@@ -516,19 +519,21 @@ export function BookingPageView() {
           <div className="absolute top-0 left-0 w-px h-32 bg-gradient-to-b from-accent/50 to-transparent" />
 
           <div>
-            <div className="mb-10">
-              {ownerLogo ? (
-                <div className={`rounded-xl px-3 py-2 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
-                  <img src={ownerLogo} alt="" className="max-h-7 max-w-[120px] object-contain" />
-                </div>
-              ) : (
-                <img src="/coordie-logo.svg" alt="Coordie" className="h-6" style={{ filter: 'invert(1)' }} />
-              )}
-            </div>
-            <h1 className="text-3xl lg:text-[40px] font-semibold text-zinc-50 leading-[1.1] tracking-tight mb-4">
+            {!hideLogo && (
+              <div className="mb-10">
+                {ownerLogo ? (
+                  <div className={`rounded-xl px-3 py-2 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
+                    <img src={ownerLogo} alt="" className="max-h-7 max-w-[120px] object-contain" />
+                  </div>
+                ) : (
+                  <img src="/coordie-logo.svg" alt="Coordie" className="h-6" style={{ filter: 'invert(1)' }} />
+                )}
+              </div>
+            )}
+            <h1 className={`text-3xl lg:text-[40px] font-semibold text-zinc-50 leading-[1.1] tracking-tight mb-4 ${hideLogo ? 'mt-2' : ''}`}>
               {page.name}
             </h1>
-            {page.description && (
+            {page.description && !hideDesc && (
               <p className="text-base text-zinc-400 leading-relaxed mb-8 max-w-md">{page.description}</p>
             )}
             <div className="inline-flex items-center gap-2 rounded-full bg-white/[0.05] border border-white/[0.06] px-3.5 py-1.5 text-sm text-zinc-300">
@@ -547,88 +552,78 @@ export function BookingPageView() {
           </div>
         </aside>
 
-        {/* RIGHT — booking flow */}
-        {/* items-start anchors content to the top so the calendar doesn't
-            bounce vertically when the slot list grows/shrinks day to day. */}
-        <main className="flex items-start justify-center px-8 lg:px-12 pt-20 lg:pt-28 pb-12 lg:pb-20">
-          {/* Calendar is the hero. Slots tuck alongside at a fixed width;
-              calendar grows to fill available space up to its max. */}
-          <div className="w-full max-w-[920px] flex items-start justify-center gap-8 lg:gap-12">
-            {/* Calendar */}
-            <div className="w-full max-w-[560px] min-w-0">
-              <MonthCalendar
-                availableDays={page.available_days || [1, 2, 3, 4, 5]}
-                selectedDate={selectedDate}
-                onSelectDate={handleDateSelect}
-                guestFreeDates={guestFreeDates}
-              />
-            </div>
+        {/* RIGHT — booking flow: full calendar → slot picker slides in */}
+        <main className="flex items-start justify-center px-8 lg:px-14 pt-20 lg:pt-28 pb-12 lg:pb-20 overflow-hidden">
+          <AnimatePresence mode="wait">
+            {step === 'date' && (
+              <motion.div
+                key="calendar"
+                className="w-full max-w-[500px]"
+                initial={{ opacity: 0, x: 28 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -28 }}
+                transition={{ duration: 0.28, ease: IOS_EASE }}
+              >
+                <MonthCalendar
+                  availableDays={page.available_days || [1, 2, 3, 4, 5]}
+                  selectedDate={selectedDate}
+                  onSelectDate={handleDateSelect}
+                  guestFreeDates={guestFreeDates}
+                />
+              </motion.div>
+            )}
 
-            {/* Slot column — always reserved so the calendar never resizes.
-                Inside, animate between the empty hint, time picker, and
-                confirm form. */}
-            <div className="w-[240px] lg:w-[260px] flex-shrink-0">
-              <AnimatePresence mode="wait">
-                {step === 'date' && (
-                  <motion.div
-                    key="date-hint"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2, ease: IOS_EASE }}
-                    className="border border-dashed border-white/10 rounded-2xl px-5 py-10 text-center"
+            {step === 'time' && (
+              <motion.div
+                key="time"
+                className="w-full max-w-[320px]"
+                initial={{ opacity: 0, x: 28 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -28 }}
+                transition={{ duration: 0.28, ease: IOS_EASE }}
+              >
+                <div className="flex items-center gap-3 mb-8">
+                  <button
+                    onClick={() => { setSelectedDate(null); setSelectedSlot(null) }}
+                    className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2"
                   >
-                    <div className="w-10 h-10 rounded-full bg-white/[0.04] border border-white/5 flex items-center justify-center mx-auto mb-3">
-                      <CalendarDays size={16} strokeWidth={1.5} className="text-zinc-500" />
-                    </div>
-                    <p className="text-[13px] font-medium text-zinc-300 mb-1">Pick a date</p>
-                    <p className="text-[12px] text-zinc-500 leading-relaxed">
-                      Open times will appear here.
-                    </p>
-                  </motion.div>
-                )}
-                {step === 'time' && (
-                  <motion.div
-                    key="time"
-                    initial={{ opacity: 0, x: 16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.25, ease: IOS_EASE }}
+                    <ChevronLeft size={18} strokeWidth={1.75} />
+                  </button>
+                  <div>
+                    <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{dateHeader.weekday}</p>
+                    <p className="text-2xl font-semibold text-zinc-100 tracking-tight">{dateHeader.day}</p>
+                  </div>
+                </div>
+                <TimeSlotPicker
+                  slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} guestEvents={guestEvents}
+                  selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect}
+                />
+              </motion.div>
+            )}
+
+            {step === 'confirm' && (
+              <motion.div
+                key="confirm"
+                className="w-full max-w-[380px]"
+                initial={{ opacity: 0, x: 28 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -28 }}
+                transition={{ duration: 0.28, ease: IOS_EASE }}
+              >
+                <div className="flex items-center gap-3 mb-8">
+                  <button
+                    onClick={() => setSelectedSlot(null)}
+                    className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2"
                   >
-                    <div className="mb-5">
-                      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-1">
-                        {dateHeader.weekday}
-                      </p>
-                      <p className="text-2xl font-semibold text-zinc-100 tracking-tight">{dateHeader.day}</p>
-                    </div>
-                    <TimeSlotPicker
-                      slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} guestEvents={guestEvents}
-                      selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect}
-                    />
-                  </motion.div>
-                )}
-                {step === 'confirm' && (
-                  <motion.div
-                    key="confirm"
-                    initial={{ opacity: 0, x: 16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.25, ease: IOS_EASE }}
-                  >
-                    <div className="flex items-center justify-between mb-5">
-                      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Your details</p>
-                      <button onClick={() => setSelectedSlot(null)}
-                        className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors">
-                        Change time
-                      </button>
-                    </div>
-                    <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={lastSlotRef.current}
-                      onConfirm={handleConfirm} submitting={submitting} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
+                    <ChevronLeft size={18} strokeWidth={1.75} />
+                  </button>
+                  <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Your details</p>
+                </div>
+                <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={lastSlotRef.current}
+                  onConfirm={handleConfirm} submitting={submitting} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </main>
       </div>
 
@@ -637,22 +632,23 @@ export function BookingPageView() {
         {/* Header */}
         <header className="px-6 pt-6 safe-top pb-6 relative">
           <div className="absolute top-0 left-0 w-px h-16 bg-gradient-to-b from-accent/50 to-transparent" />
-          <div className="mb-5">
-            {ownerLogo ? (
-              <div className={`rounded-xl px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
-                <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
-              </div>
-            ) : (
-              <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
-            )}
-          </div>
+          {!hideLogo && (
+            <div className="mb-5">
+              {ownerLogo ? (
+                <div className={`rounded-xl px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
+                  <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
+                </div>
+              ) : (
+                <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
+              )}
+            </div>
+          )}
           <h1 className="text-[26px] font-semibold text-zinc-50 leading-[1.15] tracking-tight mb-2">{page.name}</h1>
-          {page.description && <p className="text-[15px] text-zinc-400 leading-relaxed mb-4">{page.description}</p>}
+          {page.description && !hideDesc && <p className="text-[15px] text-zinc-400 leading-relaxed mb-4">{page.description}</p>}
           <div className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] border border-white/[0.06] px-3 py-1 text-xs text-zinc-300">
             <Clock size={11} strokeWidth={1.75} className="text-zinc-500" />
             {page.duration_minutes} minutes
           </div>
-          {ownerGuestCalendarEnabled && <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />}
         </header>
 
         <div className="border-t border-white/[0.05] mx-6" />
@@ -708,7 +704,10 @@ export function BookingPageView() {
           </AnimatePresence>
         </div>
 
-        <footer className="px-6 pb-6 safe-bottom">
+        <footer className="px-6 pb-6 safe-bottom space-y-4">
+          {ownerGuestCalendarEnabled && (
+            <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
+          )}
           <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
             className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
             <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />

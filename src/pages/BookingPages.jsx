@@ -14,6 +14,8 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   const [copied, setCopied] = useState(false)
   const [embedCopied, setEmbedCopied] = useState(false)
   const [showEmbed, setShowEmbed] = useState(false)
+  const [embedHideLogo, setEmbedHideLogo] = useState(false)
+  const [embedHideDesc, setEmbedHideDesc] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -29,7 +31,9 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   const [loadingBookings, setLoadingBookings] = useState(false)
 
   const link = `${window.location.origin}/book/${page.slug}`
-  const embedCode = `<iframe src="${link}" width="100%" height="700" style="border:none;border-radius:12px;" allowtransparency="true" loading="lazy"></iframe>`
+  const embedParams = [embedHideLogo && 'logo=0', embedHideDesc && 'desc=0'].filter(Boolean).join('&')
+  const embedSrc = embedParams ? `${link}?${embedParams}` : link
+  const embedCode = `<iframe src="${embedSrc}" width="100%" height="700" style="border:none;border-radius:12px;" allowtransparency="true" loading="lazy"></iframe>`
 
   function copyLink() {
     navigator.clipboard.writeText(link)
@@ -146,9 +150,21 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
 
       {showEmbed && (
         <div className="border-t border-surface-800 px-5 py-4 bg-surface-950/50">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em]">Embed on your website</p>
-            <p className="text-[11px] text-zinc-600">Paste this into any page's HTML</p>
+            <p className="text-[11px] text-zinc-600">Paste into any page's HTML</p>
+          </div>
+          <div className="flex items-center gap-4 mb-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={embedHideLogo} onChange={e => setEmbedHideLogo(e.target.checked)}
+                className="w-3 h-3 rounded border-surface-600 bg-surface-700 text-accent focus:ring-accent/30" />
+              <span className="text-[11px] text-zinc-400">Hide logo</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={embedHideDesc} onChange={e => setEmbedHideDesc(e.target.checked)}
+                className="w-3 h-3 rounded border-surface-600 bg-surface-700 text-accent focus:ring-accent/30" />
+              <span className="text-[11px] text-zinc-400">Hide description</span>
+            </label>
           </div>
           <div className="relative">
             <pre className="bg-surface-900 border border-white/[0.06] rounded-lg px-4 py-3 text-[11px] text-zinc-400 font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-all">

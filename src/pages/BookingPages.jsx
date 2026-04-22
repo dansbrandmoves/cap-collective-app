@@ -35,7 +35,7 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   const link = `${window.location.origin}/book/${page.slug}`
   const embedParams = [embedHideLogo && 'logo=0', embedHideDesc && 'desc=0', embedTheme === 'light' && 'theme=light'].filter(Boolean).join('&')
   const embedSrc = embedParams ? `${link}?${embedParams}` : link
-  const embedCode = `<iframe src="${embedSrc}" width="100%" height="700" style="border:none;border-radius:12px;" allowtransparency="true" loading="lazy"></iframe>`
+  const embedCode = `<iframe src="${embedSrc}" width="100%" height="800" style="border:none;border-radius:12px;" allowtransparency="true" loading="lazy"></iframe>`
 
   function copyLink() {
     navigator.clipboard.writeText(link)

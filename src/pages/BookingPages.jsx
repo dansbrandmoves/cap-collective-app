@@ -4,13 +4,13 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
-import { CalendarCheck, Plus, Copy, Check, Trash2, ChevronDown, ChevronUp, ExternalLink, Pencil, Clock, CalendarRange, Code2, X } from 'lucide-react'
+import { CalendarCheck, Plus, Copy, Check, Trash2, ChevronDown, ChevronUp, ExternalLink, Pencil, Clock, CalendarRange, Code2, X, ImagePlus } from 'lucide-react'
 import { PageLoader } from '../components/ui/PageLoader'
 
 const DURATIONS = [15, 30, 45, 60]
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, onUpdateBookingStatus, onDeleteBooking }) {
+function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, onUpdateBookingStatus, onDeleteBooking, onUploadLogo, onRemoveLogo }) {
   const [copied, setCopied] = useState(false)
   const [embedCopied, setEmbedCopied] = useState(false)
   const [showEmbed, setShowEmbed] = useState(false)
@@ -30,6 +30,7 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   })
   const [bookings, setBookings] = useState(null)
   const [loadingBookings, setLoadingBookings] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
 
   const link = `${window.location.origin}/book/${page.slug}`
   const embedParams = [embedHideLogo && 'logo=0', embedHideDesc && 'desc=0', embedTheme === 'light' && 'theme=light'].filter(Boolean).join('&')
@@ -254,6 +255,44 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
           })
           setEditing(false)
         }} className="space-y-4">
+
+          {/* Logo */}
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-2">Logo</label>
+            <div className="flex items-center gap-3">
+              {page.logo_url ? (
+                <div className={`rounded-lg px-3 py-2 inline-flex flex-shrink-0 ${page.logo_is_dark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e] border border-white/10'}`}>
+                  <img src={page.logo_url} alt="" className="max-h-6 max-w-[100px] object-contain" />
+                </div>
+              ) : (
+                <div className="w-14 h-10 rounded-lg bg-surface-700 border border-dashed border-white/10 flex items-center justify-center flex-shrink-0">
+                  <ImagePlus size={14} strokeWidth={1.5} className="text-zinc-600" />
+                </div>
+              )}
+              <div className="flex items-center gap-2 min-w-0">
+                <label className={`cursor-pointer text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${logoUploading ? 'opacity-50 pointer-events-none' : ''} border-white/10 text-zinc-300 hover:text-zinc-100 hover:border-white/20 bg-white/[0.03]`}>
+                  {logoUploading ? 'Uploading…' : page.logo_url ? 'Replace' : 'Upload logo'}
+                  <input type="file" accept="image/*" className="hidden" disabled={logoUploading}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      setLogoUploading(true)
+                      await onUploadLogo(page.id, file)
+                      setLogoUploading(false)
+                      e.target.value = ''
+                    }} />
+                </label>
+                {page.logo_url && (
+                  <button type="button" onClick={() => onRemoveLogo(page.id)}
+                    className="text-xs text-zinc-600 hover:text-red-400 transition-colors">
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-[11px] text-zinc-600 mt-1.5">Replaces the Coordie logo on your booking page. PNG or SVG recommended.</p>
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-zinc-400 mb-1.5">Page Name</label>
             <input type="text" value={editForm.name}
@@ -344,6 +383,7 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
 export function BookingPages() {
   const {
     bookingPages, createBookingPage, updateBookingPage, deleteBookingPage,
+    uploadBookingPageLogo, removeBookingPageLogo,
     fetchBookingsForPage, updateBookingStatus, deleteBooking,
     loading, canAddBookingPage, isProPlan, FREE_BOOKING_PAGE_LIMIT,
   } = useApp()
@@ -438,6 +478,8 @@ export function BookingPages() {
               onFetchBookings={fetchBookingsForPage}
               onUpdateBookingStatus={updateBookingStatus}
               onDeleteBooking={deleteBooking}
+              onUploadLogo={uploadBookingPageLogo}
+              onRemoveLogo={removeBookingPageLogo}
             />
           ))}
         </div>

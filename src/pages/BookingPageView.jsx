@@ -516,6 +516,10 @@ export function BookingPageView() {
   }
 
   /* ── Booking flow: full-bleed asymmetric (desktop) + stacked (mobile) ── */
+  // Page logo takes priority over owner profile logo
+  const displayLogo = page.logo_url || ownerLogo
+  const displayLogoDark = page.logo_url ? (page.logo_is_dark ?? true) : ownerLogoDark
+
   const dateHeader = selectedDate ? formatDayHeader(selectedDate) : null
   if (dateHeader !== null) lastDateHeaderRef.current = dateHeader
   const step = selectedSlot ? 'confirm' : selectedDate ? 'time' : 'date'
@@ -534,9 +538,9 @@ export function BookingPageView() {
           <div>
             {!hideLogo && (
               <div className="mb-10">
-                {ownerLogo ? (
-                  <div className={`rounded-xl px-3 py-2 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
-                    <img src={ownerLogo} alt="" className="max-h-7 max-w-[120px] object-contain" />
+                {displayLogo ? (
+                  <div className={`rounded-xl px-3 py-2 inline-flex ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
+                    <img src={displayLogo} alt="" className="max-h-7 max-w-[120px] object-contain" />
                   </div>
                 ) : (
                   <img src="/coordie-logo.svg" alt="Coordie" className="h-6" style={{ filter: 'invert(1)' }} />
@@ -647,9 +651,9 @@ export function BookingPageView() {
           <div className="absolute top-0 left-0 w-px h-16 bg-gradient-to-b from-accent/50 to-transparent" />
           {!hideLogo && (
             <div className="mb-5">
-              {ownerLogo ? (
-                <div className={`rounded-xl px-2.5 py-1.5 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
-                  <img src={ownerLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
+              {displayLogo ? (
+                <div className={`rounded-xl px-2.5 py-1.5 inline-flex ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
+                  <img src={displayLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
                 </div>
               ) : (
                 <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />

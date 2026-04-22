@@ -1031,6 +1031,28 @@ export function AppProvider({ children }) {
     return !error
   }, [])
 
+  const uploadBookingPageLogo = useCallback(async (pageId, file) => {
+    if (!user?.id) return null
+    const { blob, isDark } = await resizeImage(file, 400, 120)
+    const path = `${user.id}/booking-pages/${pageId}.webp`
+    const { error: uploadErr } = await supabase.storage.from('logos').upload(path, blob, {
+      contentType: 'image/webp', upsert: true,
+    })
+    if (uploadErr) { console.error('Booking page logo upload failed:', uploadErr); return null }
+    const { data: urlData } = supabase.storage.from('logos').getPublicUrl(path)
+    const url = urlData.publicUrl + '?t=' + Date.now()
+    await supabase.from('booking_pages').update({ logo_url: url, logo_is_dark: isDark }).eq('id', pageId)
+    setBookingPages(prev => prev.map(p => p.id === pageId ? { ...p, logo_url: url, logo_is_dark: isDark } : p))
+    return url
+  }, [user?.id])
+
+  const removeBookingPageLogo = useCallback(async (pageId) => {
+    if (!user?.id) return
+    await supabase.storage.from('logos').remove([`${user.id}/booking-pages/${pageId}.webp`])
+    await supabase.from('booking_pages').update({ logo_url: null, logo_is_dark: true }).eq('id', pageId)
+    setBookingPages(prev => prev.map(p => p.id === pageId ? { ...p, logo_url: null, logo_is_dark: true } : p))
+  }, [user?.id])
+
   const resolveBookingSlug = useCallback(async (slug) => {
     const { data } = await supabase.from('booking_pages').select('*').eq('slug', slug).eq('is_active', true).limit(1)
     return data?.[0] ?? null
@@ -1191,6 +1213,7 @@ export function AppProvider({ children }) {
       updateSharedNotes, refreshRoom,
       // Booking Pages
       bookingPages, createBookingPage, updateBookingPage, deleteBookingPage,
+      uploadBookingPageLogo, removeBookingPageLogo,
       resolveBookingSlug, fetchBookingsForPage, createBooking, updateBookingStatus, deleteBooking,
       // Date Requests
       createDateRequest, fetchDateRequests, updateDateRequestStatus,

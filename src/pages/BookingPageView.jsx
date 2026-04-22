@@ -63,27 +63,27 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate, guestFreeDat
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-base font-semibold text-zinc-100 tracking-tight">{monthLabel}</h3>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-zinc-100 tracking-tight">{monthLabel}</h3>
         <div className="flex items-center gap-1">
           <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
             className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors">
-            <ChevronLeft size={16} strokeWidth={1.75} />
+            <ChevronLeft size={18} strokeWidth={1.75} />
           </button>
           <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
             className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors">
-            <ChevronRight size={16} strokeWidth={1.75} />
+            <ChevronRight size={18} strokeWidth={1.75} />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 mb-2">
+      <div className="grid grid-cols-7 mb-3">
         {dayHeaders.map(d => (
-          <div key={d} className="text-center text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] py-1.5">{d}</div>
+          <div key={d} className="text-center text-[12px] font-semibold text-zinc-500 uppercase tracking-[0.12em] py-2">{d}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1.5">
         {grid.map(({ date, inMonth }, i) => {
           const ds = dateToStr(date)
           const isPast = date < today
@@ -94,7 +94,7 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate, guestFreeDat
 
           return (
             <button key={i} disabled={!isAvailable} onClick={() => isAvailable && onSelectDate(ds)}
-              className={`relative aspect-square flex items-center justify-center text-sm rounded-full transition-all duration-200 ease-ios font-medium ${
+              className={`relative aspect-square flex items-center justify-center text-base rounded-full transition-all duration-200 ease-ios font-medium ${
                 !inMonth ? 'text-transparent' :
                 isSelected ? 'bg-accent text-white shadow-[0_4px_16px_-4px_rgb(139_92_246/0.5)] scale-100' :
                 isAvailable ? 'text-zinc-100 hover:bg-white/5 hover:scale-105 cursor-pointer' :
@@ -570,12 +570,12 @@ export function BookingPageView() {
         </aside>
 
         {/* RIGHT — booking flow: full calendar → slot picker slides in */}
-        <main className="flex items-start justify-center px-8 lg:px-14 pt-16 lg:pt-20 pb-10 overflow-y-auto">
+        <main className="flex items-center justify-center px-8 lg:px-12 py-10 overflow-y-auto">
           <AnimatePresence mode="wait">
             {step === 'date' && (
               <motion.div
                 key="calendar"
-                className="w-full max-w-[500px]"
+                className="w-full max-w-[660px]"
                 initial={{ opacity: 0, x: 28 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -28 }}

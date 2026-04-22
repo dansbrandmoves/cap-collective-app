@@ -110,7 +110,7 @@ export function DailyView({
               onClick={isSlotSelectMode ? () => toggleSlotForDate(ds, slot.id) : undefined}
               className={`w-full text-left bg-surface-800 border border-surface-700 rounded-xl px-5 py-4 transition-all duration-150 ${
                 isSlotSelectMode ? 'hover:border-accent/40 cursor-pointer active:scale-[0.99]' : ''
-              } ${isChecked ? 'border-accent/30' : ''} ${isGuestBusy && !isChecked ? 'opacity-40' : ''}`}
+              } ${isChecked ? 'border-accent/30' : ''} ${isGuestBusy && !isChecked ? 'opacity-40' : ''} ${state === 'blocked' && !isChecked ? 'opacity-40 grayscale' : ''}`}
               style={cardStyle}
             >
               <div className="flex items-start justify-between gap-3">

@@ -462,11 +462,10 @@ function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAv
     [selectedNames, emailByName]
   )
 
-  function handleSchedule() {
-    // Default a 1-hour slot at 2pm local — owner can adjust inside Google Calendar
+  function handleSchedule(slot = null) {
     const datePart = dateStr.replace(/-/g, '')
-    const start = `${datePart}T140000`
-    const end = `${datePart}T150000`
+    const start = slot ? `${datePart}T${slot.startTime.replace(':', '')}00` : `${datePart}T140000`
+    const end   = slot ? `${datePart}T${slot.endTime.replace(':', '')}00`   : `${datePart}T150000`
 
     const selectedList = [...selectedNames]
     const title = selectedList.length === 1
@@ -677,14 +676,15 @@ function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAv
                   const isBest = freeCount === total && freeCount > 0
                   const isNone = freeCount === 0
                   return (
-                    <div
+                    <button
                       key={slot.id}
-                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-colors ${
+                      onClick={() => handleSchedule(slot)}
+                      className={`group w-full text-left flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all duration-150 active:scale-[0.99] ${
                         isBest
-                          ? 'bg-accent/10 border-accent/30'
+                          ? 'bg-accent/10 border-accent/30 hover:bg-accent/15 hover:border-accent/50'
                           : isNone
-                          ? 'bg-white/[0.02] border-white/[0.04] opacity-60'
-                          : 'bg-white/[0.03] border-white/[0.05]'
+                          ? 'bg-white/[0.02] border-white/[0.04] opacity-60 hover:opacity-80'
+                          : 'bg-white/[0.03] border-white/[0.05] hover:bg-white/[0.06] hover:border-white/10'
                       }`}
                       title={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : 'No one free'}
                     >
@@ -703,8 +703,9 @@ function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAv
                         <span className={`text-[12px] font-semibold tabular-nums w-10 text-right ${isBest ? 'text-accent' : isNone ? 'text-zinc-600' : 'text-zinc-300'}`}>
                           {freeCount}/{total}
                         </span>
+                        <CalendarPlus size={13} strokeWidth={1.75} className="opacity-0 group-hover:opacity-50 transition-opacity duration-150 text-zinc-400 flex-shrink-0" />
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
               </div>

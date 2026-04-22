@@ -593,7 +593,7 @@ export function BookingPageView() {
             {step === 'time' && (
               <motion.div
                 key="time"
-                className="w-full max-w-[320px]"
+                className="w-full max-w-[420px]"
                 initial={{ opacity: 0, x: 28 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -28 }}
@@ -621,7 +621,7 @@ export function BookingPageView() {
             {step === 'confirm' && (
               <motion.div
                 key="confirm"
-                className="w-full max-w-[380px]"
+                className="w-full max-w-[460px]"
                 initial={{ opacity: 0, x: 28 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -28 }}

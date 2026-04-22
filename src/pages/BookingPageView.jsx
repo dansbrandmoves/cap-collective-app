@@ -525,13 +525,13 @@ export function BookingPageView() {
   const step = selectedSlot ? 'confirm' : selectedDate ? 'time' : 'date'
 
   return (
-    <div className="min-h-screen bg-surface-950 ambient-glow relative">
+    <div className="bg-surface-950 ambient-glow relative">
 
       {/* ═══ DESKTOP (md+): asymmetric full-bleed ═══ */}
-      <div className="hidden md:grid md:grid-cols-[minmax(0,440px)_1fr] lg:grid-cols-[minmax(0,520px)_1fr] min-h-screen">
+      <div className="hidden md:grid md:grid-cols-[minmax(0,440px)_1fr] lg:grid-cols-[minmax(0,520px)_1fr] h-screen overflow-hidden">
 
         {/* LEFT — brand canvas */}
-        <aside className="flex flex-col justify-between px-10 lg:px-16 py-12 lg:py-20 border-r border-white/[0.06] relative overflow-hidden">
+        <aside className="flex flex-col justify-between px-10 lg:px-16 py-12 lg:py-20 border-r border-white/[0.06] relative overflow-y-auto">
           {/* Subtle accent line */}
           <div className="absolute top-0 left-0 w-px h-32 bg-gradient-to-b from-accent/50 to-transparent" />
 
@@ -570,7 +570,7 @@ export function BookingPageView() {
         </aside>
 
         {/* RIGHT — booking flow: full calendar → slot picker slides in */}
-        <main className="flex items-start justify-center px-8 lg:px-14 pt-20 lg:pt-28 pb-12 lg:pb-20 overflow-hidden">
+        <main className="flex items-start justify-center px-8 lg:px-14 pt-16 lg:pt-20 pb-10 overflow-y-auto">
           <AnimatePresence mode="wait">
             {step === 'date' && (
               <motion.div

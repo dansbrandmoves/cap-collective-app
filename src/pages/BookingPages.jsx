@@ -16,6 +16,7 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   const [showEmbed, setShowEmbed] = useState(false)
   const [embedHideLogo, setEmbedHideLogo] = useState(false)
   const [embedHideDesc, setEmbedHideDesc] = useState(false)
+  const [embedTheme, setEmbedTheme] = useState('dark')
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -31,7 +32,7 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   const [loadingBookings, setLoadingBookings] = useState(false)
 
   const link = `${window.location.origin}/book/${page.slug}`
-  const embedParams = [embedHideLogo && 'logo=0', embedHideDesc && 'desc=0'].filter(Boolean).join('&')
+  const embedParams = [embedHideLogo && 'logo=0', embedHideDesc && 'desc=0', embedTheme === 'light' && 'theme=light'].filter(Boolean).join('&')
   const embedSrc = embedParams ? `${link}?${embedParams}` : link
   const embedCode = `<iframe src="${embedSrc}" width="100%" height="700" style="border:none;border-radius:12px;" allowtransparency="true" loading="lazy"></iframe>`
 
@@ -154,17 +155,31 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
             <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em]">Embed on your website</p>
             <p className="text-[11px] text-zinc-600">Paste into any page's HTML</p>
           </div>
-          <div className="flex items-center gap-4 mb-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={embedHideLogo} onChange={e => setEmbedHideLogo(e.target.checked)}
-                className="w-3 h-3 rounded border-surface-600 bg-surface-700 text-accent focus:ring-accent/30" />
-              <span className="text-[11px] text-zinc-400">Hide logo</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={embedHideDesc} onChange={e => setEmbedHideDesc(e.target.checked)}
-                className="w-3 h-3 rounded border-surface-600 bg-surface-700 text-accent focus:ring-accent/30" />
-              <span className="text-[11px] text-zinc-400">Hide description</span>
-            </label>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={embedHideLogo} onChange={e => setEmbedHideLogo(e.target.checked)}
+                  className="w-3 h-3 rounded border-surface-600 bg-surface-700 text-accent focus:ring-accent/30" />
+                <span className="text-[11px] text-zinc-400">Hide logo</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={embedHideDesc} onChange={e => setEmbedHideDesc(e.target.checked)}
+                  className="w-3 h-3 rounded border-surface-600 bg-surface-700 text-accent focus:ring-accent/30" />
+                <span className="text-[11px] text-zinc-400">Hide description</span>
+              </label>
+            </div>
+            <div className="flex items-center gap-1 bg-surface-800 border border-white/[0.06] rounded-lg p-0.5">
+              {['dark', 'light'].map(t => (
+                <button key={t} onClick={() => setEmbedTheme(t)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors capitalize ${
+                    embedTheme === t
+                      ? 'bg-surface-600 text-zinc-100'
+                      : 'text-zinc-500 hover:text-zinc-300'
+                  }`}>
+                  {t}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="relative">
             <pre className="bg-surface-900 border border-white/[0.06] rounded-lg px-4 py-3 text-[11px] text-zinc-400 font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-all">

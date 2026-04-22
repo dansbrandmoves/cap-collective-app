@@ -322,7 +322,18 @@ export function BookingPageView() {
   const [searchParams] = useSearchParams()
   const hideLogo = searchParams.get('logo') === '0'
   const hideDesc = searchParams.get('desc') === '0'
+  const theme = searchParams.get('theme') // 'light' | 'dark' | null (null = dark)
   const { resolveBookingSlug, createBooking } = useApp()
+
+  // Apply theme to document root — safe in iframe (isolated document)
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light')
+    } else {
+      document.documentElement.classList.remove('light')
+    }
+    return () => document.documentElement.classList.remove('light')
+  }, [theme])
 
   const [page, setPage] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -348,9 +359,10 @@ export function BookingPageView() {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
-  // Preserve last non-null slot so ConfirmForm doesn't crash during exit animation
+  // Preserve last non-null values so exit animations don't crash on null
   const lastSlotRef = useRef(null)
   if (selectedSlot !== null) lastSlotRef.current = selectedSlot
+  const lastDateHeaderRef = useRef(null)
 
   // Mobile step state (desktop shows all panels)
   const [mobileStep, setMobileStep] = useState(1)
@@ -505,6 +517,7 @@ export function BookingPageView() {
 
   /* ── Booking flow: full-bleed asymmetric (desktop) + stacked (mobile) ── */
   const dateHeader = selectedDate ? formatDayHeader(selectedDate) : null
+  if (dateHeader !== null) lastDateHeaderRef.current = dateHeader
   const step = selectedSlot ? 'confirm' : selectedDate ? 'time' : 'date'
 
   return (
@@ -590,8 +603,8 @@ export function BookingPageView() {
                     <ChevronLeft size={18} strokeWidth={1.75} />
                   </button>
                   <div>
-                    <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{dateHeader.weekday}</p>
-                    <p className="text-2xl font-semibold text-zinc-100 tracking-tight">{dateHeader.day}</p>
+                    <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{lastDateHeaderRef.current?.weekday}</p>
+                    <p className="text-2xl font-semibold text-zinc-100 tracking-tight">{lastDateHeaderRef.current?.day}</p>
                   </div>
                 </div>
                 <TimeSlotPicker
@@ -679,8 +692,8 @@ export function BookingPageView() {
                       <ChevronLeft size={18} strokeWidth={1.75} />
                     </button>
                     <div>
-                      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{dateHeader.weekday}</p>
-                      <p className="text-xl font-semibold text-zinc-100 tracking-tight">{dateHeader.day}</p>
+                      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{lastDateHeaderRef.current?.weekday}</p>
+                      <p className="text-xl font-semibold text-zinc-100 tracking-tight">{lastDateHeaderRef.current?.day}</p>
                     </div>
                   </div>
                   <TimeSlotPicker slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} guestEvents={guestEvents} selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect} />

@@ -1,7 +1,14 @@
 import { useMemo } from 'react'
 import { deriveSlotState, dateToStr, DEFAULT_SLOT_STATES, eventOverlapsSlot } from '../../utils/availability'
 import { Badge } from '../ui/Badge'
-import { Check } from 'lucide-react'
+import { Check, CalendarPlus } from 'lucide-react'
+
+function gcalNewEventUrl(date, slot) {
+  const ds = dateToStr(date).replace(/-/g, '')
+  const start = `${ds}T${slot.startTime.replace(':', '')}00`
+  const end   = `${ds}T${slot.endTime.replace(':', '')}00`
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&dates=${start}/${end}`
+}
 
 const STATE_BADGE = {
   available: 'ghost',
@@ -102,15 +109,20 @@ export function DailyView({
             ? { borderLeftColor: '#8b5cf6', borderLeftWidth: '3px', backgroundColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.3)' }
             : { borderLeftColor: meta.color, borderLeftWidth: '3px' }
 
-          const CardEl = isSlotSelectMode ? 'button' : 'div'
+          const canSchedule = isOwner && !isSlotSelectMode
+          const CardEl = (isSlotSelectMode || canSchedule) ? 'button' : 'div'
 
           return (
             <CardEl
               key={slot.id}
-              onClick={isSlotSelectMode ? () => toggleSlotForDate(ds, slot.id) : undefined}
-              className={`w-full text-left bg-surface-800 border border-surface-700 rounded-xl px-5 py-4 transition-all duration-150 ${
+              onClick={isSlotSelectMode
+                ? () => toggleSlotForDate(ds, slot.id)
+                : canSchedule
+                  ? () => window.open(gcalNewEventUrl(date, slot), '_blank')
+                  : undefined}
+              className={`group w-full text-left bg-surface-800 border border-surface-700 rounded-xl px-5 py-4 transition-all duration-150 ${
                 isSlotSelectMode ? 'hover:border-accent/40 cursor-pointer active:scale-[0.99]' : ''
-              } ${isChecked ? 'border-accent/30' : ''} ${isGuestBusy && !isChecked ? 'opacity-40' : ''} ${state !== 'available' && !isChecked ? 'opacity-40 grayscale' : ''}`}
+              } ${canSchedule ? 'cursor-pointer hover:border-white/10' : ''} ${isChecked ? 'border-accent/30' : ''} ${isGuestBusy && !isChecked ? 'opacity-40' : ''} ${state !== 'available' && !isChecked ? 'opacity-40 grayscale' : ''}`}
               style={cardStyle}
             >
               <div className="flex items-start justify-between gap-3">
@@ -136,6 +148,13 @@ export function DailyView({
                       : 'border border-white/20 bg-transparent'
                   }`}>
                     {isChecked && <Check size={13} strokeWidth={2.5} />}
+                  </div>
+                ) : canSchedule ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant={STATE_BADGE[state]}>{meta.label}</Badge>
+                    <span className="opacity-0 group-hover:opacity-60 transition-opacity duration-150 text-zinc-400">
+                      <CalendarPlus size={14} strokeWidth={1.75} />
+                    </span>
                   </div>
                 ) : (
                   <Badge variant={STATE_BADGE[state]}>{meta.label}</Badge>

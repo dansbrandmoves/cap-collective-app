@@ -1,5 +1,41 @@
 # Cap Collective App — Claude Orientation
 
+---
+
+## SESSION START — READ THIS BLOCK FIRST
+
+### Critical IDs (never guess these)
+| Key | Value |
+|-----|-------|
+| Supabase `project_id` | `xwuekcysigkujhyucugi` |
+| GitHub `owner` | `dansbrandmoves` |
+| GitHub `repo` | `cap-collective-app` |
+| Production branch | `master` |
+| Feature branches | `claude/<description>` |
+| Vercel live URL | `https://www.coordie.com` |
+
+### MCP Tools — schema must be loaded before first call
+All Supabase and specialty MCP tools are **deferred** — calling them without loading the schema first will throw `InputValidationError`. Always `ToolSearch` before the first call in any session:
+
+```
+ToolSearch({ query: "select:mcp__0d08157b-3774-4d9a-ab3b-15694ab833bd__execute_sql,mcp__0d08157b-3774-4d9a-ab3b-15694ab833bd__apply_migration" })
+```
+
+Load only the tools you need for the task — don't bulk-load everything.
+
+### Git — ALWAYS use temp index (Dropbox holds index.lock)
+Plain `git add` fails. Use this exact pattern every time:
+
+```bash
+GIT_INDEX_FILE=.git/index_tmp git read-tree HEAD   # CRITICAL — do this first or you wipe the tree
+GIT_INDEX_FILE=.git/index_tmp git add <specific files>
+GIT_INDEX_FILE=.git/index_tmp git commit -m "..."
+rm -f .git/index_tmp
+git push -u origin <branch>
+```
+
+---
+
 ## What This Is
 
 A production coordination app built for Christian (Cap Collective). React + Vite prototype deployed to Vercel.

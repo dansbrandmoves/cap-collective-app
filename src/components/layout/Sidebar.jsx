@@ -2,19 +2,42 @@ import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { LayoutGrid, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditCard, Shield } from 'lucide-react'
 
-// Nav order follows the vision: coordinate (Projects) → share (Booking) →
-// see your time (Availability) → configure (Settings). Inbox is intentionally
-// NOT top-level — the list-of-requests is the pattern Coordie defeats.
-// Inbox remains accessible at /inbox and via the bell dropdown.
-const NAV = [
+// Primary destinations live at the top ("what you do"); configuration/utility is
+// pinned to the bottom ("settings"). Keeps the nav uncluttered and scannable.
+const PRIMARY_NAV = [
   { to: '/', label: 'Projects', icon: LayoutGrid },
   { to: '/booking-pages', label: 'Booking', icon: CalendarCheck },
-  { to: '/availability', label: 'Default Availability', icon: CalendarDays },
+]
+const UTILITY_NAV = [
+  { to: '/availability', label: 'Availability', icon: CalendarDays },
   { to: '/calendars', label: 'Settings', icon: Settings },
 ]
 
 export function Sidebar({ mobileOpen = false, onMobileClose }) {
   const { productions, user, signOut, theme, isProPlan, isAdmin } = useApp()
+
+  const navItem = ({ to, label, icon: Icon }) => (
+    <NavLink
+      key={to}
+      to={to}
+      end={to === '/'}
+      onClick={onMobileClose}
+      className={({ isActive }) =>
+        `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 ${
+          isActive
+            ? 'bg-accent/10 text-zinc-100 border border-accent/15'
+            : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 border border-transparent'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <Icon size={16} strokeWidth={1.75} className={`flex-shrink-0 ${isActive ? 'text-accent' : 'opacity-70'}`} />
+          <span className="flex-1">{label}</span>
+        </>
+      )}
+    </NavLink>
+  )
 
   return (
     <>
@@ -31,109 +54,93 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
           <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
         </div>
 
-        {/* Scrollable nav — everything goes here so nothing gets cut off */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
-          {NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              onClick={onMobileClose}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 ${
-                  isActive
-                    ? 'bg-accent/10 text-zinc-100 border border-accent/15'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 border border-transparent'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon size={16} strokeWidth={1.75} className={`flex-shrink-0 ${isActive ? 'text-accent' : 'opacity-70'}`} />
-                  <span className="flex-1">{label}</span>
-                </>
-              )}
-            </NavLink>
-          ))}
+        {/* Nav — primary at top, project list beneath, utility pinned to the bottom */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 flex flex-col">
+          <div className="space-y-0.5">
+            {PRIMARY_NAV.map(navItem)}
+          </div>
 
-          {/* Projects list — no pending badges; overlap shows on each project's calendar */}
+          {/* Projects — sub-list under the Projects destination (no redundant header) */}
           {productions.length > 0 && (
-            <div className="pt-4">
-              <p className="px-3 text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-2">Projects</p>
+            <div className="mt-1.5 ml-3 pl-2 border-l border-surface-700/60 space-y-0.5">
               {productions.map(p => (
                 <NavLink
                   key={p.id}
                   to={`/project/${p.id}`}
                   onClick={onMobileClose}
                   className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    `block px-3 py-1.5 rounded-lg text-[13px] truncate transition-colors ${
                       isActive
                         ? 'bg-surface-700 text-zinc-100'
-                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
+                        : 'text-zinc-500 hover:text-zinc-200 hover:bg-surface-800'
                     }`
                   }
                 >
-                  <span className="flex-1 truncate">{p.name}</span>
+                  {p.name}
                 </NavLink>
               ))}
             </div>
           )}
 
-          {/* Bottom controls — inside scrollable area so they're never cut off */}
-          <div className="pt-4 border-t border-surface-800 mt-4 space-y-0.5">
-            {/* Upgrade CTA for free users */}
-            {!isProPlan && (
-              <NavLink
-                to="/billing"
-                onClick={onMobileClose}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-accent hover:bg-accent/10 transition-colors"
-              >
-                <Zap size={16} strokeWidth={1.75} className="flex-shrink-0" />
-                <span className="flex-1">Upgrade to Pro</span>
-                <span className="text-[10px] font-bold bg-accent/15 border border-accent/25 text-accent px-1.5 py-0.5 rounded-full">$10/mo</span>
-              </NavLink>
-            )}
+          {/* Bottom cluster: configuration + account, pinned to the bottom */}
+          <div className="mt-auto pt-4 space-y-0.5">
+            <div className="space-y-0.5">
+              {UTILITY_NAV.map(navItem)}
+            </div>
 
-            {/* Billing link for pro users */}
-            {isProPlan && (
-              <NavLink
-                to="/billing"
-                onClick={onMobileClose}
-                className={({ isActive }) =>
-                  `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                    isActive ? 'bg-surface-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
-                  }`
-                }
-              >
-                <CreditCard size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
-                <span>Billing</span>
-              </NavLink>
-            )}
+            <div className="pt-2 mt-2 border-t border-surface-800 space-y-0.5">
+              {!isProPlan && (
+                <NavLink
+                  to="/billing"
+                  onClick={onMobileClose}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-accent hover:bg-accent/10 transition-colors"
+                >
+                  <Zap size={16} strokeWidth={1.75} className="flex-shrink-0" />
+                  <span className="flex-1">Upgrade to Pro</span>
+                  <span className="text-[10px] font-bold bg-accent/15 border border-accent/25 text-accent px-1.5 py-0.5 rounded-full">$10/mo</span>
+                </NavLink>
+              )}
 
-            {isAdmin && (
-              <NavLink
-                to="/admin"
-                onClick={onMobileClose}
-                className={({ isActive }) =>
-                  `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                    isActive ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-zinc-400 hover:text-amber-400 hover:bg-amber-500/5 border border-transparent'
-                  }`
-                }
-              >
-                <Shield size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
-                <span>Admin</span>
-              </NavLink>
-            )}
+              {isProPlan && (
+                <NavLink
+                  to="/billing"
+                  onClick={onMobileClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                      isActive ? 'bg-surface-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
+                    }`
+                  }
+                >
+                  <CreditCard size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
+                  <span>Billing</span>
+                </NavLink>
+              )}
 
-            {user && (
-              <button
-                onClick={signOut}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-              >
-                <LogOut size={16} strokeWidth={1.75} className="flex-shrink-0" />
-                Sign out
-              </button>
-            )}
+              {isAdmin && (
+                <NavLink
+                  to="/admin"
+                  onClick={onMobileClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                      isActive ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-zinc-400 hover:text-amber-400 hover:bg-amber-500/5 border border-transparent'
+                    }`
+                  }
+                >
+                  <Shield size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
+                  <span>Admin</span>
+                </NavLink>
+              )}
+
+              {user && (
+                <button
+                  onClick={signOut}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <LogOut size={16} strokeWidth={1.75} className="flex-shrink-0" />
+                  Sign out
+                </button>
+              )}
+            </div>
           </div>
         </nav>
 

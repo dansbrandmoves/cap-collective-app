@@ -132,6 +132,20 @@ export function AvailabilityCalendar({
 
   return (
     <div>
+      {/* Best days strip — owner room view only, when guests have connected */}
+      {isOwnerRoomContext && (
+        <BestDaysStrip
+          slots={slots}
+          calendarEvents={calendarEvents}
+          connectedCalendars={connectedCalendars}
+          prefixRules={prefixRules}
+          businessHours={businessHours}
+          dateRequests={dateRequests}
+          sharedAvailability={sharedAvailability}
+          onDaySelect={setInspectedDate}
+        />
+      )}
+
       {/* Legend */}
       <div className="flex items-center gap-x-5 gap-y-2 mb-5 flex-wrap">
         {Object.entries(slotStates).map(([key, val]) => (
@@ -360,6 +374,69 @@ export function AvailabilityCalendar({
           onClose={() => setInspectedDate(null)}
         />
       )}
+    </div>
+  )
+}
+
+/* ── Best Days Strip: top days where owner is free AND the most guests are available ── */
+function BestDaysStrip({ slots, calendarEvents, connectedCalendars, prefixRules, businessHours,
+  dateRequests, sharedAvailability, onDaySelect }) {
+
+  const totalGuests = useMemo(() => {
+    const names = new Set([
+      ...dateRequests.filter(r => r.status !== 'declined' && r.status !== 'archived').map(r => r.requester_name),
+      ...sharedAvailability.filter(a => a.is_available).map(a => a.guest_name),
+    ])
+    names.delete(undefined); names.delete(null); names.delete('')
+    return names.size
+  }, [dateRequests, sharedAvailability])
+
+  const bestDays = useMemo(() => {
+    if (totalGuests === 0) return []
+    const today = new Date()
+    const days = []
+    for (let i = 0; i < 60; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      const ds = dateToStr(date)
+
+      // Owner must have at least one available slot
+      const ownerFree = slots.some(slot => {
+        const { state } = deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules, businessHours)
+        return state === 'available'
+      })
+      if (!ownerFree) continue
+
+      const freeGuests = new Set([
+        ...dateRequests.filter(r => r.dates?.includes(ds) && r.status !== 'declined' && r.status !== 'archived').map(r => r.requester_name),
+        ...sharedAvailability.filter(a => a.date === ds && a.is_available).map(a => a.guest_name),
+      ])
+      freeGuests.delete(undefined); freeGuests.delete(null); freeGuests.delete('')
+
+      if (freeGuests.size > 0) days.push({ date, ds, count: freeGuests.size })
+    }
+    return days.sort((a, b) => b.count - a.count).slice(0, 3)
+  }, [slots, calendarEvents, connectedCalendars, prefixRules, businessHours, dateRequests, sharedAvailability, totalGuests])
+
+  if (bestDays.length === 0) return null
+
+  return (
+    <div className="mb-5 bg-surface-800/40 border border-white/[0.06] rounded-xl px-4 py-3">
+      <div className="flex items-center gap-2 mb-2.5">
+        <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Best days</span>
+        <span className="text-[11px] text-zinc-600">· {totalGuests} {totalGuests === 1 ? 'person' : 'people'} connected</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {bestDays.map(({ date, ds, count }) => (
+          <button key={ds} onClick={() => onDaySelect(ds)}
+            className="text-left bg-surface-900 hover:bg-surface-800 border border-white/[0.06] hover:border-white/[0.14] rounded-lg px-3 py-2 transition-all duration-150 ease-ios">
+            <p className="text-[13px] font-semibold text-zinc-100 tracking-tight">
+              {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            </p>
+            <p className="text-[11px] text-green-400 mt-0.5">{count}/{totalGuests} free</p>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

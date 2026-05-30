@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/Badge'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
+import { eventOverlapsSlot, dateToStr } from '../utils/availability'
 import { CalendarDays, CheckCircle2 } from 'lucide-react'
 import { GoogleOAuthGuide } from '../components/ui/GoogleOAuthGuide'
 
@@ -153,7 +154,7 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
               </div>
               <div>
                 <p className="text-sm font-semibold text-zinc-100 mb-0.5 tracking-tight">Spot your free time at a glance</p>
-                <p className="text-xs text-zinc-400 leading-relaxed">We'll dim slots where you're already busy so you can pick dates and times that actually work. Only free/busy is read &mdash; never event details, and nothing leaves your browser.</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">We'll dim slots where you're already busy and automatically share your free days with the project team — no form needed. Only free/busy is used, never event titles or details.</p>
               </div>
             </div>
             <Button
@@ -206,13 +207,32 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
   const [guestEvents, setGuestEvents] = useState(() => {
     try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
   })
-  function connectGuestCalendar(events) {
+  async function connectGuestCalendar(events) {
     setGuestEvents(events)
     try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch (e) { /* */ }
+
+    // Persist free/busy to shared_availability so owner sees it in real time
+    if (!roomId || !guestName || !slots?.length) return
+    const today = new Date()
+    const freeDays = []
+    for (let i = 0; i < 60; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      const ds = dateToStr(date)
+      const isFree = slots.some(s =>
+        !events.some(ev => eventOverlapsSlot(date, s, { ...ev, calendarId: 'primary' }))
+      )
+      if (isFree) freeDays.push({ room_id: roomId, guest_name: guestName, date: ds, is_available: true })
+    }
+    await supabase.from('shared_availability').delete().eq('room_id', roomId).eq('guest_name', guestName)
+    if (freeDays.length) await supabase.from('shared_availability').insert(freeDays)
   }
-  function disconnectGuestCalendar() {
+  async function disconnectGuestCalendar() {
     setGuestEvents(null)
     try { sessionStorage.removeItem('coordie-gcal') } catch (e) { /* */ }
+    if (roomId && guestName) {
+      await supabase.from('shared_availability').delete().eq('room_id', roomId).eq('guest_name', guestName)
+    }
   }
 
   useEffect(() => {

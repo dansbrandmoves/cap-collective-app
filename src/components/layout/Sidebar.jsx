@@ -9,7 +9,7 @@ import { LayoutGrid, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditC
 const NAV = [
   { to: '/', label: 'Projects', icon: LayoutGrid },
   { to: '/booking-pages', label: 'Booking', icon: CalendarCheck },
-  { to: '/availability', label: 'Availability', icon: CalendarDays },
+  { to: '/availability', label: 'Default Availability', icon: CalendarDays },
   { to: '/calendars', label: 'Settings', icon: Settings },
 ]
 

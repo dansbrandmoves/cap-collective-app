@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { supabase } from '../utils/supabase'
-import { Inbox as InboxIcon, CalendarDays, Mail, Archive, ArrowUpRight } from 'lucide-react'
+import { Inbox as InboxIcon, CalendarDays, Mail, Archive, ArrowUpRight, Check, X } from 'lucide-react'
 import { PageLoader } from '../components/ui/PageLoader'
 
 export function Inbox() {
@@ -46,11 +46,28 @@ export function Inbox() {
   async function handleArchive(requestId) {
     const success = await updateDateRequestStatus(requestId, 'archived')
     if (success) {
-      // If we're on the 'active' filter, remove it from view; otherwise flip the status.
       if (filter === 'active') {
         setRequests(prev => prev.filter(r => r.id !== requestId))
       } else {
         setRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'archived' } : r))
+      }
+    }
+  }
+
+  async function handleConfirm(requestId) {
+    const success = await updateDateRequestStatus(requestId, 'confirmed')
+    if (success) {
+      setRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'confirmed' } : r))
+    }
+  }
+
+  async function handleDecline(requestId) {
+    const success = await updateDateRequestStatus(requestId, 'declined')
+    if (success) {
+      if (filter === 'active') {
+        setRequests(prev => prev.filter(r => r.id !== requestId))
+      } else {
+        setRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'declined' } : r))
       }
     }
   }
@@ -142,10 +159,14 @@ export function Inbox() {
                       </button>
                     )}
                   </div>
-                  {isArchived && (
-                    <span className="flex-shrink-0 text-[10px] font-medium text-zinc-500 px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/5">
-                      Archived
-                    </span>
+                  {req.status === 'archived' && (
+                    <span className="flex-shrink-0 text-[10px] font-medium text-zinc-500 px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/5">Archived</span>
+                  )}
+                  {req.status === 'confirmed' && (
+                    <span className="flex-shrink-0 text-[10px] font-medium text-green-400 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20">Confirmed</span>
+                  )}
+                  {req.status === 'declined' && (
+                    <span className="flex-shrink-0 text-[10px] font-medium text-red-400 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20">Declined</span>
                   )}
                 </div>
 
@@ -172,17 +193,30 @@ export function Inbox() {
                   </div>
                 )}
 
-                {!isArchived && (
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/[0.05]">
-                    <Button size="sm" onClick={() => handleOpenRoom(req)}>
+                {req.status !== 'archived' && (
+                  <div className="flex items-center flex-wrap gap-2 mt-4 pt-4 border-t border-white/[0.05]">
+                    {req.status === 'pending' && (
+                      <>
+                        <Button size="sm" onClick={() => handleConfirm(req.id)}
+                          className="bg-green-600 hover:bg-green-500 border-green-500/40 text-white">
+                          <Check size={12} strokeWidth={2.5} className="mr-1" />
+                          Confirm
+                        </Button>
+                        <button
+                          onClick={() => handleDecline(req.id)}
+                          className="min-h-[36px] flex items-center gap-1.5 text-[12px] font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 px-3 rounded-lg transition-colors">
+                          <X size={13} strokeWidth={2} />
+                          Decline
+                        </button>
+                      </>
+                    )}
+                    <Button size="sm" variant="secondary" onClick={() => handleOpenRoom(req)} className="ml-auto">
                       Open room
                       <ArrowUpRight size={13} strokeWidth={1.75} className="ml-1" />
                     </Button>
                     <button
                       onClick={() => handleArchive(req.id)}
-                      className="min-h-[36px] flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 hover:text-zinc-200 hover:bg-white/5 px-3 rounded-lg transition-colors"
-                      title="Archive"
-                    >
+                      className="min-h-[36px] flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 hover:text-zinc-200 hover:bg-white/5 px-3 rounded-lg transition-colors">
                       <Archive size={13} strokeWidth={1.75} />
                       Archive
                     </button>

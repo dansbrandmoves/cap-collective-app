@@ -14,10 +14,12 @@ const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // Day-cell tints per signal. Kept inline (not slotStates) — this is a distinct,
 // project-level traffic-light language: everyone clear → mostly → conflict → unknown.
+// Tints are deliberately gentle at rest so the month grid reads calm; they firm up
+// on hover. The legend dots and the count text carry the stronger color signal.
 const SIGNAL = {
-  green: { dot: '#22c55e', cell: 'bg-green-500/15 border-green-500/25 hover:border-green-500/45', count: 'text-green-400' },
-  amber: { dot: '#f59e0b', cell: 'bg-amber-500/12 border-amber-500/25 hover:border-amber-500/45', count: 'text-amber-400' },
-  red:   { dot: '#ef4444', cell: 'bg-red-500/10 border-red-500/20 hover:border-red-500/40', count: 'text-red-400' },
+  green: { dot: '#22c55e', cell: 'bg-green-500/[0.06] border-green-500/15 hover:bg-green-500/[0.12] hover:border-green-500/35', count: 'text-green-400/90' },
+  amber: { dot: '#f59e0b', cell: 'bg-amber-500/[0.05] border-amber-500/15 hover:bg-amber-500/[0.10] hover:border-amber-500/35', count: 'text-amber-400/90' },
+  red:   { dot: '#ef4444', cell: 'bg-red-500/[0.04] border-red-500/12 hover:bg-red-500/[0.09] hover:border-red-500/30', count: 'text-red-400/90' },
   gray:  { dot: '#52525b', cell: 'bg-white/[0.02] border-white/[0.05] hover:border-white/12', count: 'text-zinc-600' },
 }
 

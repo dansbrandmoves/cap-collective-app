@@ -1,225 +1,92 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-04-22
-**Last pushed commit:** `0199073` — "Per-booking-page custom logo upload"
+**Last session ended:** 2026-05-30
+**Last pushed commit:** `7b35b8f` — "fix guest calendar writes — anon RLS on shared_availability"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push)
-**Google OAuth verification:** submitted, awaiting review (2–4 weeks typical)
+**Google OAuth:** ✅ verified for `calendar.readonly` (no unverified-app warning).
+**Commit convention:** prefix every commit subject with `coordie:` (parallel work across projects).
+**Becoming:** Arro Calendar / Arro Scheduler — part of the Arro family (erro.ai).
 
 ---
 
 ## 🚦 Start here in a new thread
-
 1. `git pull origin master`
-2. Read vision: `C:\Users\danie\.claude\projects\C--Users-danie-Dropbox-Creative-Cloud-Files-Client-Fulfillment-MM-vibe-coding-cap-collective-app\memory\project_coordie_vision.md`
-3. Skim `CLAUDE.md` at project root
+2. Read memory index: `…/memory/MEMORY.md` — especially `project_unified_calendar_direction.md`, `project_ux_principles.md`, `project_arro_theme.md`.
+3. Skim `CLAUDE.md` at project root.
+4. **Run `npm test`** (9 logic tests over the availability engine) before/after changes.
 
 ---
 
-## ✅ Shipped this session (2026-04-22)
-
-| SHA | Summary |
-|---|---|
-| `579ae91` | **Booking page embed**: `<iframe>` snippet generator in BookingPageCard (Code2 button). `.npmrc` adds `min-release-age=7` supply chain defense. |
-| `9cf9637` | **Zen booking layout**: Desktop right panel is now full-width calendar → slot picker slides in (AnimatePresence step swap) with back button. Mobile: Connect Calendar moved to footer. Embed panel gets Hide logo / Hide description checkboxes (`?logo=0&desc=0`). |
-| `9d32582` | **Light/dark theme for embeds**: `?theme=light` applies `html.light` to the iframe document. Dark/Light toggle in embed panel. Back button crash fixed (`lastDateHeaderRef` — same pattern as `lastSlotRef`). index.css: white-opacity border/bg overrides + ambient-glow + shadow-lift for light mode. |
-| `0199073` | **Per-booking-page logo**: `logo_url` + `logo_is_dark` added to `booking_pages` table. `uploadBookingPageLogo` / `removeBookingPageLogo` in AppContext (resizes to webp, auto-detects light/dark). Upload/replace/remove UI in Edit modal. BookingPageView: page logo → profile logo → Coordie logo fallback chain. |
-
-## ✅ Shipped previously (2026-04-20)
-
-| SHA | Summary |
-|---|---|
-| `831f34e` | **Groups → Rooms rename** |
-| `dd3844f` | **ProductionView redesign** |
-| `da34a88` | **Google Calendar resilience** |
-| `0fe96d2` | **Admin dashboard** |
-| `20b0195` | **Stripe subscriptions (webhook-less)** |
-| `770e008` | **Calmer calendar** (dots + hover cards + PendingRequestsModal) |
-| `761560a` | DayInspectorPanel restored |
-| `48cd6fe` | Weekly view parity + "Also invite" non-responders |
-
----
-
-## 🧠 Current mental model
-
-- **Production → Rooms** (renamed from Groups). Each production auto-creates one default room on create.
-- **ProductionView**: sidebar = project mgmt (rooms list + "+ New Room" + Edit/Delete + Private Notes). Main area = selected room's calendar with room-name header, pending count chip (→ modal), and "Share room" button (→ share modal w/ Preview-as-guest link).
-- **Share modal** is the single place for access mode, link copy, invites, pending count → Inbox, preview link.
-- **Project Settings modal** (renamed from Edit Project): basic info + availability config (mode/hours/slot selection) — replaces the old gear icon.
-- **Pending requests modal** (from the chip): grouped by requester with per-person show/hide toggle (filters calendar dots live) + Approve/Decline/Archive inline.
-- **DayInspectorPanel** (click any day with requests): free-people list + "Also invite" non-responders + By-time-slot heatmap + "Schedule in Google Calendar" action.
-- **Roles vs Plans**: `profiles.role` (`user | admin`) is separate from `profiles.plan` (`free | pro`). Stripe only touches `plan`; admin status stays safe.
-
----
-
-## 🧠 Booking page embed mental model
-
-- Booking pages live at `/book/:slug`. No app shell — full-page standalone, works perfectly as an iframe target.
-- **Embed snippet** generated in BookingPages → card → Code2 button. Checkboxes wire `?logo=0`, `?desc=0`, `?theme=light` into the src URL. Copy button grabs the full `<iframe>` tag.
-- **Theme**: `?theme=light` calls `document.documentElement.classList.add('light')` inside the iframe — isolated from host page. Leverages the full existing `html.light` CSS system. `?theme=dark` forces dark (default). No `auto` mode — owner explicitly picks.
-- **Logo priority**: `page.logo_url` → `ownerLogo` (profile) → Coordie SVG. Auto-detects light/dark from pixel brightness in `resizeImage`. Stored at `logos` bucket: `userId/booking-pages/pageId.webp`.
-- **Booking calendar design decision**: kept simple (available/unavailable days). Intentionally different from rooms heatmap — guest tool vs. owner management tool. Different jobs warrant different UI contracts. Revisit with real guest feedback if needed.
-
----
-
-## 📋 Backlog (priority order)
-
-1. **Homepage marketing copy still says "groups"** in a couple places in `src/pages/HomePage.jsx` — small copy sweep.
-2. **Verify slot-request flow E2E** in a real room — toggle `guestSlotSelection` in Project Settings, guest picks date→slots→Send. Confirm owner inbox shows slot chips and DayInspectorPanel renders "By time slot" heatmap.
-3. **Inbox UI for `slot_map`** — inbox list still shows dates only; should surface selected slots per date when `slot_map` present.
-4. **RESEND_API_KEY check** in Supabase → Edge Function Secrets (edge functions no-op silently if missing).
-5. **Google OAuth verification** — submitted 2026-04-20. Check Cloud Console → OAuth consent screen → Verification center for status. Respond promptly if Google asks follow-ups.
-6. **Stripe hosted checkout branding** — Stripe Dashboard → Settings → Branding (logo, colors) makes the checkout page match Coordie's aesthetic. 5-min task.
-7. **Guest view privacy pass** — overlap counts show for guests but names should NOT. Double-check Monthly/Weekly tooltip `title` + hover card `isOwner` gating (already mostly handled, verify).
-8. **Real-time subscription on `shared_availability`** in RoomView — only `date_requests` live-updates currently.
-9. **Phase 2 room overlap: multi-person filter** — chip row at top of AvailabilityTab. Note: `shared_availability` is read but no longer written to (Share-with-team dropped).
-10. **Timezone actually used** — stored in context, but slot times + email timestamps don't use it yet.
-11. **Stripe webhooks** (when ready to harden) — current flow is webhook-less and catches cancellations on next `/billing` visit. Webhooks would catch them in real-time. Secret: `STRIPE_WEBHOOK_SECRET` → add to Supabase. Stub `stripe-webhook` edge function exists.
-12. **Dead-code finding:** `supabase/functions/notify-shared-availability/index.ts:162` still queries the old `groups` table. Function is no longer called from client (Share-with-team dropped); would 500 if invoked. Safe to fix next time you touch edge functions.
-
----
-
-## 🧭 Design decisions worth remembering
-
-- **Webhook-less Stripe** (for now): simpler — verify on return via `?session_id={CHECKOUT_SESSION_ID}`, re-sync on every `/billing` mount. Tradeoff: cancellations only catch up when user revisits billing. Easy to add webhooks later without refactoring.
-- **Google refresh tokens wiped only on `invalid_grant`**: transient errors (network, 5xx, rate limits, `invalid_client`) keep the token for next retry instead of forcing reconnect on every blip.
-- **Calm calendar indicators**: numbers on day cells caused number-on-number parsing. Dots remove the noise; count lives in the header chip. Hover cards give full info on demand.
-- **Admin role is separate from billing plan**: a customer can be both admin and pro. Stripe webhook only touches `plan`.
-
----
-
-## 🔧 Working rules for this repo
-
-### Committing (Dropbox + temp-index workaround)
-
-Plain `git add` fails because Dropbox holds `.git/index`. Use a temp index every time:
-
-```bash
-GIT_INDEX_FILE=.git/index_tmp git read-tree HEAD   # CRITICAL — start from HEAD or you wipe the tree
-GIT_INDEX_FILE=.git/index_tmp git add <files>      # stage specific files, NEVER `git add -A`
-GIT_INDEX_FILE=.git/index_tmp git commit -m "..."
-rm -f .git/index_tmp
-git push origin master
+## ⏳ ONE thing waiting on the user (do first)
+**Verify guest calendar sync.** The RLS bug that silently blocked guest writes is fixed
+(`7b35b8f`). Christian needs to have the test guest (daniel.furfaro@gmail.com) **reconnect
+their Google Calendar** in the group. Then verify via SQL:
+```sql
+select guest_name, count(*) free_days, bool_or(date='2026-07-02') as has_jul2
+from shared_availability group by guest_name;
+select event, detail, created_at from diagnostics order by created_at desc limit 10;
 ```
-
-### Preview server
-
-- `preview_start` with name `cap-collective` (port 5173, config in `.claude/launch.json`)
-- Vite dep cache pinned to `os.tmpdir()/vite-cap-collective` to avoid Dropbox EBUSY (see `vite.config.js`)
-- App uses real Supabase auth — can't navigate owner routes in preview without credentials. Homepage renders fine.
-- **Babel parser gotcha:** doesn't parse optional-catch-binding — use `catch (e) { }`.
-
-### Design tokens
-
-- Motion: `ease-ios` = `cubic-bezier(0.32, 0.72, 0, 1)`
-- Shadows: `shadow-lift`, `shadow-sheet`
-- Tap targets: `min-h-touch` / `min-w-touch` = 44px
-- Accent: purple `#8b5cf6`
-- Never `border-surface-700` (too harsh) — use `border-white/[0.06]` or `border-white/10`
-- Cards: `bg-surface-900 border border-white/[0.06] rounded-2xl p-5 sm:p-6 hover:border-white/10 hover:shadow-lift transition-all duration-200 ease-ios`
-- Page wrapper: `px-5 sm:px-8 lg:px-14 py-8 sm:py-12`
-- H1: `text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15]`
-- Loading: `<PageLoader />` — never "Loading..." text
-- Toggles: off=`bg-surface-600`, on=`bg-accent`, knob=`bg-white shadow-sm`
-
-### Settings persistence
-
-- `profiles.settings` JSONB stores cross-device owner settings: `guestCalendarEnabled`, `timezone`, `theme`, `slotStateCustomizations`, `prefixRules`
-- `AppContext.fetchPlan()` reads on login — Supabase wins over localStorage on conflict
-- Rooms read `guestCalendarEnabled` from owner's profile, not context
-
-### Edge function deploys
-
-- Deploy via MCP `mcp__0d08157b-...__deploy_edge_function`
-- Most functions use `verify_jwt: false` + in-code `supabase.auth.getUser()` — Supabase gateway's JWT check is too strict and returns 401 before our code runs
-- **Notes:** `notify-date-request` still expects `groupName`/`groupId` field names; `createDateRequest` in AppContext passes them for backward compat
+Expect free-days written, July 2 **excluded** (guest busy 8am–7pm), and a `guest_connect_done`
+diagnostic. If empty, read the diagnostic skip reason.
 
 ---
 
-## 🗂 Key files
+## ✅ Shipped this session (2026-05-30)
+**Live calendar sync (S1) — server-owned, near-live, verified server-side:**
+- `sync-calendar` edge function: incremental `events.list` per governing calendar with stored
+  `syncToken`, writes only changed rows to `owner_calendar_events` (upsert/delete by
+  `google_event_id`; daily re-baseline of the −1mo/+3mo window; empty delta = no write; dedupe
+  by event id). Triggers: client on-app-load + manual; 15-min `pg_cron` fallback; (push = S2).
+- Delivery via Supabase **realtime** on `owner_calendar_events` → owner + guests update live, no
+  browser polling. Client retired the old full-fetch + Settings-scoped 30-min interval.
+- Cron self-authorizes via a DB-stored `app_config.cron_secret` (no service-role key / Vault).
+- **diagnostics table**: client→server event log (anon-insert) so guest-side flows are debuggable
+  without the browser console. This is the tool that found the RLS bug.
 
-| File | What's there |
-|---|---|
-| `src/pages/HomePage.jsx` | Marketing at `/`. Phase-driven booking-flow demo |
-| `src/App.jsx` | Routes: `/`, `/signin`, `/project/:id`, `/room/:token`, `/inbox`, `/booking/:slug`, `/admin`, `/billing`, etc. |
-| `src/pages/ProductionView.jsx` | Sidebar = rooms + project mgmt; main = selected room's calendar. Contains: `ProductionView`, `RoomCalendarPanel`, `ShareModal`, `RenameRoomModal`, `EditProjectModal`, `PendingRequestsModal`, `EmptyState` |
-| `src/pages/RoomView.jsx` | Guest-facing room (`/room/:token`). Notes + Availability tabs |
-| `src/pages/BookingPageView.jsx` | Booking page with guest calendar overlay, slot picker |
-| `src/pages/AdminDashboard.jsx` | Role-gated `/admin`. User list with inline plan/role pill toggles |
-| `src/pages/BillingPage.jsx` | Upgrade flow (Stripe Checkout), verify-on-return, sync-on-mount, Manage-in-Stripe portal button |
-| `src/components/availability/AvailabilityCalendar.jsx` | Monthly/Weekly/Daily + `DayInspectorPanel` (responded list + "Also invite" non-responders + By-time-slot heatmap + GCal scheduling) |
-| `src/components/availability/MonthlyView.jsx` | Day grid with dot indicators + custom hover cards |
-| `src/components/availability/WeeklyView.jsx` | Slot×day grid with dot indicators + hover cards on headers AND slot cells |
-| `src/contexts/AppContext.jsx` | State, Supabase sync. Room CRUD, date requests, notifications, plan/role, `isAdmin` |
-| `src/pages/CalendarSettings.jsx` | Google OAuth (with amber "Connection expired" state for stale connections), business hours, timezone, theme, branding, `guestCalendarEnabled` |
-| `src/components/layout/Sidebar.jsx` | Nav (Projects, Booking, Availability, Settings) + admin-only "Admin" link + Upgrade/Billing |
+**Arro theme + UX (all owner-side, user should eyeball):**
+- Accent token violet → **Arro teal `#5e9c8c`** app-wide (`tailwind.config.js`).
+- Dark mode less-dark slate (`#1e2429…`), **landing page forced light**.
+- Availability month view: **one calm teal meter per day** (was a neon stripe-per-slot barcode).
+- Day inspector is now a **real split column** (calendar shrinks beside it; no dimming overlay; Esc closes; mobile = bottom sheet). Applied in group calendar + project overview.
+- Killed the room **Notes tab**. Decluttered/reorganized the **left nav** (primary top, project sub-list, config/account pinned bottom). "Who's included" people filter on Best Days.
 
----
-
-## 🏗 Infrastructure
-
-- **Vercel**: auto-deploys on push to `master`
-- **Supabase project ID**: `xwuekcysigkujhyucugi`
-- **Tables**: `productions`, `rooms`, `room_members`, `shared_notes`, `messages`, `date_requests`, `shared_availability`, `profiles`, `booking_pages`, `bookings`, `owner_calendar_events`
-- **`profiles` columns**: `id, plan, role, stripe_customer_id, stripe_subscription_id, logo_url, logo_is_dark, connected_calendars, google_refresh_token, google_access_token, google_token_expires_at, settings (jsonb), created_at, updated_at`
-- **Security-definer RPCs**: `admin_list_users()`, `admin_update_user(target_id, new_plan, new_role)` — both check `auth.uid()` is admin inside the function
-
-### Edge functions deployed
-
-| Function | Purpose | verify_jwt |
-|---|---|---|
-| `google-calendar-auth` | OAuth exchange/refresh/disconnect with resilient error handling | false |
-| `create-checkout-session` | Stripe Checkout session for subscription | false |
-| `verify-checkout-session` | Verify session on return, flip to pro | false |
-| `create-portal-session` | Stripe Customer Portal URL | false |
-| `sync-subscription-status` | Called on `/billing` mount to reconcile from Stripe | false |
-| `notify-booking` | Email owner when someone books | true |
-| `notify-date-request` | Email owner when guest sends date request (expects legacy `groupName`/`groupId` fields) | true |
-| `send-welcome-email` | (deployed but disabled in client) | true |
-| `stripe-webhook` | Stub for future webhook wiring | false |
-| `notify-shared-availability` | Legacy — no longer called from client | false |
-
-### Secrets (Supabase Edge Function Secrets)
-
-- `STRIPE_SECRET_KEY` ✅
-- `STRIPE_PRICE_ID` ✅
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` ✅
-- `RESEND_API_KEY` — check if set; edge functions silently no-op if missing
-- `STRIPE_WEBHOOK_SECRET` — not set (webhook-less flow for now)
-
-### Known user states (for debugging)
-
-From `profiles`:
-- `daniel@brandmoves.co` = admin, pro plan after successful test checkout, 2 calendars + refresh token
-- `daniel.furfaro@gmail.com` = user, free plan, 2 calendars but **no refresh token** (will see "Reconnect" amber state in settings — expected)
-- `daniel.furfato@gmail.com` = user, free plan, no calendars
-- `cawleyconsulting@gmail.com` = user, free plan
+**Earlier in session:** guest connect-calendar-first flow; date-request form → "tap your free
+days"; Room→Group / Production→Project naming; one-click copy link; project-level **Best Days**
+aggregate calendar; **group/project delete fix** (cascade FKs); legal TOS/Privacy updates.
 
 ---
 
-## 🔒 Supply Chain Security
-
-`.npmrc` at project root sets `min-release-age=7` — npm won't install packages published fewer than 7 days ago. Lightweight defense against the class of attack that hit litellm and axios in early 2025.
-
-**Rules:**
-- Never `npm update` casually — only intentionally, after a package has been out 7+ days
-- Use `npm ci` in any automated context (not `npm install`)
-- Run `npm audit` periodically
-- `package-lock.json` is committed — keep it that way
-
-Full rationale and package risk profile: `memory/security_supply_chain.md` (in Claude memory).
-
----
-
-## 💡 How Daniel works
-
-- Ships fast, iterates on real feedback
-- Values honesty about tradeoffs + vision alignment
-- "When you see a good move, look for a better one"
-- Prefers tight strategic responses for exploratory questions (2–4 sentences + recommendation + tradeoff)
-- Framing: "effortless, useful, and gorgeous"
-- Responds well to momentum — keep the energy up
-- Prefers data model to match UX (groups→rooms was driven by this, not cosmetic)
+## 🔜 Open / next (priority order)
+1. **S2 — Google push notifications** (true seconds-live). Layers on the S1 engine. Plan is in
+   `…/.claude/plans/let-s-double-down-on-steady-wall.md`. **Needs user config:** a
+   `coordie.com/api/gcal-webhook` Vercel route (I provide code) + **domain verification** in
+   Google Cloud Console. No new OAuth scope. Then build `calendar_watches` + `calendar-webhook`
+   edge fn + `events.watch` register + renewal cron.
+2. **The "one effortless dashboard"** (researched — see `project_unified_calendar_direction.md`):
+   roster strip (everyone in the group, visible to members) → best-window answer line →
+   **LIST / CALENDAR / GRID** toggle over one dataset → push inspector. Build incrementally.
+   Sidebars should be **collapsible + drag-resizable**.
+3. **A2/A3 — calendar convergence:** fold `ProjectOverview` grid into shared `MonthlyView`;
+   migrate `RoomCalendarPanel` + guest `RoomView` to the `role` prop (A1 added the prop, derived
+   internally) and delete the legacy booleans.
+4. **Bookings → a project "meeting" mode** (not a silo): `rooms.mode` + `bookings.room_id`,
+   guest pick-a-time via the unified calendar, retire `/booking-pages` last. (Revises the old
+   "don't merge bookings" decision.)
 
 ---
 
-**When ready: pull, check backlog item #1 (homepage copy) or ask Daniel what's next.**
+## ⚠️ Gotchas (hard-won)
+- **Dropbox holds `index.lock`** → commit via the temp-index workaround in CLAUDE.md
+  (`GIT_INDEX_FILE=.git/index_tmp git read-tree HEAD` first — critical).
+- **Don't use PowerShell here-strings (`@'...'@`) in the Bash tool** — the `@` leaks into the
+  commit subject. Use a `printf`/`-F file` message.
+- **Supabase RLS targets the `anon` role, not `public`** — guest (anonymous) inserts need
+  policies `to anon, authenticated` + explicit grants, or they silently fail (this was the
+  guest-sync bug). `date_requests` may still have a `public`-targeted insert policy — check it
+  if guest date requests don't persist.
+- **Owner-authenticated UI can't be verified by the agent** (no sign-in). Verify via: `npm test`,
+  Supabase SQL/MCP, the `diagnostics` table, the guest-facing surfaces (logged-out preview),
+  and the user click-testing. `preview_screenshot` times out in this env — use `preview_snapshot`.
+- **Edge functions** are deployed via MCP and mirrored in `supabase/functions/` for VC; migrations
+  applied via MCP and mirrored in `supabase/migrations/`.
+- Supabase project: `xwuekcysigkujhyucugi`. GitHub: `dansbrandmoves/cap-collective-app`.

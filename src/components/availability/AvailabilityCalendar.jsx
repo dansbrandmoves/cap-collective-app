@@ -442,10 +442,20 @@ function BestDaysStrip({ slots, calendarEvents, connectedCalendars, prefixRules,
   )
 }
 
-/* ── Day Inspector: owner-only panel with overlap + Schedule in Google Calendar ── */
-function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAvailability, onClose }) {
+/* ── Day Inspector: owner-only panel with overlap + Schedule in Google Calendar ──
+ * Single-room by default. Pass `roomIds` (array) to inspect a whole project — the
+ * caller combines every group's date-filtered requests/availability and we pull
+ * member emails from all of those rooms. `actionLabel` renames the primary button. */
+export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRequests, sharedAvailability, onClose, actionLabel = 'Schedule in Google Calendar' }) {
   const { getMembersForRoom } = useApp()
-  const members = useMemo(() => getMembersForRoom(roomId || ''), [getMembersForRoom, roomId])
+  const memberRoomIds = useMemo(
+    () => (roomIds && roomIds.length ? roomIds : (roomId ? [roomId] : [])),
+    [roomIds, roomId]
+  )
+  const members = useMemo(
+    () => memberRoomIds.flatMap(id => getMembersForRoom(id)),
+    [getMembersForRoom, memberRoomIds]
+  )
 
   const dateObj = useMemo(() => new Date(dateStr + 'T00:00:00'), [dateStr])
 
@@ -810,7 +820,7 @@ function DayInspectorPanel({ dateStr, roomId, slots = [], dateRequests, sharedAv
             className="w-full min-h-touch flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white text-[15px] font-semibold transition-all duration-200 ease-ios shadow-[0_8px_24px_-8px_rgb(139_92_246/0.55)]"
           >
             <CalendarPlus size={16} strokeWidth={2} />
-            Schedule in Google Calendar
+            {actionLabel}
           </button>
           {guestData.length > 0 && (
             <p className="text-[12px] text-zinc-500 mt-3 text-center leading-relaxed">

@@ -241,3 +241,113 @@ export function getWeekStart(date) {
   d.setHours(0, 0, 0, 0)
   return d
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Project-level aggregation — "when can everyone do this?"
+ *
+ * Generalizes the single-room BestDaysStrip merge logic to span every group
+ * (room) in a project. A "person" is identified by name string (no global IDs
+ * yet), so same-named people across groups merge — acceptable for v1.
+ *
+ * IMPORTANT data asymmetry: shared_availability stores only POSITIVE (free) rows
+ * for the next ~60 days. "Absent from the set" therefore means UNKNOWN, never
+ * busy. That's why the signal denominator is knownCount (people with any signal
+ * anywhere in the project), not a full member roster.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Resolve a project's effective slots from its availability_config, falling back
+ * to the owner's global effectiveSlots. Mirrors the per-room/RoomView derivation
+ * so the project overview uses the same slots the guests see.
+ */
+export function projectSlotsFromConfig(config, effectiveSlots) {
+  if (!config) return effectiveSlots
+  if (config.mode === 'slots') return config.customSlots || effectiveSlots
+  const schedule = config.businessHours?.schedule || {}
+  let earliest = '23:59', latest = '00:00'
+  for (const day of Object.values(schedule)) {
+    if (!day) continue
+    if (day.start < earliest) earliest = day.start
+    if (day.end > latest) latest = day.end
+  }
+  if (earliest >= latest) return effectiveSlots
+  const dur = config.blockDuration || 30
+  const generated = []
+  let [h, m] = earliest.split(':').map(Number)
+  const endMins = latest.split(':').map(Number).reduce((a, b, i) => a + (i === 0 ? b * 60 : b), 0)
+  while (h * 60 + m + dur <= endMins) {
+    const start = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+    const te = h * 60 + m + dur
+    const end = `${String(Math.floor(te / 60)).padStart(2, '0')}:${String(te % 60).padStart(2, '0')}`
+    const period = h >= 12 ? 'PM' : 'AM'
+    generated.push({ id: `block-${start}`, name: `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`, startTime: start, endTime: end, color: '#22c55e', defaultState: 'available' })
+    m += dur
+    if (m >= 60) { h += Math.floor(m / 60); m = m % 60 }
+  }
+  return generated
+}
+
+const ACTIVE_REQUEST = r => r.status !== 'declined' && r.status !== 'archived'
+
+function cleanNameSet(names) {
+  const set = new Set(names)
+  set.delete(undefined); set.delete(null); set.delete('')
+  return set
+}
+
+/**
+ * Distinct people who have ANY availability signal anywhere in the project.
+ * This is the denominator for the day signal — everyone "connected" so far.
+ */
+export function projectKnownPeople(rooms, dateRequestsByRoom, sharedAvailByRoom) {
+  const names = []
+  for (const room of rooms) {
+    for (const r of (dateRequestsByRoom[room.id] || []).filter(ACTIVE_REQUEST)) names.push(r.requester_name)
+    for (const a of (sharedAvailByRoom[room.id] || [])) { if (a.is_available) names.push(a.guest_name) }
+  }
+  return cleanNameSet(names)
+}
+
+/**
+ * Aggregate one day across all groups in a project.
+ * @returns {{ perRoom: Array<{roomId,roomName,freeNames:string[],totalKnown:number}>,
+ *             freeCount: number, knownCount: number }}
+ */
+export function aggregateProjectDay(dateStr, rooms, dateRequestsByRoom, sharedAvailByRoom) {
+  const allFree = []
+  const perRoom = rooms.map(room => {
+    const reqs = (dateRequestsByRoom[room.id] || []).filter(ACTIVE_REQUEST)
+    const avail = sharedAvailByRoom[room.id] || []
+
+    const free = cleanNameSet([
+      ...reqs.filter(r => r.dates?.includes(dateStr)).map(r => r.requester_name),
+      ...avail.filter(a => a.date === dateStr && a.is_available).map(a => a.guest_name),
+    ])
+    const known = cleanNameSet([
+      ...reqs.map(r => r.requester_name),
+      ...avail.filter(a => a.is_available).map(a => a.guest_name),
+    ])
+    free.forEach(n => allFree.push(n))
+    return { roomId: room.id, roomName: room.name, freeNames: [...free], totalKnown: known.size }
+  })
+
+  const knownCount = projectKnownPeople(rooms, dateRequestsByRoom, sharedAvailByRoom).size
+  return { perRoom, freeCount: cleanNameSet(allFree).size, knownCount }
+}
+
+export const PROJECT_DAY_AMBER_RATIO = 0.5
+
+/**
+ * Map a day's aggregate to a traffic-light signal.
+ * gray  — no signal yet, OR owner is not free (owner's own block is not a
+ *         negotiable guest conflict, so it reads neutral, not red).
+ * green — owner free and everyone known is free.
+ * amber — owner free and at least half of known people are free.
+ * red   — owner free but under half are free (a real scheduling conflict).
+ */
+export function projectDaySignal(ownerFree, freeCount, knownCount) {
+  if (!ownerFree || knownCount === 0) return 'gray'
+  if (freeCount === knownCount) return 'green'
+  if (freeCount / knownCount >= PROJECT_DAY_AMBER_RATIO) return 'amber'
+  return 'red'
+}

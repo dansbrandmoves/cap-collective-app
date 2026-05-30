@@ -5,8 +5,10 @@ import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
+import { ProjectOverview } from '../components/project/ProjectOverview'
+import { projectSlotsFromConfig } from '../utils/availability'
 import { supabase } from '../utils/supabase'
-import { Lock, Menu, X, Share2, ExternalLink, Check, Archive, XCircle, Eye, EyeOff } from 'lucide-react'
+import { Lock, Menu, X, Share2, ExternalLink, Check, Archive, XCircle, Eye, EyeOff, LayoutGrid } from 'lucide-react'
 
 export function ProductionView() {
   const { id } = useParams()
@@ -21,6 +23,7 @@ export function ProductionView() {
 
   const production = getProduction(id)
   const [activeRoomId, setActiveRoomId] = useState(null)
+  const [activeView, setActiveView] = useState('overview') // 'overview' | 'room'
   const [mobileShowSidebar, setMobileShowSidebar] = useState(false)
   const [showNewRoom, setShowNewRoom] = useState(false)
   const [newRoomName, setNewRoomName] = useState('')
@@ -62,6 +65,8 @@ export function ProductionView() {
 
   const activeRoom = production.rooms.find(r => r.id === activeRoomId) || null
   const renamingRoom = production.rooms.find(r => r.id === renamingRoomId) || null
+  const projectConfig = production.availabilityConfig || production.availability_config
+  const projectSlots = projectSlotsFromConfig(projectConfig, effectiveSlots)
 
   function openAddRoom() {
     if (!canAddRoom(id)) { setShowUpgrade(true); return }
@@ -99,6 +104,12 @@ export function ProductionView() {
 
   function handleSelectRoom(roomId) {
     setActiveRoomId(roomId)
+    setActiveView('room')
+    setMobileShowSidebar(false)
+  }
+
+  function showOverview() {
+    setActiveView('overview')
     setMobileShowSidebar(false)
   }
 
@@ -149,6 +160,19 @@ export function ProductionView() {
 
         {/* Rooms list */}
         <div className="flex-1 overflow-y-auto px-3 py-4">
+          {/* Project overview entry — the aggregated "best days" view */}
+          <button
+            onClick={showOverview}
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg mb-3 text-[13px] transition-colors ${
+              activeView === 'overview'
+                ? 'bg-accent/10 text-zinc-100 border border-accent/15 font-medium'
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] border border-transparent'
+            }`}
+          >
+            <LayoutGrid size={15} strokeWidth={1.75} className={activeView === 'overview' ? 'text-accent' : 'opacity-70'} />
+            <span>Best days</span>
+          </button>
+
           <div className="flex items-center justify-between px-2 mb-2">
             <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Groups</p>
             <button onClick={openAddRoom} className="text-xs text-zinc-500 hover:text-accent transition-colors">+ New group</button>
@@ -162,7 +186,7 @@ export function ProductionView() {
           )}
 
           {production.rooms.map(room => {
-            const isActive = activeRoomId === room.id
+            const isActive = activeView === 'room' && activeRoomId === room.id
             const pending = pendingRequestCounts[room.id] || 0
             return (
               <div
@@ -248,7 +272,16 @@ export function ProductionView() {
           </button>
         </div>
 
-        {activeRoom ? (
+        {activeView === 'overview' ? (
+          <ProjectOverview
+            production={production}
+            slots={projectSlots}
+            calendarEvents={calendarEvents}
+            connectedCalendars={connectedCalendars}
+            prefixRules={prefixRules}
+            businessHours={projectConfig?.businessHours || businessHours}
+          />
+        ) : activeRoom ? (
           <RoomCalendarPanel
             key={activeRoom.id}
             production={production}

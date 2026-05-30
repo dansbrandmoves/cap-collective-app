@@ -26,7 +26,7 @@ const FEATURES = [
   {
     icon: LayoutGrid,
     title: 'Projects, not chaos',
-    desc: 'Every production lives in its own space. Groups, notes, messages, and availability — all together.',
+    desc: 'Every production lives in its own space. Rooms, notes, messages, and availability — all together.',
   },
   {
     icon: Zap,
@@ -36,9 +36,9 @@ const FEATURES = [
 ]
 
 const HOW_IT_WORKS = [
-  { step: '01', title: 'Create a project', desc: 'Add your production with dates, description, and groups for each set of collaborators.' },
+  { step: '01', title: 'Create a project', desc: 'Add your production with dates, description, and rooms for each set of collaborators.' },
   { step: '02', title: 'Connect your calendar', desc: 'Link Google Calendar once. Your real availability updates automatically — no extra work.' },
-  { step: '03', title: 'Share a room link', desc: 'Each group gets a unique link. Paste it in your own email. They open it and see their space.' },
+  { step: '03', title: 'Share a room link', desc: 'Each room gets a unique link. Paste it in your own email. They open it and see their space.' },
   { step: '04', title: 'Coordinate together', desc: 'Guests view availability, request dates, and message you — all without creating an account.' },
 ]
 
@@ -432,7 +432,7 @@ export function HomePage() {
         </h1>
 
         <p className="text-lg sm:text-xl text-zinc-400 leading-relaxed max-w-xl mb-10">
-          Share availability, manage groups, and keep every production organized —
+          Share availability, manage rooms, and keep every production organized —
           without the back-and-forth.
         </p>
 

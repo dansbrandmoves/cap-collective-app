@@ -9,7 +9,6 @@ import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '.
 import { eventOverlapsSlot, dateToStr } from '../utils/availability'
 import { CalendarDays, CheckCircle2 } from 'lucide-react'
 
-const TABS = ['Availability', 'Notes']
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
@@ -46,50 +45,6 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
           />
           <Button type="submit" disabled={!name.trim()} className="w-full">Continue →</Button>
         </form>
-      </div>
-    </div>
-  )
-}
-
-function NotesTab({ productionId, room, guestName }) {
-  const { updateSharedNotes } = useApp()
-  const [value, setValue] = useState(room.room.sharedNotes)
-  const [saved, setSaved] = useState(true)
-  const timerRef = useRef(null)
-  const pendingRef = useRef(false)
-
-  useEffect(() => {
-    if (!pendingRef.current) setValue(room.room.sharedNotes)
-  }, [room.room.sharedNotes])
-
-  function handleChange(e) {
-    setValue(e.target.value)
-    setSaved(false)
-    pendingRef.current = true
-    clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => {
-      updateSharedNotes(productionId, room.id, e.target.value)
-      setSaved(true)
-      pendingRef.current = false
-    }, 800)
-  }
-
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-5 sm:px-8 py-3 border-b border-surface-700">
-        <p className="text-sm text-zinc-500">Shared notes — both sides can edit</p>
-        <span className={`text-xs transition-opacity ${saved ? 'text-zinc-600' : 'text-accent'}`}>
-          {saved ? 'Saved' : 'Saving...'}
-        </span>
-      </div>
-      <div className="flex-1 overflow-hidden px-5 sm:px-8 py-4 sm:py-6">
-        <textarea
-          value={value}
-          onChange={handleChange}
-          className="w-full h-full bg-transparent text-sm text-zinc-200 leading-relaxed resize-none focus:outline-none font-mono placeholder-zinc-700"
-          placeholder="Start typing shared notes..."
-          spellCheck={false}
-        />
       </div>
     </div>
   )
@@ -317,7 +272,6 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
 export function RoomView() {
   const { token } = useParams()
   const { getProduction, getRoom, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions } = useApp()
-  const [activeTab, setActiveTab] = useState('Availability')
   const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)
   const [guestName, setGuestName] = useState(null)
@@ -493,40 +447,20 @@ export function RoomView() {
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-0 px-5 sm:px-8 border-b border-white/[0.06] bg-surface-900/60 backdrop-blur-sm">
-        {TABS.map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`min-h-touch px-4 py-3 text-[13px] font-medium transition-colors border-b-2 tracking-tight ${
-              activeTab === tab ? 'border-accent text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-200'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'Notes' && (
-        <NotesTab productionId={productionId} room={room} guestName={guestName} />
-      )}
-      {activeTab === 'Availability' && (
-        <AvailabilityTab
-          isOwner={isOwner}
-          availabilityRules={availabilityRules}
-          roomId={roomId}
-          guestName={guestName}
-          slots={slots}
-          projectBusinessHours={production?.availability_config?.businessHours}
-          guestSlotSelection={production?.availability_config?.guestSlotSelection || false}
-          ownerCalendarEvents={ownerCalendarEvents}
-          ownerConnectedCalendars={ownerConnectedCalendars}
-          ownerId={production?.ownerId}
-          ownerName={ownerName}
-          guestCalendarEnabled={ownerGuestCalendarEnabled}
-        />
-      )}
+      <AvailabilityTab
+        isOwner={isOwner}
+        availabilityRules={availabilityRules}
+        roomId={roomId}
+        guestName={guestName}
+        slots={slots}
+        projectBusinessHours={production?.availability_config?.businessHours}
+        guestSlotSelection={production?.availability_config?.guestSlotSelection || false}
+        ownerCalendarEvents={ownerCalendarEvents}
+        ownerConnectedCalendars={ownerConnectedCalendars}
+        ownerId={production?.ownerId}
+        ownerName={ownerName}
+        guestCalendarEnabled={ownerGuestCalendarEnabled}
+      />
 
       {/* Footer */}
       {!isOwner && (

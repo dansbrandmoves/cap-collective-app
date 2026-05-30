@@ -8,7 +8,6 @@ import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
 import { eventOverlapsSlot, dateToStr } from '../utils/availability'
 import { CalendarDays, CheckCircle2 } from 'lucide-react'
-import { GoogleOAuthGuide } from '../components/ui/GoogleOAuthGuide'
 
 const TABS = ['Availability', 'Notes']
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -101,7 +100,6 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
   const [gisReady, setGisReady] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [showGuide, setShowGuide] = useState(false)
   const tokenClientRef = useRef(null)
   const configured = isConfigured()
 
@@ -140,12 +138,6 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
   if (guestEvents === null) {
     return (
       <>
-        {showGuide && (
-          <GoogleOAuthGuide
-            onConfirm={() => { setShowGuide(false); tokenClientRef.current?.requestAccessToken() }}
-            onCancel={() => setShowGuide(false)}
-          />
-        )}
         <div className="border border-dashed border-white/10 rounded-2xl px-5 py-4 mb-5">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
             <div className="flex items-start gap-3">
@@ -160,7 +152,7 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => setShowGuide(true)}
+              onClick={() => tokenClientRef.current?.requestAccessToken()}
               disabled={!gisReady || loading}
               className="flex-shrink-0 self-start sm:self-auto"
             >

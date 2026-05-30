@@ -7,7 +7,6 @@ import { getMonthGrid, dateToStr, eventOverlapsSlot } from '../utils/availabilit
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
 import { ChevronLeft, ChevronRight, CheckCircle2, Clock, CalendarDays, X } from 'lucide-react'
-import { GoogleOAuthGuide } from '../components/ui/GoogleOAuthGuide'
 
 // iOS system motion curve
 const IOS_EASE = [0.32, 0.72, 0, 1]
@@ -235,7 +234,6 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
   const [gisReady, setGisReady] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [showGuide, setShowGuide] = useState(false)
   const tokenClientRef = useRef(null)
   const configured = isConfigured()
 
@@ -289,12 +287,6 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
   // Not connected — invite to connect
   return (
     <>
-      {showGuide && (
-        <GoogleOAuthGuide
-          onConfirm={() => { setShowGuide(false); tokenClientRef.current?.requestAccessToken() }}
-          onCancel={() => setShowGuide(false)}
-        />
-      )}
       <div className="border border-dashed border-white/10 rounded-xl px-4 py-3 mt-4">
         <div className="flex items-center gap-3">
           <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-500 flex-shrink-0" />
@@ -304,7 +296,7 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
           </div>
         </div>
         <button
-          onClick={() => setShowGuide(true)}
+          onClick={() => tokenClientRef.current?.requestAccessToken()}
           disabled={!gisReady || loading}
           className="mt-2 w-full text-xs font-medium text-zinc-300 hover:text-zinc-100 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
         >

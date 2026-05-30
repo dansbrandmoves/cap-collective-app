@@ -1,30 +1,40 @@
 -- S1.4: 15-minute server cron fallback for sync-calendar.
 -- Applied to the live DB via MCP; recorded here for version control.
 --
--- ONE-TIME SETUP (run in Supabase SQL editor with your service-role key from
--- Dashboard → Settings → API): the cron stays a no-op until this exists.
---   select vault.create_secret('<SERVICE_ROLE_KEY>', 'service_role_key');
+-- Cron authorizes with a DB-stored secret (validated by the sync-calendar edge
+-- function) using the public anon key for the gateway — no service-role key or Vault
+-- needed, so the whole thing is self-contained.
 
 create extension if not exists pg_net;
 create extension if not exists pg_cron;
 
+-- Service-role-only config table (RLS on, no policies → only edge functions read it).
+create table if not exists public.app_config (
+  key text primary key,
+  value text not null
+);
+alter table public.app_config enable row level security;
+
+insert into public.app_config (key, value)
+values ('cron_secret', gen_random_uuid()::text)
+on conflict (key) do nothing;
+
+-- Cron job body: read the secret and POST {all:true} to sync-calendar.
 create or replace function public.cron_sync_calendars()
 returns void
 language plpgsql
 security definer
-set search_path = public, vault, net
+set search_path = public, net
 as $$
 declare
-  key text;
+  secret text;
+  anon text := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3dWVrY3lzaWdrdWpoeXVjdWdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNjU2MjMsImV4cCI6MjA5MDY0MTYyM30.rkYuML0hpIToWV20A2GeH8sY91xCHMwBnkSG_awI9BM';
 begin
-  select decrypted_secret into key from vault.decrypted_secrets where name = 'service_role_key' limit 1;
-  if key is null then
-    raise notice 'cron_sync_calendars: service_role_key not in vault; skipping';
-    return;
-  end if;
+  select value into secret from public.app_config where key = 'cron_secret' limit 1;
+  if secret is null then raise notice 'cron_sync_calendars: no cron_secret'; return; end if;
   perform net.http_post(
     url := 'https://xwuekcysigkujhyucugi.supabase.co/functions/v1/sync-calendar',
-    headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || key),
+    headers := jsonb_build_object('Content-Type','application/json','apikey',anon,'Authorization','Bearer '||anon,'x-cron-secret',secret),
     body := jsonb_build_object('all', true)
   );
 end;

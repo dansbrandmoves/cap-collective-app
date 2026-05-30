@@ -1,10 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Server-owned incremental Google Calendar sync. Single engine called by:
-//  - on-demand (client invoke with user JWT)  -> sync that owner
-//  - cron (Authorization: Bearer <service_role>, body {all:true}) -> all connected owners
-//  - push webhook (service_role, body {userId}) -> one owner
+// Server-owned incremental Google Calendar sync. Triggers:
+//  - on-demand: client invoke with user JWT  -> sync that owner
+//  - cron: header x-cron-secret == app_config.cron_secret, body {all:true} -> all owners
+//  - service role: Authorization Bearer <service_role>, body {all|userId}
 // Writes only changed rows to owner_calendar_events (syncToken deltas + upsert/delete).
 
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID")!;
@@ -19,7 +19,7 @@ const BASELINE_TTL_MS = 24 * 3600 * 1000;
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 const json = (d: unknown, status = 200) =>
   new Response(JSON.stringify(d), { status, headers: { ...cors, "Content-Type": "application/json" } });
@@ -36,49 +36,40 @@ function mapEvent(ownerId: string, calId: string, e: any) {
   };
 }
 
+// Last-wins dedupe by google_event_id — Google can return the same id twice in a
+// window (recurring exceptions), which would break upsert's ON CONFLICT.
+function dedupe(rows: any[]) {
+  const m = new Map<string, any>();
+  for (const r of rows) if (r.google_event_id) m.set(r.google_event_id, r);
+  return [...m.values()];
+}
+
 async function getAccessToken(admin: any, ownerId: string): Promise<string | null> {
   const { data: p } = await admin.from("profiles")
     .select("google_refresh_token, google_access_token, google_token_expires_at")
     .eq("id", ownerId).single();
   if (!p?.google_refresh_token) return null;
-  if (p.google_access_token && p.google_token_expires_at > Date.now() + 300000) {
-    return p.google_access_token;
-  }
+  if (p.google_access_token && p.google_token_expires_at > Date.now() + 300000) return p.google_access_token;
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      refresh_token: p.google_refresh_token,
-      client_id: GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
-      grant_type: "refresh_token",
+      refresh_token: p.google_refresh_token, client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET, grant_type: "refresh_token",
     }),
   });
   const tok = await res.json();
   if (tok.error) {
     if (tok.error === "invalid_grant") {
-      await admin.from("profiles").update({
-        google_access_token: null, google_refresh_token: null, google_token_expires_at: null,
-      }).eq("id", ownerId);
+      await admin.from("profiles").update({ google_access_token: null, google_refresh_token: null, google_token_expires_at: null }).eq("id", ownerId);
     }
     return null;
   }
   const expiresAt = Date.now() + tok.expires_in * 1000;
-  await admin.from("profiles").update({
-    google_access_token: tok.access_token, google_token_expires_at: expiresAt,
-  }).eq("id", ownerId);
+  await admin.from("profiles").update({ google_access_token: tok.access_token, google_token_expires_at: expiresAt }).eq("id", ownerId);
   return tok.access_token;
 }
 
-async function listPage(calId: string, token: string, params: URLSearchParams) {
-  const res = await fetch(
-    `${CAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`,
-    { headers: { Authorization: `Bearer ${token}` } },
-  );
-  return { status: res.status, body: await res.json() };
-}
-
-// Returns { items, nextSyncToken, gone } collecting all pages.
 async function listAll(calId: string, token: string, base: Record<string, string>) {
   const items: any[] = [];
   let pageToken: string | undefined;
@@ -86,9 +77,10 @@ async function listAll(calId: string, token: string, base: Record<string, string
   for (let i = 0; i < 20; i++) {
     const params = new URLSearchParams({ ...base, maxResults: "250" });
     if (pageToken) params.set("pageToken", pageToken);
-    const { status, body } = await listPage(calId, token, params);
-    if (status === 410) return { items, nextSyncToken: undefined, gone: true };
-    if (!body || body.error) throw new Error(body?.error?.message || `events.list ${status}`);
+    const res = await fetch(`${CAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 410) return { items, nextSyncToken: undefined, gone: true };
+    const body = await res.json();
+    if (!body || body.error) throw new Error(body?.error?.message || `events.list ${res.status}`);
     for (const it of body.items || []) items.push(it);
     if (body.nextPageToken) { pageToken = body.nextPageToken; continue; }
     nextSyncToken = body.nextSyncToken;
@@ -100,7 +92,6 @@ async function listAll(calId: string, token: string, base: Record<string, string
 async function syncCalendar(admin: any, ownerId: string, token: string, calId: string) {
   const { data: state } = await admin.from("calendar_sync_state")
     .select("sync_token, baseline_at").eq("owner_id", ownerId).eq("google_calendar_id", calId).maybeSingle();
-
   const baselineStale = !state?.baseline_at || (Date.now() - new Date(state.baseline_at).getTime() > BASELINE_TTL_MS);
   const doBaseline = !state?.sync_token || baselineStale;
 
@@ -108,45 +99,47 @@ async function syncCalendar(admin: any, ownerId: string, token: string, calId: s
     const timeMin = new Date(Date.now() - WINDOW_BACK_MS).toISOString();
     const timeMax = new Date(Date.now() + WINDOW_FWD_MS).toISOString();
     const { items, nextSyncToken } = await listAll(calId, token, { timeMin, timeMax, singleEvents: "true" });
-    const rows = items.filter((e) => e.status !== "cancelled").map((e) => mapEvent(ownerId, calId, e));
-    // Full replace for this calendar (establishes the rolling window baseline).
+    const rows = dedupe(items.filter((e) => e.status !== "cancelled").map((e) => mapEvent(ownerId, calId, e)));
     await admin.from("owner_calendar_events").delete().eq("owner_id", ownerId).eq("calendar_id", calId);
-    if (rows.length) await admin.from("owner_calendar_events").upsert(rows, { onConflict: "owner_id,calendar_id,google_event_id" });
+    let upErr: string | undefined;
+    if (rows.length) {
+      const { error } = await admin.from("owner_calendar_events").upsert(rows, { onConflict: "owner_id,calendar_id,google_event_id" });
+      if (error) upErr = error.message;
+    }
     await admin.from("calendar_sync_state").upsert({
-      owner_id: ownerId, google_calendar_id: calId, sync_token: nextSyncToken ?? null,
-      baseline_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      owner_id: ownerId, google_calendar_id: calId,
+      sync_token: upErr ? null : (nextSyncToken ?? null),
+      baseline_at: upErr ? null : new Date().toISOString(), updated_at: new Date().toISOString(),
     });
-    return { calId, mode: "baseline", count: rows.length };
+    if (upErr) console.error("baseline upsert error", calId, upErr);
+    return { calId, mode: "baseline", count: rows.length, error: upErr };
   }
 
-  // Incremental: only changes since last syncToken (no timeMin/timeMax allowed).
   const { items, nextSyncToken, gone } = await listAll(calId, token, { syncToken: state.sync_token, singleEvents: "true" });
   if (gone) {
-    await admin.from("calendar_sync_state").upsert({
-      owner_id: ownerId, google_calendar_id: calId, sync_token: null, baseline_at: null, updated_at: new Date().toISOString(),
-    });
+    await admin.from("calendar_sync_state").upsert({ owner_id: ownerId, google_calendar_id: calId, sync_token: null, baseline_at: null, updated_at: new Date().toISOString() });
     return { calId, mode: "gone-reset", count: 0 };
   }
   if (items.length === 0) {
     if (nextSyncToken && nextSyncToken !== state.sync_token) {
-      await admin.from("calendar_sync_state").update({ sync_token: nextSyncToken, updated_at: new Date().toISOString() })
-        .eq("owner_id", ownerId).eq("google_calendar_id", calId);
+      await admin.from("calendar_sync_state").update({ sync_token: nextSyncToken, updated_at: new Date().toISOString() }).eq("owner_id", ownerId).eq("google_calendar_id", calId);
     }
     return { calId, mode: "incremental", changed: 0 };
   }
   const cancelled = items.filter((e) => e.status === "cancelled").map((e) => e.id);
-  const upserts = items.filter((e) => e.status !== "cancelled").map((e) => mapEvent(ownerId, calId, e));
+  const upserts = dedupe(items.filter((e) => e.status !== "cancelled").map((e) => mapEvent(ownerId, calId, e)));
   if (cancelled.length) {
-    await admin.from("owner_calendar_events").delete()
-      .eq("owner_id", ownerId).eq("calendar_id", calId).in("google_event_id", cancelled);
+    await admin.from("owner_calendar_events").delete().eq("owner_id", ownerId).eq("calendar_id", calId).in("google_event_id", cancelled);
   }
+  let upErr: string | undefined;
   if (upserts.length) {
-    await admin.from("owner_calendar_events").upsert(upserts, { onConflict: "owner_id,calendar_id,google_event_id" });
+    const { error } = await admin.from("owner_calendar_events").upsert(upserts, { onConflict: "owner_id,calendar_id,google_event_id" });
+    if (error) upErr = error.message;
   }
-  await admin.from("calendar_sync_state").update({
-    sync_token: nextSyncToken ?? state.sync_token, updated_at: new Date().toISOString(),
-  }).eq("owner_id", ownerId).eq("google_calendar_id", calId);
-  return { calId, mode: "incremental", changed: items.length, removed: cancelled.length };
+  if (!upErr) {
+    await admin.from("calendar_sync_state").update({ sync_token: nextSyncToken ?? state.sync_token, updated_at: new Date().toISOString() }).eq("owner_id", ownerId).eq("google_calendar_id", calId);
+  } else { console.error("incremental upsert error", calId, upErr); }
+  return { calId, mode: "incremental", changed: items.length, removed: cancelled.length, error: upErr };
 }
 
 async function syncOwner(admin: any, ownerId: string) {
@@ -171,8 +164,17 @@ Deno.serve(async (req) => {
     const isService = authHeader === `Bearer ${SERVICE_ROLE}`;
     const body = await req.json().catch(() => ({}));
 
+    let cronOk = false;
+    if (body.all && !isService) {
+      const provided = req.headers.get("x-cron-secret");
+      if (provided) {
+        const { data: cfg } = await admin.from("app_config").select("value").eq("key", "cron_secret").maybeSingle();
+        cronOk = !!cfg?.value && cfg.value === provided;
+      }
+    }
+
     let ownerIds: string[] = [];
-    if (isService && body.all) {
+    if (body.all && (isService || cronOk)) {
       const { data } = await admin.from("profiles").select("id").not("google_refresh_token", "is", null);
       ownerIds = (data || []).map((r: any) => r.id);
     } else if (isService && body.userId) {

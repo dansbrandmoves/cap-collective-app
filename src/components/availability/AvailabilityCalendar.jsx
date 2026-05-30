@@ -248,7 +248,7 @@ export function AvailabilityCalendar({
       {/* Slot picker side panel */}
       {isSelectionMode && guestSlotSelection && slotPickerDate && (
         <>
-          <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setSlotPickerDate(null)} />
+          <div className="fixed inset-0 bg-black/40 z-40 sm:hidden" onClick={() => setSlotPickerDate(null)} />
           <div className="fixed right-0 top-0 bottom-0 w-full sm:w-80 bg-surface-900 border-l border-surface-700 z-50 flex flex-col animate-slideIn shadow-2xl shadow-black/40">
             <div className="px-5 py-4 border-b border-surface-700 flex items-center justify-between">
               <div>
@@ -466,6 +466,13 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
     [getMembersForRoom, memberRoomIds]
   )
 
+  // Esc closes the panel — it has no dimming backdrop on desktop to click away on.
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
   const dateObj = useMemo(() => new Date(dateStr + 'T00:00:00'), [dateStr])
 
   // Guest data for this day: name + email (from their request or from group_members).
@@ -603,9 +610,11 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — mobile only. On desktop the panel folds out beside the calendar
+          (Asana-style): no dimming, the project stays fully visible and interactive
+          so you can click another day to swap the panel. Esc closes it. */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fadeIn"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fadeIn md:hidden"
         onClick={onClose}
       />
 

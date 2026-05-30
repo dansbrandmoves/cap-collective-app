@@ -23,10 +23,12 @@ export default {
           700: 'var(--surface-700)',
           600: 'var(--surface-600)',
         },
+        // Arro/erro brand teal — calm, muted sea-green. Replaces the old violet accent
+        // app-wide (buttons, tabs, rings, badges, availability). See project_arro_theme.
         accent: {
-          DEFAULT: '#8b5cf6',
-          hover: '#7c3aed',
-          muted: '#4c1d95',
+          DEFAULT: '#5e9c8c',
+          hover: '#4f8d7c',
+          muted: '#2f4f48',
         },
       },
       spacing: {

@@ -400,7 +400,13 @@ function HeroBookingMockup() {
 
 export function HomePage() {
   const { theme } = useApp()
-  const logoFilter = theme === 'dark' ? 'invert(1)' : 'none'
+  // The marketing landing is always light (Arro brand), regardless of the app theme.
+  // Restore the user's theme when leaving the page.
+  useEffect(() => {
+    document.documentElement.classList.add('light')
+    return () => { document.documentElement.classList.toggle('light', theme === 'light') }
+  }, [theme])
+  const logoFilter = 'none'
 
   return (
     <div className="min-h-screen bg-surface-950 flex flex-col">

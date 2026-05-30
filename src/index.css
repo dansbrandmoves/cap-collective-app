@@ -3,11 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --surface-950: #0c0c0e;
-  --surface-900: #141416;
-  --surface-800: #1c1c20;
-  --surface-700: #26262c;
-  --surface-600: #313138;
+  /* Dark mode: calm slate-charcoal (Arro/erro), not near-black. "Less dark." */
+  --surface-950: #1e2429;
+  --surface-900: #262d33;
+  --surface-800: #303841;
+  --surface-700: #3c454e;
+  --surface-600: #4a545e;
 }
 
 html.light {
@@ -212,11 +213,11 @@ html.light .bg-zinc-700 { background-color: #e5e7eb !important; }
 html.light .placeholder-zinc-600::placeholder { color: #a1a1aa !important; }
 html.light .placeholder-zinc-700::placeholder { color: #d4d4d8 !important; }
 
-/* Light mode: accent */
-html.light .border-accent\/20 { border-color: rgb(139 92 246 / 0.3) !important; }
-html.light .border-accent\/30 { border-color: rgb(139 92 246 / 0.4) !important; }
-html.light .bg-accent\/20 { background-color: rgb(139 92 246 / 0.15) !important; }
-html.light .bg-accent\/10 { background-color: rgb(139 92 246 / 0.08) !important; }
+/* Light mode: accent (Arro teal #5e9c8c = rgb 94 156 140) */
+html.light .border-accent\/20 { border-color: rgb(94 156 140 / 0.35) !important; }
+html.light .border-accent\/30 { border-color: rgb(94 156 140 / 0.45) !important; }
+html.light .bg-accent\/20 { background-color: rgb(94 156 140 / 0.16) !important; }
+html.light .bg-accent\/10 { background-color: rgb(94 156 140 / 0.09) !important; }
 
 /* Light mode: status badges */
 html.light .bg-emerald-900 { background-color: #d1fae5 !important; }

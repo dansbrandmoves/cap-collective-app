@@ -17,19 +17,6 @@ export function MonthlyView({
     [dates, slots, calendarEvents, connectedCalendars, prefixRules, businessHours]
   )
 
-  // Days where the guest has at least one slot that's free in their personal calendar
-  const guestFreeDays = useMemo(() => {
-    if (!guestEvents) return null
-    const out = new Set()
-    for (const date of dates) {
-      const free = slots.some(s =>
-        !guestEvents.some(ev => eventOverlapsSlot(date, s, { ...ev, calendarId: 'primary' }))
-      )
-      if (free) out.add(dateToStr(date))
-    }
-    return out
-  }, [guestEvents, dates, slots])
-
   const todayStr = dateToStr(new Date())
 
   return (
@@ -66,7 +53,7 @@ export function MonthlyView({
 
           // Cell tint intensifies with overlap — the "heat" of overlap is immediately readable
           const overlapBg =
-            overlapCount >= 3 ? 'bg-accent/[0.14] ring-1 ring-accent/30 shadow-[0_0_0_1px_rgba(139,92,246,0.15)]' :
+            overlapCount >= 3 ? 'bg-accent/[0.14] ring-1 ring-accent/30 shadow-[0_0_0_1px_rgba(94,156,140,0.15)]' :
             overlapCount === 2 ? 'bg-accent/[0.09] ring-1 ring-accent/20' :
             overlapCount === 1 ? 'bg-accent/[0.05]' :
             'bg-surface-800'
@@ -89,7 +76,7 @@ export function MonthlyView({
                   hover the cell for names, click to manage. */}
               {inMonth && overlapCount > 0 && !isSelected && (
                 <>
-                  <div className="absolute top-1.5 right-1.5 z-10 w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_6px_-1px_rgba(139,92,246,0.8)]" />
+                  <div className="absolute top-1.5 right-1.5 z-10 w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_6px_-1px_rgba(94,156,140,0.7)]" />
 
                   {/* Custom hover card — replaces the native browser tooltip.
                       Desktop-only; mobile users use the click flow. */}
@@ -120,49 +107,34 @@ export function MonthlyView({
                 'text-zinc-600'
               }`}>
                 <span>{date.getDate()}</span>
-                {inMonth && guestFreeDays?.has(ds) && !isSelected && (
-                  <span className="w-1 h-1 rounded-full bg-green-400 flex-shrink-0" title="You have free time this day" />
-                )}
               </span>
 
-              {inMonth && (
-                <div className="flex flex-col gap-0.5 flex-1">
-                  {slots.length <= 4 ? (
-                    /* Named slots — individual bars. Calm: thin, soft-opacity fills so the
-                       month reads gently (research: single muted hue, no saturated walls). */
-                    slots.map(slot => {
-                      const state = dayMatrix[slot.id]?.state ?? slot.defaultState
-                      const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
-                      const slotGuestBusy = guestEvents !== null &&
-                        guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
-                      return (
-                        <div
-                          key={slot.id}
-                          className={`h-2 sm:h-2.5 rounded-full flex-shrink-0 ${slotGuestBusy ? 'opacity-15' : 'opacity-40'}`}
-                          style={{ backgroundColor: meta.color }}
-                          title={slotGuestBusy ? `${slot.name}: you're busy` : `${slot.name}: ${meta.label}`}
-                        />
-                      )
-                    })
-                  ) : (
-                    /* Many time blocks — compact stacked stripes, softened so a full day of
-                       open blocks no longer reads as a wall of saturated green. */
-                    <div className="flex flex-col flex-1 rounded-sm overflow-hidden gap-px opacity-50">
-                      {slots.map(slot => {
-                        const state = dayMatrix[slot.id]?.state ?? slot.defaultState
-                        const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
-                        const slotGuestBusy = guestEvents !== null &&
-                          guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
-                        return (
-                          <div key={slot.id} className={`flex-1 min-h-0 ${slotGuestBusy ? 'opacity-25' : ''}`}
-                            style={{ backgroundColor: meta.color }}
-                            title={slotGuestBusy ? `${slot.name}: you're busy` : `${slot.name}: ${meta.label}`} />
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* One calm availability meter per day — never a stripe-per-slot barcode.
+                  A single muted bar; its fill = how much of the day is open. Detail
+                  (which slots) lives in the day/week view. */}
+              {inMonth && (() => {
+                let availCount = 0
+                for (const slot of slots) {
+                  const st = dayMatrix[slot.id]?.state ?? slot.defaultState
+                  if (st !== 'available') continue
+                  const guestBusy = guestEvents !== null &&
+                    guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
+                  if (!guestBusy) availCount++
+                }
+                const total = slots.length || 1
+                const frac = availCount / total
+                return (
+                  <div className="mt-auto h-1.5 w-full rounded-full bg-white/[0.05] overflow-hidden">
+                    {availCount > 0 && (
+                      <div
+                        className="h-full rounded-full bg-accent"
+                        style={{ width: `${Math.round(frac * 100)}%`, opacity: 0.45 + 0.35 * frac }}
+                        title={`${availCount} of ${total} ${total === 1 ? 'slot' : 'slots'} open`}
+                      />
+                    )}
+                  </div>
+                )
+              })()}
             </button>
           )
         })}

@@ -207,8 +207,17 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
     setGuestEvents(events)
     try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch (e) { /* */ }
 
-    // Persist free/busy to shared_availability so owner sees it in real time
-    if (!roomId || !guestName || !slots?.length) return
+    // Persist free/busy to shared_availability so the owner sees it without the
+    // guest tapping anything. This IS the connect-calendar value — surface any
+    // failure loudly so it never silently no-ops.
+    if (!roomId || !guestName) {
+      console.warn('[coordie] guest calendar not shared — missing roomId or guestName', { roomId, guestName })
+      return
+    }
+    if (!slots?.length) {
+      console.warn('[coordie] guest calendar not shared — no slots resolved for this project')
+      return
+    }
     const today = new Date()
     const freeDays = []
     for (let i = 0; i < 60; i++) {
@@ -220,14 +229,22 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
       )
       if (isFree) freeDays.push({ room_id: roomId, guest_name: guestName, date: ds, is_available: true })
     }
-    await supabase.from('shared_availability').delete().eq('room_id', roomId).eq('guest_name', guestName)
-    if (freeDays.length) await supabase.from('shared_availability').insert(freeDays)
+    const { error: delErr } = await supabase.from('shared_availability').delete().eq('room_id', roomId).eq('guest_name', guestName)
+    if (delErr) console.error('[coordie] failed clearing previous shared availability:', delErr.message)
+    if (freeDays.length) {
+      const { error: insErr } = await supabase.from('shared_availability').insert(freeDays)
+      if (insErr) console.error('[coordie] failed sharing calendar availability:', insErr.message)
+      else console.info(`[coordie] shared ${freeDays.length} free days for ${guestName}`)
+    } else {
+      console.info('[coordie] calendar connected but no free days found in the next 60 days')
+    }
   }
   async function disconnectGuestCalendar() {
     setGuestEvents(null)
     try { sessionStorage.removeItem('coordie-gcal') } catch (e) { /* */ }
     if (roomId && guestName) {
-      await supabase.from('shared_availability').delete().eq('room_id', roomId).eq('guest_name', guestName)
+      const { error } = await supabase.from('shared_availability').delete().eq('room_id', roomId).eq('guest_name', guestName)
+      if (error) console.error('[coordie] failed clearing shared availability on disconnect:', error.message)
     }
   }
 

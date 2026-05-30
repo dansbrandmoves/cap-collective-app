@@ -128,7 +128,8 @@ export function MonthlyView({
               {inMonth && (
                 <div className="flex flex-col gap-0.5 flex-1">
                   {slots.length <= 4 ? (
-                    /* Named slots — individual bars */
+                    /* Named slots — individual bars. Calm: thin, soft-opacity fills so the
+                       month reads gently (research: single muted hue, no saturated walls). */
                     slots.map(slot => {
                       const state = dayMatrix[slot.id]?.state ?? slot.defaultState
                       const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
@@ -137,22 +138,23 @@ export function MonthlyView({
                       return (
                         <div
                           key={slot.id}
-                          className={`h-3 sm:h-4 rounded-sm flex-shrink-0 ${slotGuestBusy ? 'opacity-20' : 'opacity-80'}`}
+                          className={`h-2 sm:h-2.5 rounded-full flex-shrink-0 ${slotGuestBusy ? 'opacity-15' : 'opacity-40'}`}
                           style={{ backgroundColor: meta.color }}
                           title={slotGuestBusy ? `${slot.name}: you're busy` : `${slot.name}: ${meta.label}`}
                         />
                       )
                     })
                   ) : (
-                    /* Many time blocks — compact stacked stripes */
-                    <div className="flex flex-col flex-1 rounded-sm overflow-hidden">
+                    /* Many time blocks — compact stacked stripes, softened so a full day of
+                       open blocks no longer reads as a wall of saturated green. */
+                    <div className="flex flex-col flex-1 rounded-sm overflow-hidden gap-px opacity-50">
                       {slots.map(slot => {
                         const state = dayMatrix[slot.id]?.state ?? slot.defaultState
                         const meta = slotStates[state] || DEFAULT_SLOT_STATES[state]
                         const slotGuestBusy = guestEvents !== null &&
                           guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
                         return (
-                          <div key={slot.id} className={`flex-1 min-h-0 ${slotGuestBusy ? 'opacity-20' : ''}`}
+                          <div key={slot.id} className={`flex-1 min-h-0 ${slotGuestBusy ? 'opacity-25' : ''}`}
                             style={{ backgroundColor: meta.color }}
                             title={slotGuestBusy ? `${slot.name}: you're busy` : `${slot.name}: ${meta.label}`} />
                         )

@@ -17,10 +17,21 @@ export function AvailabilityCalendar({
   slots, calendarEvents, connectedCalendars, availabilityRules = [], prefixRules = [],
   isOwner = false, slotStates: slotStatesProp, roomId, guestName, onRequestSubmit,
   dateRequests = [], sharedAvailability = [], businessHours = null, guestSlotSelection = false,
-  guestEvents = null, ownerName = null,
+  guestEvents = null, ownerName = null, role: roleProp = null,
 }) {
   const { slotStates: contextSlotStates } = useApp()
   const slotStates = slotStatesProp || contextSlotStates
+
+  // Single source of truth for the calendar's audience/capabilities. Callers may pass
+  // `role` explicitly; until every caller is migrated we derive it from the legacy
+  // isOwner/roomId props so behavior is identical. (Convergence step A1.)
+  //   pm-group      → owner inspecting one group's calendar (schedule/lock, day inspector)
+  //   member-select → guest picking days/slots to share
+  //   readonly      → standalone display (e.g. Default Availability preview)
+  // ('pm-aggregate' is wired in a later step for the project overview grid.)
+  const role = roleProp || (isOwner ? (roomId ? 'pm-group' : 'readonly') : (roomId ? 'member-select' : 'readonly'))
+  const isSelectionMode = role === 'member-select'
+  const isOwnerRoomContext = role === 'pm-group'
 
   const today = new Date()
   const [view, setView] = useState('Monthly')
@@ -35,8 +46,6 @@ export function AvailabilityCalendar({
   const [slotPickerDate, setSlotPickerDate] = useState(null) // date string showing slot picker
   const [showRequestModal, setShowRequestModal] = useState(false)
   const [inspectedDate, setInspectedDate] = useState(null) // owner inspecting a day for overlap + scheduling
-  const isSelectionMode = !isOwner && !!roomId
-  const isOwnerRoomContext = isOwner && !!roomId
 
   function handleDayClick(date) {
     if (isSelectionMode) {

@@ -112,7 +112,7 @@ export function CalendarSettings() {
     googleAccessToken, setGoogleAccessToken,
     googleTokenExpiresAt, setGoogleTokenExpiresAt,
     calendarSyncing, setCalendarSyncing,
-    lastSynced, replaceCalendarEvents,
+    lastSynced, syncNow,
     prefixRules, createPrefixRule, updatePrefixRule, deletePrefixRule,
     slotStates, updateSlotStateCustomization, resetSlotStateCustomizations,
     businessHours, setBusinessHours,
@@ -170,12 +170,11 @@ export function CalendarSettings() {
     init()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-sync on mount and every 30 minutes
+  // Freshen on open. The server cron + realtime handle ongoing updates, so no
+  // client-side polling interval is needed here anymore.
   useEffect(() => {
     if (!connected || connectedCalendars.length === 0) return
     handleSync()
-    const interval = setInterval(() => { handleSync() }, 30 * 60 * 1000)
-    return () => clearInterval(interval)
   }, [connected, connectedCalendars.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleConnect() {
@@ -206,26 +205,9 @@ export function CalendarSettings() {
   }, [connectedCalendars]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSync() {
-    setCalendarSyncing(true)
     setAuthError(null)
-    try {
-      const accessToken = await getValidAccessToken()
-      if (!accessToken) {
-        setConnected(false)
-        setAuthError('Google Calendar disconnected. Reconnect to sync.')
-        setCalendarSyncing(false)
-        return
-      }
-      setGoogleAccessToken(accessToken)
-      const timeMin = new Date(); timeMin.setMonth(timeMin.getMonth() - 1)
-      const timeMax = new Date(); timeMax.setMonth(timeMax.getMonth() + 3)
-      const events = await fetchAllGoverningEvents(accessToken, connectedCalendars, timeMin, timeMax)
-      replaceCalendarEvents(events)
-    } catch (err) {
-      setAuthError(`Sync failed: ${err.message}`)
-    } finally {
-      setCalendarSyncing(false)
-    }
+    const ok = await syncNow()
+    if (!ok) setAuthError('Sync failed. If Google was disconnected, reconnect to resume.')
   }
 
   const schedule = businessHours.schedule || {}

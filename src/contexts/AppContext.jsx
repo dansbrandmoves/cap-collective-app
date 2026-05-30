@@ -7,6 +7,19 @@ import { buildSlotStates } from '../utils/availability'
 const AppContext = createContext(null)
 const STORAGE_KEY = 'coordie-app'
 
+// owner_calendar_events row → the shape deriveSlotState expects.
+// calendarId must be the googleCalendarId (stable key) — see CLAUDE.md.
+function mapOwnerEventRow(r) {
+  return {
+    id: r.google_event_id || r.id,
+    calendarId: r.calendar_id,
+    title: r.title || '',
+    start: r.start,
+    end: r.end_at,
+    isAllDay: r.is_all_day || false,
+  }
+}
+
 function resizeImage(file, maxW, maxH) {
   return new Promise((resolve) => {
     const img = new Image()
@@ -175,31 +188,16 @@ export function AppProvider({ children }) {
     if (data?.connected_calendars?.length) {
       setConnectedCalendars(data.connected_calendars)
     }
-    // If we have a refresh token, auto-sync calendar events
+    // Server owns the sync now. Load the current snapshot from owner_calendar_events,
+    // and kick off a fresh incremental sync (the edge function refreshes the token,
+    // pulls deltas, and writes back — realtime then updates us). No client-side fetch.
+    if (userId) {
+      const { data: rows } = await supabase.from('owner_calendar_events').select('*').eq('owner_id', userId)
+      if (rows) setCalendarEvents(rows.map(mapOwnerEventRow))
+      if (rows?.length) setLastSynced(new Date().toISOString())
+    }
     if (data?.google_refresh_token && data?.connected_calendars?.length) {
-      try {
-        const { getValidAccessToken, fetchAllGoverningEvents } = await import('../utils/googleCalendar.js')
-        const accessToken = await getValidAccessToken()
-        if (accessToken) {
-          setGoogleAccessToken(accessToken)
-          const timeMin = new Date(); timeMin.setMonth(timeMin.getMonth() - 1)
-          const timeMax = new Date(); timeMax.setMonth(timeMax.getMonth() + 3)
-          const events = await fetchAllGoverningEvents(accessToken, data.connected_calendars, timeMin, timeMax)
-          setCalendarEvents(events)
-          setLastSynced(new Date().toISOString())
-          // Also sync to Supabase for booking pages
-          if (userId) {
-            await supabase.from('owner_calendar_events').delete().eq('owner_id', userId)
-            if (events.length > 0) {
-              await supabase.from('owner_calendar_events').insert(
-                events.map(e => ({ owner_id: userId, calendar_id: e.calendarId, title: e.title, start: e.start, end_at: e.end, is_all_day: e.isAllDay || false }))
-              )
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Auto-sync calendar on login:', err)
-      }
+      supabase.functions.invoke('sync-calendar').catch(err => console.warn('sync-calendar invoke:', err))
     }
     setProfileLoaded(true)
   }
@@ -771,6 +769,40 @@ export function AppProvider({ children }) {
     }
   }, [user])
 
+  // Trigger the server-side incremental sync, then reload the snapshot.
+  // Realtime keeps us fresh between calls; this is for "make it fresh right now".
+  const syncNow = useCallback(async () => {
+    setCalendarSyncing(true)
+    try {
+      const { error } = await supabase.functions.invoke('sync-calendar')
+      if (error) { console.warn('sync-calendar:', error); return false }
+      if (user?.id) {
+        const { data: rows } = await supabase.from('owner_calendar_events').select('*').eq('owner_id', user.id)
+        if (rows) setCalendarEvents(rows.map(mapOwnerEventRow))
+      }
+      setLastSynced(new Date().toISOString())
+      return true
+    } finally {
+      setCalendarSyncing(false)
+    }
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Live: when the server updates owner_calendar_events (push / cron / on-demand),
+  // refresh the owner's in-memory events without any polling.
+  useEffect(() => {
+    if (!user?.id) return
+    const ch = supabase
+      .channel(`owner-cal-${user.id}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'owner_calendar_events', filter: `owner_id=eq.${user.id}` },
+        () => {
+          supabase.from('owner_calendar_events').select('*').eq('owner_id', user.id)
+            .then(({ data }) => { if (data) setCalendarEvents(data.map(mapOwnerEventRow)) })
+        })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [user?.id])
+
   // --- Productions ---
   const createProduction = useCallback(async (data) => {
     const ownerId = user?.id ?? null
@@ -1202,7 +1234,7 @@ export function AppProvider({ children }) {
       // Prefix Rules
       createPrefixRule, updatePrefixRule, deletePrefixRule,
       // Calendars
-      addConnectedCalendar, updateCalendarRole, updateCalendarDefaultState, removeConnectedCalendar, replaceCalendarEvents,
+      addConnectedCalendar, updateCalendarRole, updateCalendarDefaultState, removeConnectedCalendar, replaceCalendarEvents, syncNow,
       // Productions
       createProduction, updateProduction, updateProductionNotes, deleteProduction,
       // Rooms

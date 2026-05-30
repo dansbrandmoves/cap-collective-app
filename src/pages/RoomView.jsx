@@ -339,19 +339,17 @@ export function RoomView() {
 
   useEffect(() => {
     if (!production?.ownerId || isOwner) return
-    supabase.from('owner_calendar_events').select('*').eq('owner_id', production.ownerId)
-      .then(({ data }) => {
-        if (data?.length) {
-          setOwnerCalendarEvents(data.map(e => ({
-            id: e.id,
-            calendarId: e.calendar_id,
-            title: e.title,
-            start: e.start,
-            end: e.end_at,
-            isAllDay: e.is_all_day,
-          })))
-        }
-      })
+    const ownerId = production.ownerId
+    const mapRow = e => ({ id: e.google_event_id || e.id, calendarId: e.calendar_id, title: e.title, start: e.start, end: e.end_at, isAllDay: e.is_all_day })
+    const load = () => supabase.from('owner_calendar_events').select('*').eq('owner_id', ownerId)
+      .then(({ data }) => setOwnerCalendarEvents((data || []).map(mapRow)))
+    load()
+    // Live: when the owner's calendar changes (server sync), guests update too.
+    const ch = supabase
+      .channel(`owner-cal-guest-${ownerId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'owner_calendar_events', filter: `owner_id=eq.${ownerId}` }, load)
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
   }, [production?.ownerId, isOwner])
 
   useEffect(() => {

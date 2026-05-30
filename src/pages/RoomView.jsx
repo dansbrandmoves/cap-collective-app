@@ -158,19 +158,25 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
   const [guestEvents, setGuestEvents] = useState(() => {
     try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
   })
+  // Server-side breadcrumb so guest-connect outcomes are visible without the guest's console.
+  const diag = (event, detail) => { try { supabase.from('diagnostics').insert({ event, detail }).then(() => {}, () => {}) } catch (e) { /* */ } }
+
   async function connectGuestCalendar(events) {
     setGuestEvents(events)
     try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch (e) { /* */ }
+    diag('guest_connect_start', { roomId, guestName, slotCount: slots?.length ?? 0, eventCount: events?.length ?? 0 })
 
     // Persist free/busy to shared_availability so the owner sees it without the
     // guest tapping anything. This IS the connect-calendar value — surface any
     // failure loudly so it never silently no-ops.
     if (!roomId || !guestName) {
       console.warn('[coordie] guest calendar not shared — missing roomId or guestName', { roomId, guestName })
+      diag('guest_connect_skip', { reason: 'missing roomId or guestName', roomId, guestName, eventCount: events?.length ?? 0 })
       return
     }
     if (!slots?.length) {
       console.warn('[coordie] guest calendar not shared — no slots resolved for this project')
+      diag('guest_connect_skip', { reason: 'no slots', roomId, guestName, eventCount: events?.length ?? 0 })
       return
     }
     const today = new Date()
@@ -186,13 +192,19 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
     }
     const { error: delErr } = await supabase.from('shared_availability').delete().eq('room_id', roomId).eq('guest_name', guestName)
     if (delErr) console.error('[coordie] failed clearing previous shared availability:', delErr.message)
+    let insErr = null
     if (freeDays.length) {
-      const { error: insErr } = await supabase.from('shared_availability').insert(freeDays)
+      const r = await supabase.from('shared_availability').insert(freeDays)
+      insErr = r.error
       if (insErr) console.error('[coordie] failed sharing calendar availability:', insErr.message)
       else console.info(`[coordie] shared ${freeDays.length} free days for ${guestName}`)
     } else {
       console.info('[coordie] calendar connected but no free days found in the next 60 days')
     }
+    diag('guest_connect_done', {
+      roomId, guestName, slotCount: slots.length, eventCount: events?.length ?? 0,
+      freeDays: freeDays.length, deleteError: delErr?.message ?? null, insertError: insErr?.message ?? null,
+    })
   }
   async function disconnectGuestCalendar() {
     setGuestEvents(null)

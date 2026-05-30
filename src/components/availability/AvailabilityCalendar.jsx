@@ -17,7 +17,7 @@ export function AvailabilityCalendar({
   slots, calendarEvents, connectedCalendars, availabilityRules = [], prefixRules = [],
   isOwner = false, slotStates: slotStatesProp, roomId, guestName, onRequestSubmit,
   dateRequests = [], sharedAvailability = [], businessHours = null, guestSlotSelection = false,
-  guestEvents = null,
+  guestEvents = null, ownerName = null,
 }) {
   const { slotStates: contextSlotStates } = useApp()
   const slotStates = slotStatesProp || contextSlotStates
@@ -318,7 +318,7 @@ export function AvailabilityCalendar({
                 <Button
                   onClick={() => { setSlotPickerDate(null); setShowRequestModal(true) }}
                   className="w-full justify-center">
-                  Send Request →
+                  Send my free days →
                 </Button>
               </div>
             )}
@@ -347,7 +347,7 @@ export function AvailabilityCalendar({
             </span>
             <div className="flex items-center gap-2">
               <button onClick={clearSelection} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Clear all</button>
-              <Button size="sm" onClick={() => setShowRequestModal(true)}>Send Request →</Button>
+              <Button size="sm" onClick={() => setShowRequestModal(true)}>Send my free days →</Button>
             </div>
           </div>
         </div>
@@ -360,6 +360,7 @@ export function AvailabilityCalendar({
         selectedDates={selectedDates}
         selectedSlotMap={selectedSlotMap}
         guestName={guestName}
+        ownerName={ownerName}
         onSubmit={handleRequestSubmit}
       />
 

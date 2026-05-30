@@ -33,8 +33,8 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
             <img src="/coordie-logo.svg" alt="Coordie" className="h-6" style={{ filter: 'invert(1)' }} />
           )}
         </div>
-        <h2 className="text-[24px] font-semibold text-zinc-50 tracking-tight leading-tight mb-2">What's your name?</h2>
-        <p className="text-[15px] text-zinc-400 leading-relaxed mb-7">So the team knows who they're talking to.</p>
+        <h2 className="text-[24px] font-semibold text-zinc-50 tracking-tight leading-tight mb-2">Let’s find a day that works</h2>
+        <p className="text-[15px] text-zinc-400 leading-relaxed mb-7">First, what’s your name? So the team knows whose availability this is.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
@@ -44,7 +44,7 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
             autoFocus
             className="w-full bg-surface-800/70 border border-white/[0.06] rounded-xl px-4 py-3 text-[15px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all duration-200"
           />
-          <Button type="submit" disabled={!name.trim()} className="w-full">Enter Room →</Button>
+          <Button type="submit" disabled={!name.trim()} className="w-full">Continue →</Button>
         </form>
       </div>
     </div>
@@ -96,7 +96,8 @@ function NotesTab({ productionId, room, guestName }) {
 }
 
 // Guest calendar panel — connects guest's Google Calendar so they can see their busy/free overlay in the views
-function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
+function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect, ownerName }) {
+  const who = ownerName ? ownerName.split(' ')[0] : 'the team'
   const [gisReady, setGisReady] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -137,31 +138,27 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
 
   if (guestEvents === null) {
     return (
-      <>
-        <div className="border border-dashed border-white/10 rounded-2xl px-5 py-4 mb-5">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <CalendarDays size={15} strokeWidth={1.75} className="text-accent" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-zinc-100 mb-0.5 tracking-tight">Spot your free time at a glance</p>
-                <p className="text-xs text-zinc-400 leading-relaxed">We'll dim slots where you're already busy and automatically share your free days with the project team — no form needed. Only free/busy is used, never event titles or details.</p>
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => tokenClientRef.current?.requestAccessToken()}
-              disabled={!gisReady || loading}
-              className="flex-shrink-0 self-start sm:self-auto"
-            >
-              <CalendarDays size={13} strokeWidth={1.75} className="mr-1.5" />
-              Connect Calendar
-            </Button>
-          </div>
+      <div className="bg-gradient-to-b from-accent/[0.08] to-transparent border border-accent/20 rounded-2xl px-6 py-7 mb-6 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-accent/15 border border-accent/25 flex items-center justify-center mx-auto mb-4">
+          <CalendarDays size={20} strokeWidth={1.75} className="text-accent" />
         </div>
-      </>
+        <p className="text-[17px] font-semibold text-zinc-50 tracking-tight mb-1.5">
+          Connect your calendar — that’s it
+        </p>
+        <p className="text-[13px] text-zinc-400 leading-relaxed max-w-sm mx-auto mb-5">
+          We’ll find the days you’re free and share them with {who} automatically. No form to fill out.
+          Only free/busy is read — never your event titles or details.
+        </p>
+        <Button
+          onClick={() => tokenClientRef.current?.requestAccessToken()}
+          disabled={!gisReady || loading}
+          className="w-full sm:w-auto justify-center px-6"
+        >
+          <CalendarDays size={15} strokeWidth={1.75} className="mr-2" />
+          Connect Google Calendar
+        </Button>
+        {error && <p className="text-xs text-red-400 mt-3">{error}</p>}
+      </div>
     )
   }
 
@@ -174,21 +171,28 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-5">
-      <div className="flex items-center gap-1.5 text-[11px] text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5">
-        <CheckCircle2 size={11} strokeWidth={2} />
-        Your calendar connected — busy times dimmed below
+    <div className="bg-green-500/[0.07] border border-green-500/20 rounded-2xl px-5 py-4 mb-6">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-xl bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <CheckCircle2 size={16} strokeWidth={2} className="text-green-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-zinc-100 tracking-tight">Done — we found your free days</p>
+          <p className="text-xs text-zinc-400 leading-relaxed mt-0.5">
+            {who.charAt(0).toUpperCase() + who.slice(1)} can see them now. Your busy times are dimmed below — nothing else to do.
+          </p>
+        </div>
+        <button onClick={onDisconnect}
+          className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors flex-shrink-0">
+          Disconnect
+        </button>
       </div>
-      <button onClick={onDisconnect}
-        className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors ml-auto">
-        Disconnect
-      </button>
-      {error && <p className="w-full text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
     </div>
   )
 }
 
-function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots, projectBusinessHours, guestSlotSelection, ownerCalendarEvents, ownerConnectedCalendars, ownerId, guestCalendarEnabled }) {
+function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots, projectBusinessHours, guestSlotSelection, ownerCalendarEvents, ownerConnectedCalendars, ownerId, ownerName, guestCalendarEnabled }) {
   const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, businessHours } = useApp()
   const effectiveCalendarEvents = isOwner ? calendarEvents : ownerCalendarEvents
   const effectiveConnectedCalendars = isOwner ? connectedCalendars : ownerConnectedCalendars
@@ -257,10 +261,17 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
               guestEvents={guestEvents}
               onConnect={connectGuestCalendar}
               onDisconnect={disconnectGuestCalendar}
+              ownerName={ownerName}
             />
           )}
           <p className="text-sm text-zinc-400 mb-4">
-            {guestSlotSelection ? 'Tap a date to pick which time slots work for you.' : 'Tap dates to select them, then send a request.'}
+            {guestCalendarEnabled && guestEvents === null
+              ? (guestSlotSelection
+                  ? 'Or tap a date below to pick the time slots that work for you.'
+                  : 'Or just tap the days you’re free below — no account needed.')
+              : (guestSlotSelection
+                  ? 'Tap a date to pick which time slots work for you.'
+                  : 'Tap the days you’re free, then send them over.')}
           </p>
         </>
       )}
@@ -276,6 +287,7 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
         guestSlotSelection={guestSlotSelection}
         roomId={roomId}
         guestName={guestName}
+        ownerName={ownerName}
         onRequestSubmit={(rId, data) => createDateRequest(rId, { ...data, ownerId })}
         dateRequests={dateRequests}
         sharedAvailability={sharedAvailability}
@@ -294,6 +306,7 @@ export function RoomView() {
   const [guestName, setGuestName] = useState(null)
   const [ownerLogo, setOwnerLogo] = useState(null)
   const [ownerLogoDark, setOwnerLogoDark] = useState(true)
+  const [ownerName, setOwnerName] = useState(null)
   const [ownerCalendarEvents, setOwnerCalendarEvents] = useState([])
   const [ownerConnectedCalendars, setOwnerConnectedCalendars] = useState([])
   const [ownerGuestCalendarEnabled, setOwnerGuestCalendarEnabled] = useState(true)
@@ -345,6 +358,7 @@ export function RoomView() {
       .then(({ data }) => {
         setOwnerLogo(data?.logo_url || null)
         setOwnerLogoDark(data?.logo_is_dark ?? true)
+        setOwnerName(data?.settings?.displayName || null)
         if (!isOwner && data?.connected_calendars?.length) {
           setOwnerConnectedCalendars(data.connected_calendars)
         }
@@ -492,6 +506,7 @@ export function RoomView() {
           ownerCalendarEvents={ownerCalendarEvents}
           ownerConnectedCalendars={ownerConnectedCalendars}
           ownerId={production?.ownerId}
+          ownerName={ownerName}
           guestCalendarEnabled={ownerGuestCalendarEnabled}
         />
       )}

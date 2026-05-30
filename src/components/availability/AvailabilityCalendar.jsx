@@ -140,7 +140,8 @@ export function AvailabilityCalendar({
   }
 
   return (
-    <div>
+    <div className="lg:flex lg:gap-5 lg:items-start">
+      <div className="flex-1 min-w-0">
       {/* Best days strip — owner room view only, when guests have connected */}
       {isOwnerRoomContext && (
         <BestDaysStrip
@@ -361,8 +362,9 @@ export function AvailabilityCalendar({
           </div>
         </div>
       )}
+      </div>{/* /main column */}
 
-      {/* Request modal */}
+      {/* Request modal — true overlay (commit action); fixed, so its place in the row is moot */}
       <DateRequestModal
         isOpen={showRequestModal}
         onClose={() => setShowRequestModal(false)}
@@ -610,19 +612,18 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
 
   return (
     <>
-      {/* Backdrop — mobile only. On desktop the panel folds out beside the calendar
-          (Asana-style): no dimming, the project stays fully visible and interactive
-          so you can click another day to swap the panel. Esc closes it. */}
+      {/* Backdrop — small screens only (the panel is a bottom sheet there). On lg+ the
+          panel is an in-flow right column beside the calendar, so no backdrop. */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fadeIn md:hidden"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fadeIn lg:hidden"
         onClick={onClose}
       />
 
-      {/* Panel: bottom sheet on mobile, right drawer on desktop */}
-      <div className="fixed z-50 bg-surface-900 border-white/[0.06] shadow-[0_-12px_40px_-8px_rgb(0_0_0/0.6)]
-        inset-x-0 bottom-0 rounded-t-[20px] border-t
-        md:inset-y-0 md:right-0 md:top-0 md:bottom-0 md:left-auto md:w-[400px] md:rounded-none md:border-l md:border-t-0
-        flex flex-col max-h-[88vh] md:max-h-none animate-slideUp md:animate-slideIn safe-bottom">
+      {/* Panel: bottom sheet on small screens; on lg+ a sticky in-flow right column so
+          the calendar shrinks beside it (split layout) — it never covers the workspace. */}
+      <div className="bg-surface-900 flex flex-col safe-bottom
+        fixed inset-x-0 bottom-0 z-50 max-h-[88vh] rounded-t-[20px] border-t border-white/[0.06] shadow-[0_-12px_40px_-8px_rgb(0_0_0/0.6)] animate-slideUp
+        lg:sticky lg:inset-auto lg:top-4 lg:z-auto lg:max-h-[calc(100vh-2rem)] lg:w-[360px] lg:shrink-0 lg:self-start lg:rounded-2xl lg:border lg:shadow-lift lg:animate-none">
 
         {/* Mobile grab handle */}
         <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">

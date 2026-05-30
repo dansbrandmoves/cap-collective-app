@@ -147,6 +147,8 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
 
   return (
     <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 sm:py-8">
+      <div className="lg:flex lg:gap-5 lg:items-start">
+      <div className="flex-1 min-w-0">
       {/* Best days */}
       {totalPeople > 0 ? (
         bestDays.length > 0 && (
@@ -294,6 +296,7 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
       </div>
 
       <p className="text-[11px] text-zinc-600 mt-4">Availability is known for the next 60 days.</p>
+      </div>{/* /main column */}
 
       {inspected && inspectorData && (
         <DayInspectorPanel
@@ -306,6 +309,7 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
           onClose={() => setInspected(null)}
         />
       )}
+      </div>{/* /split row */}
     </div>
   )
 }

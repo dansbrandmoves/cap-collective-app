@@ -13,7 +13,7 @@ export function ProductionView() {
   const navigate = useNavigate()
   const {
     getProduction, updateProduction, updateProductionNotes, deleteProduction,
-    createRoom, updateRoomName, deleteRoom,
+    createRoom, updateRoomName, deleteRoom, getRoomLink,
     effectiveSlots, calendarEvents, connectedCalendars, availabilityRules,
     prefixRules, slotStates, canAddRoom, FREE_ROOM_LIMIT, pendingRequestCounts,
     availabilityMode, blockDuration, businessHours,
@@ -32,6 +32,14 @@ export function ProductionView() {
   const [deletingRoomId, setDeletingRoomId] = useState(null)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [showShare, setShowShare] = useState(false)
+  const [copiedRoomId, setCopiedRoomId] = useState(null)
+
+  function copyRoomLink(room) {
+    if (!room.openToken) return
+    navigator.clipboard.writeText(getRoomLink(room.openToken))
+    setCopiedRoomId(room.id)
+    setTimeout(() => setCopiedRoomId(prev => (prev === room.id ? null : prev)), 2000)
+  }
 
   // Auto-select a room when productions load: prefer one with pending requests, else first
   useEffect(() => {
@@ -142,14 +150,14 @@ export function ProductionView() {
         {/* Rooms list */}
         <div className="flex-1 overflow-y-auto px-3 py-4">
           <div className="flex items-center justify-between px-2 mb-2">
-            <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Rooms</p>
-            <button onClick={openAddRoom} className="text-xs text-zinc-500 hover:text-accent transition-colors">+ New Room</button>
+            <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Groups</p>
+            <button onClick={openAddRoom} className="text-xs text-zinc-500 hover:text-accent transition-colors">+ New group</button>
           </div>
 
           {production.rooms.length === 0 && (
             <div className="px-2 py-4 text-center">
-              <p className="text-xs text-zinc-600 mb-3">No rooms yet.</p>
-              <Button size="sm" variant="secondary" onClick={openAddRoom}>Create first room</Button>
+              <p className="text-xs text-zinc-600 mb-3">No groups yet.</p>
+              <Button size="sm" variant="secondary" onClick={openAddRoom}>Create first group</Button>
             </div>
           )}
 
@@ -177,6 +185,12 @@ export function ProductionView() {
                   </span>
                 )}
                 <div className="hidden group-hover/item:flex items-center gap-0.5 pr-2">
+                  {room.openToken && room.accessMode !== 'invite_only' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); copyRoomLink(room) }}
+                      className={`text-xs px-1 py-1 transition-colors ${copiedRoomId === room.id ? 'text-green-400' : 'text-zinc-600 hover:text-accent'}`}
+                    >{copiedRoomId === room.id ? 'Copied!' : 'Copy link'}</button>
+                  )}
                   <button
                     onClick={(e) => { e.stopPropagation(); setRenamingRoomId(room.id) }}
                     className="text-xs text-zinc-600 hover:text-zinc-300 px-1 py-1 transition-colors"
@@ -230,7 +244,7 @@ export function ProductionView() {
             className="flex items-center gap-1.5 text-[12px] text-zinc-400 hover:text-zinc-100 transition-colors flex-shrink-0"
           >
             <Menu size={15} />
-            <span>Rooms</span>
+            <span>Groups</span>
           </button>
         </div>
 
@@ -258,10 +272,10 @@ export function ProductionView() {
       )}
 
       {/* New Room Modal */}
-      <Modal isOpen={showNewRoom} onClose={() => setShowNewRoom(false)} title="New Room">
+      <Modal isOpen={showNewRoom} onClose={() => setShowNewRoom(false)} title="New group">
         <form onSubmit={handleCreateRoom} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Room Name</label>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">Group name</label>
             <input
               type="text"
               placeholder="e.g. Clients, Crew, Vendors..."
@@ -270,11 +284,11 @@ export function ProductionView() {
               className="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent"
               autoFocus
             />
-            <p className="text-sm text-zinc-500 mt-1.5">Each room gets its own shareable link.</p>
+            <p className="text-sm text-zinc-500 mt-1.5">Each group gets its own shareable link.</p>
           </div>
           <div className="flex justify-end gap-3 pt-1">
             <Button variant="secondary" onClick={() => setShowNewRoom(false)}>Cancel</Button>
-            <Button type="submit" disabled={!newRoomName.trim()}>Create Room</Button>
+            <Button type="submit" disabled={!newRoomName.trim()}>Create group</Button>
           </div>
         </form>
       </Modal>
@@ -309,13 +323,13 @@ export function ProductionView() {
       />
 
       {/* Delete Room */}
-      <Modal isOpen={!!deletingRoomId} onClose={() => setDeletingRoomId(null)} title="Delete Room">
+      <Modal isOpen={!!deletingRoomId} onClose={() => setDeletingRoomId(null)} title="Delete group">
         <div className="space-y-4">
-          <p className="text-sm text-zinc-300">Are you sure you want to delete this room? This will also delete its notes, messages, and date requests.</p>
+          <p className="text-sm text-zinc-300">Are you sure you want to delete this group? This will also delete its notes, messages, and date requests.</p>
           <p className="text-sm text-red-400">This action cannot be undone.</p>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setDeletingRoomId(null)}>Cancel</Button>
-            <Button variant="danger" onClick={() => handleDeleteRoom(deletingRoomId)}>Delete Room</Button>
+            <Button variant="danger" onClick={() => handleDeleteRoom(deletingRoomId)}>Delete group</Button>
           </div>
         </div>
       </Modal>
@@ -324,7 +338,7 @@ export function ProductionView() {
       <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Delete Project">
         <div className="space-y-4">
           <p className="text-sm text-zinc-300">
-            Are you sure you want to delete <strong>{production.name}</strong>? This will also delete all rooms, notes, and date requests inside it.
+            Are you sure you want to delete <strong>{production.name}</strong>? This will also delete all groups, notes, and date requests inside it.
           </p>
           <p className="text-sm text-red-400">This action cannot be undone.</p>
           <div className="flex justify-end gap-3 pt-2">
@@ -337,7 +351,7 @@ export function ProductionView() {
       {showUpgrade && (
         <UpgradeModal
           onClose={() => setShowUpgrade(false)}
-          reason={`Free plan includes ${FREE_ROOM_LIMIT} rooms per project. Upgrade to Pro for unlimited rooms.`}
+          reason={`Free plan includes ${FREE_ROOM_LIMIT} groups per project. Upgrade to Pro for unlimited groups.`}
         />
       )}
     </div>
@@ -348,20 +362,28 @@ function EmptyState({ onCreate }) {
   return (
     <div className="flex-1 flex items-center justify-center px-6">
       <div className="text-center max-w-sm">
-        <p className="text-[15px] font-medium text-zinc-200 mb-1.5">No rooms yet</p>
-        <p className="text-sm text-zinc-500 mb-5 leading-relaxed">Create a room to share availability with a group of people.</p>
-        <Button onClick={onCreate}>Create a room</Button>
+        <p className="text-[15px] font-medium text-zinc-200 mb-1.5">No groups yet</p>
+        <p className="text-sm text-zinc-500 mb-5 leading-relaxed">Create a group to share availability with a set of people.</p>
+        <Button onClick={onCreate}>Create a group</Button>
       </div>
     </div>
   )
 }
 
 function RoomCalendarPanel({ production, room, pendingCount, onShare }) {
-  const { effectiveSlots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates, businessHours, updateDateRequestStatus } = useApp()
+  const { effectiveSlots, calendarEvents, connectedCalendars, availabilityRules, prefixRules, slotStates, businessHours, updateDateRequestStatus, getRoomLink } = useApp()
   const [dateRequests, setDateRequests] = useState([])
   const [sharedAvailability, setSharedAvailability] = useState([])
   const [hiddenRequesters, setHiddenRequesters] = useState(() => new Set())
   const [showRequests, setShowRequests] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  function copyLink() {
+    if (!room.openToken) return
+    navigator.clipboard.writeText(getRoomLink(room.openToken))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const config = production.availabilityConfig || production.availability_config
 
@@ -430,13 +452,28 @@ function RoomCalendarPanel({ production, room, pendingCount, onShare }) {
             </button>
           )}
         </div>
-        <button
-          onClick={onShare}
-          className="flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-white text-[13px] font-medium px-3.5 py-2 rounded-lg transition-colors flex-shrink-0"
-        >
-          <Share2 size={13} strokeWidth={2} />
-          Share room
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {room.openToken && room.accessMode !== 'invite_only' && (
+            <button
+              onClick={copyLink}
+              className={`flex items-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-lg border transition-colors ${
+                copied
+                  ? 'border-green-500/30 text-green-400 bg-green-500/10'
+                  : 'border-white/[0.08] text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.04]'
+              }`}
+            >
+              {copied ? <Check size={13} strokeWidth={2} /> : <ExternalLink size={13} strokeWidth={2} />}
+              {copied ? 'Copied!' : 'Copy link'}
+            </button>
+          )}
+          <button
+            onClick={onShare}
+            className="flex items-center gap-1.5 bg-accent hover:bg-accent/90 text-white text-[13px] font-medium px-3.5 py-2 rounded-lg transition-colors"
+          >
+            <Share2 size={13} strokeWidth={2} />
+            Share
+          </button>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 sm:py-8">
         <AvailabilityCalendar
@@ -709,7 +746,7 @@ function ShareModal({ isOpen, onClose, room, pendingCount }) {
 function RenameRoomModal({ room, onClose, onSave }) {
   const [name, setName] = useState(room.name)
   return (
-    <Modal isOpen={true} onClose={onClose} title="Rename Room">
+    <Modal isOpen={true} onClose={onClose} title="Rename group">
       <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) onSave(name.trim()) }} className="space-y-4">
         <input
           type="text"

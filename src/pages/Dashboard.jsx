@@ -107,7 +107,7 @@ function ProjectCard({ production, onUpdate, onDelete }) {
             )}
             <div className="flex items-center gap-1.5 text-[13px] text-zinc-400">
               <Users size={13} strokeWidth={1.75} className="text-zinc-500" />
-              {totalRooms} {totalRooms === 1 ? 'room' : 'rooms'}
+              {totalRooms} {totalRooms === 1 ? 'group' : 'groups'}
             </div>
           </div>
 
@@ -180,7 +180,7 @@ function ProjectCard({ production, onUpdate, onDelete }) {
       {/* Delete confirm modal */}
       <Modal isOpen={confirmDelete} onClose={() => setConfirmDelete(false)} title="Delete Project">
         <p className="text-sm text-zinc-400 mb-6">
-          Delete <span className="text-zinc-100 font-medium">"{production.name}"</span>? This removes all rooms and data. This cannot be undone.
+          Delete <span className="text-zinc-100 font-medium">"{production.name}"</span>? This removes all groups and data. This cannot be undone.
         </p>
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={() => setConfirmDelete(false)}>Cancel</Button>
@@ -219,7 +219,7 @@ export function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-10 sm:mb-12">
         <div className="min-w-0">
           <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15]">Projects</h1>
-          <p className="text-[15px] text-zinc-400 mt-2 leading-relaxed">Your active productions, all in one place.</p>
+          <p className="text-[15px] text-zinc-400 mt-2 leading-relaxed">Your active projects, all in one place.</p>
         </div>
         <Button onClick={openNewProject} className="flex-shrink-0 self-start">
           <Plus size={14} strokeWidth={2} className="mr-1.5" />

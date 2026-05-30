@@ -406,13 +406,13 @@ export function RoomView() {
   }, [resolved, refreshRoom])
 
   if (loading || resolving) {
-    return <div className="flex items-center justify-center h-screen text-zinc-500">Loading room...</div>
+    return <div className="flex items-center justify-center h-screen text-zinc-500">Loading...</div>
   }
 
   if (!resolved) {
     return (
       <div className="flex items-center justify-center h-screen text-zinc-500 flex-col gap-3">
-        <p>Room not found.</p>
+        <p>Link not found.</p>
         <p className="text-sm text-zinc-500">This link may be invalid or expired.</p>
       </div>
     )
@@ -427,12 +427,12 @@ export function RoomView() {
     // a moment later once the query resolves. Previously this race caused valid rooms to flash
     // "unavailable" on slow mobile networks.
     if (productions.length === 0) {
-      return <div className="flex items-center justify-center h-screen text-zinc-500">Loading room...</div>
+      return <div className="flex items-center justify-center h-screen text-zinc-500">Loading...</div>
     }
     return (
       <div className="flex items-center justify-center h-screen bg-surface-950 px-5">
         <div className="text-center max-w-sm">
-          <p className="text-zinc-300 font-medium mb-2">This room is no longer available</p>
+          <p className="text-zinc-300 font-medium mb-2">This link is no longer available</p>
           <p className="text-sm text-zinc-600">The project it belonged to may have been removed. Contact the person who shared this link for an updated one.</p>
         </div>
       </div>

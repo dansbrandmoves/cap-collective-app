@@ -8,12 +8,14 @@ export function AvailabilityRules() {
   return (
     <div className="px-5 sm:px-8 lg:px-14 py-8 sm:py-12">
       <div className="mb-10 sm:mb-12">
-        <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15] mb-2">Availability</h1>
+        <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15] mb-2">Default Availability</h1>
         <p className="text-[15px] text-zinc-400 leading-relaxed">
+          The baseline every project starts from — any project can override it in its own Settings.
+          {' '}
           {availabilityMode === 'blocks'
             ? `Showing ${effectiveSlots.length} time blocks based on your business hours.`
             : 'Your calendar with custom time slots.'}
-          {' '}Adjust in Settings.
+          {' '}Adjust hours in Settings.
         </p>
       </div>
 

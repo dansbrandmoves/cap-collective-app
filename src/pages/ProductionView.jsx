@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { ProjectOverview } from '../components/project/ProjectOverview'
 import { projectSlotsFromConfig } from '../utils/availability'
@@ -355,31 +356,25 @@ export function ProductionView() {
         }}
       />
 
-      {/* Delete Room */}
-      <Modal isOpen={!!deletingRoomId} onClose={() => setDeletingRoomId(null)} title="Delete group">
-        <div className="space-y-4">
-          <p className="text-sm text-zinc-300">Are you sure you want to delete this group? This will also delete its notes, messages, and date requests.</p>
-          <p className="text-sm text-red-400">This action cannot be undone.</p>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setDeletingRoomId(null)}>Cancel</Button>
-            <Button variant="danger" onClick={() => handleDeleteRoom(deletingRoomId)}>Delete group</Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Delete group */}
+      <ConfirmDialog
+        isOpen={!!deletingRoomId}
+        onClose={() => setDeletingRoomId(null)}
+        onConfirm={() => handleDeleteRoom(deletingRoomId)}
+        title="Delete group"
+        body="Are you sure you want to delete this group? This will also delete its notes, messages, and date requests."
+        confirmLabel="Delete group"
+      />
 
-      {/* Delete Project */}
-      <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Delete Project">
-        <div className="space-y-4">
-          <p className="text-sm text-zinc-300">
-            Are you sure you want to delete <strong>{production.name}</strong>? This will also delete all groups, notes, and date requests inside it.
-          </p>
-          <p className="text-sm text-red-400">This action cannot be undone.</p>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
-            <Button variant="danger" onClick={handleDeleteProject}>Delete Project</Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Delete project */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteProject}
+        title="Delete project"
+        body={<>Are you sure you want to delete <strong>{production.name}</strong>? This will also delete all groups, notes, and date requests inside it.</>}
+        confirmLabel="Delete project"
+      />
 
       {showUpgrade && (
         <UpgradeModal
@@ -871,14 +866,17 @@ function EditProjectModal({ isOpen, onClose, production, onSave, defaultAvailCon
 
         {/* Availability settings */}
         <div className="pt-4 border-t border-white/[0.06]">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-1.5">
             <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Availability</p>
             <button
               type="button"
               onClick={() => setAvailConfig(defaultAvailConfig)}
               className="text-xs text-zinc-600 hover:text-zinc-300 transition-colors"
-            >Reset to global</button>
+            >Reset to default</button>
           </div>
+          <p className="text-[11px] text-zinc-600 leading-relaxed mb-3">
+            Overrides your Default Availability for this project only. Reset to default to use your baseline.
+          </p>
 
           <div className="flex items-center gap-3 mb-4">
             <select

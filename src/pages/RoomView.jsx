@@ -434,7 +434,13 @@ export function RoomView() {
     )
   }
 
-  if (!isOwner && mode === 'open_link' && !guestName) {
+  // A guest must have an identity before they can contribute availability —
+  // otherwise the write is attributed to nobody and silently no-ops (the
+  // guestName-null skip the diagnostics caught). open_link guests are prompted
+  // on first visit; invite_only guests normally get their name from the member
+  // token, but if that didn't resolve (e.g. the shared open link was used for an
+  // invite_only room) we fall back to the same prompt instead of a dead flow.
+  if (!isOwner && !guestName) {
     return <NamePrompt token={token} onConfirm={setGuestName} ownerLogo={ownerLogo} ownerLogoDark={ownerLogoDark} />
   }
 

@@ -33,6 +33,19 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
   // multiple rooms are a legacy implementation detail we no longer surface.
   const primaryRoom = rooms[0] || null
 
+  // The owner is a first-class participant in the joint view — their connected
+  // calendar counts as one of the people, not just a yes/no gate. This is what
+  // makes "you + one guest" produce a real overlap.
+  const OWNER_LABEL = 'You'
+
+  // Day signal when the owner is folded into the counts (owner is just a person).
+  function signalFor(freeCount, knownCount) {
+    if (knownCount === 0) return 'gray'
+    if (freeCount === knownCount) return 'green'
+    if (freeCount > 0) return 'amber'
+    return 'red'
+  }
+
   const today = new Date()
   const [month, setMonth] = useState(today.getMonth())
   const [year, setYear] = useState(today.getFullYear())
@@ -69,11 +82,14 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
         if (a.is_available && a.guest_name) ensure(a.guest_name).sources.add('calendar')
       }
     }
-    return [...map.entries()]
+    const guests = [...map.entries()]
       .map(([name, v]) => ({ name, sources: [...v.sources], memberId: v.memberId, inviteToken: v.inviteToken }))
       .sort((a, b) => a.name.localeCompare(b.name))
+    // Owner first, always — it's "you" in the overlap.
+    return [{ name: OWNER_LABEL, isOwner: true, sources: [], memberId: null, inviteToken: null }, ...guests]
   }, [members, dateRequestsByRoom, sharedAvailByRoom])
 
+  const includedOwner = !excluded.has(OWNER_LABEL)
   const totalPeople = people.length
   const includedCount = useMemo(() => people.filter(p => !excluded.has(p.name)).length, [people, excluded])
 
@@ -123,16 +139,17 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
     for (const { date, inMonth } of grid) {
       if (!inMonth) continue
       const ds = dateToStr(date)
-      const agg = aggregateProjectDay(ds, rooms, fReq, fAvail)
-      const signal = projectDaySignal(ownerFreeOn(date), agg.freeCount, agg.knownCount)
-      map[ds] = { ...agg, signal }
+      const base = aggregateProjectDay(ds, rooms, fReq, fAvail)
+      const knownCount = base.knownCount + (includedOwner ? 1 : 0)
+      const freeCount = base.freeCount + (includedOwner && ownerFreeOn(date) ? 1 : 0)
+      map[ds] = { freeCount, knownCount, signal: signalFor(freeCount, knownCount) }
     }
     return map
-  }, [grid, rooms, fReq, fAvail, slots, calendarEvents, connectedCalendars, prefixRules, businessHours]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [grid, rooms, fReq, fAvail, includedOwner, slots, calendarEvents, connectedCalendars, prefixRules, businessHours]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const includedKnown = useMemo(
-    () => projectKnownPeople(rooms, fReq, fAvail).size,
-    [rooms, fReq, fAvail]
+    () => projectKnownPeople(rooms, fReq, fAvail).size + (includedOwner ? 1 : 0),
+    [rooms, fReq, fAvail, includedOwner]
   )
 
   // Best days: scan next 60 days for the highest free-counts where owner is free.
@@ -141,13 +158,15 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
     const out = []
     for (let i = 0; i < 60; i++) {
       const date = new Date(today); date.setDate(today.getDate() + i)
-      if (!ownerFreeOn(date)) continue
       const ds = dateToStr(date)
-      const agg = aggregateProjectDay(ds, rooms, fReq, fAvail)
-      if (agg.freeCount > 0) out.push({ ds, date, freeCount: agg.freeCount, knownCount: agg.knownCount })
+      const base = aggregateProjectDay(ds, rooms, fReq, fAvail)
+      const knownCount = base.knownCount + (includedOwner ? 1 : 0)
+      const freeCount = base.freeCount + (includedOwner && ownerFreeOn(date) ? 1 : 0)
+      if (freeCount > 0) out.push({ ds, date, freeCount, knownCount })
     }
-    return out.sort((a, b) => b.freeCount - a.freeCount).slice(0, 3)
-  }, [includedKnown, rooms, fReq, fAvail, slots, calendarEvents, connectedCalendars, prefixRules, businessHours]) // eslint-disable-line react-hooks/exhaustive-deps
+    // Most people free first; break ties by soonest.
+    return out.sort((a, b) => b.freeCount - a.freeCount || new Date(a.ds) - new Date(b.ds)).slice(0, 3)
+  }, [includedKnown, includedOwner, rooms, fReq, fAvail, slots, calendarEvents, connectedCalendars, prefixRules, businessHours]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Build the combined, date-filtered data the inspector expects (respects the filter).
   const inspectorData = useMemo(() => {
@@ -222,7 +241,7 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
 
         {totalPeople > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {people.map(({ name, sources, memberId, inviteToken }) => {
+            {people.map(({ name, sources, memberId, inviteToken, isOwner }) => {
               const inc = !excluded.has(name)
               const viaCalendar = sources.includes('calendar')
               const responded = sources.length > 0
@@ -237,15 +256,17 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
                 >
                   <button
                     onClick={() => togglePerson(name)}
-                    title={responded ? (viaCalendar ? 'Shared via Google Calendar' : 'Tapped their free days') : 'Hasn’t responded yet'}
+                    title={isOwner ? 'Your calendar' : (responded ? (viaCalendar ? 'Shared via Google Calendar' : 'Tapped their free days') : 'Hasn’t responded yet')}
                     className="inline-flex items-center gap-1.5"
                   >
                     <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 ${inc ? 'bg-accent text-white' : 'border border-white/20'}`}>
                       {inc && <Check size={9} strokeWidth={3} />}
                     </span>
-                    {viaCalendar && <CalendarDays size={11} strokeWidth={2} className={inc ? 'text-accent' : 'text-zinc-600'} />}
+                    {(viaCalendar || isOwner) && <CalendarDays size={11} strokeWidth={2} className={inc ? 'text-accent' : 'text-zinc-600'} />}
                     <span className={inc ? '' : 'line-through'}>{name}</span>
-                    {!responded && <span className="text-[10px] text-zinc-600 italic">invited</span>}
+                    {isOwner
+                      ? <span className="text-[10px] text-zinc-500">you</span>
+                      : (!responded && <span className="text-[10px] text-zinc-600 italic">invited</span>)}
                   </button>
                   {inviteToken && (
                     <button

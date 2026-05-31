@@ -66,6 +66,7 @@ export function ProductionView() {
 
   const activeRoom = production.rooms.find(r => r.id === activeRoomId) || null
   const renamingRoom = production.rooms.find(r => r.id === renamingRoomId) || null
+  const primaryRoom = production.rooms[0] || null
   const projectConfig = production.availabilityConfig || production.availability_config
   const projectSlots = projectSlotsFromConfig(projectConfig, effectiveSlots)
 
@@ -159,75 +160,39 @@ export function ProductionView() {
           </div>
         </div>
 
-        {/* Rooms list */}
+        {/* Share — one open link for the whole project. People are managed on the
+            calendar itself (the roster), so there's no separate "groups" concept. */}
         <div className="flex-1 overflow-y-auto px-3 py-4">
-          {/* Project overview entry — the aggregated "best days" view */}
-          <button
-            onClick={showOverview}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg mb-3 text-[13px] transition-colors ${
-              activeView === 'overview'
-                ? 'bg-accent/10 text-zinc-100 border border-accent/15 font-medium'
-                : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] border border-transparent'
-            }`}
-          >
-            <LayoutGrid size={15} strokeWidth={1.75} className={activeView === 'overview' ? 'text-accent' : 'opacity-70'} />
-            <span>Best days</span>
-          </button>
-
-          <div className="flex items-center justify-between px-2 mb-2">
-            <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Groups</p>
-            <button onClick={openAddRoom} className="text-xs text-zinc-500 hover:text-accent transition-colors">+ New group</button>
-          </div>
-
-          {production.rooms.length === 0 && (
-            <div className="px-2 py-4 text-center">
-              <p className="text-xs text-zinc-600 mb-3">No groups yet.</p>
-              <Button size="sm" variant="secondary" onClick={openAddRoom}>Create first group</Button>
-            </div>
-          )}
-
-          {production.rooms.map(room => {
-            const isActive = activeView === 'room' && activeRoomId === room.id
-            const pending = pendingRequestCounts[room.id] || 0
-            return (
-              <div
-                key={room.id}
-                className={`flex items-center gap-1 rounded-lg mb-0.5 group/item transition-colors ${
-                  isActive ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest px-2 mb-2">Share</p>
+          {primaryRoom?.openToken ? (
+            <>
+              <button
+                onClick={() => copyRoomLink(primaryRoom)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] border transition-colors ${
+                  copiedRoomId === primaryRoom.id
+                    ? 'border-green-500/30 text-green-400 bg-green-500/10'
+                    : 'border-white/[0.08] text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.04]'
                 }`}
               >
-                <button
-                  onClick={() => handleSelectRoom(room.id)}
-                  className={`flex-1 text-left px-3 py-2.5 text-[13px] transition-colors truncate ${
-                    isActive ? 'text-zinc-100 font-medium' : 'text-zinc-400 hover:text-zinc-100'
-                  }`}
-                >
-                  {room.name}
-                </button>
-                {pending > 0 && (
-                  <span className="bg-accent text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mr-1">
-                    {pending}
-                  </span>
-                )}
-                <div className="hidden group-hover/item:flex items-center gap-0.5 pr-2">
-                  {room.openToken && room.accessMode !== 'invite_only' && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); copyRoomLink(room) }}
-                      className={`text-xs px-1 py-1 transition-colors ${copiedRoomId === room.id ? 'text-green-400' : 'text-zinc-600 hover:text-accent'}`}
-                    >{copiedRoomId === room.id ? 'Copied!' : 'Copy link'}</button>
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setRenamingRoomId(room.id) }}
-                    className="text-xs text-zinc-600 hover:text-zinc-300 px-1 py-1 transition-colors"
-                  >Rename</button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setDeletingRoomId(room.id) }}
-                    className="text-xs text-red-700 hover:text-red-400 px-1 py-1 transition-colors"
-                  >Delete</button>
-                </div>
-              </div>
-            )
-          })}
+                {copiedRoomId === primaryRoom.id ? <Check size={15} strokeWidth={2} /> : <Share2 size={15} strokeWidth={1.75} className="opacity-70" />}
+                {copiedRoomId === primaryRoom.id ? 'Copied!' : 'Copy shareable link'}
+              </button>
+              <a
+                href={getRoomLink(primaryRoom.openToken)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 mt-1 rounded-lg text-[13px] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] transition-colors"
+              >
+                <ExternalLink size={15} strokeWidth={1.75} className="opacity-70" />
+                Preview as guest
+              </a>
+              <p className="text-[11px] text-zinc-600 leading-relaxed px-2 mt-3">
+                Anyone with this link can add their availability. To invite specific people, use “Add person” on the calendar — each gets their own link.
+              </p>
+            </>
+          ) : (
+            <p className="text-[11px] text-zinc-600 px-2">No shareable link yet.</p>
+          )}
         </div>
 
         {/* Private notes */}
@@ -269,30 +234,18 @@ export function ProductionView() {
             className="flex items-center gap-1.5 text-[12px] text-zinc-400 hover:text-zinc-100 transition-colors flex-shrink-0"
           >
             <Menu size={15} />
-            <span>Groups</span>
+            <span>Details</span>
           </button>
         </div>
 
-        {activeView === 'overview' ? (
-          <ProjectOverview
-            production={production}
-            slots={projectSlots}
-            calendarEvents={calendarEvents}
-            connectedCalendars={connectedCalendars}
-            prefixRules={prefixRules}
-            businessHours={projectConfig?.businessHours || businessHours}
-          />
-        ) : activeRoom ? (
-          <RoomCalendarPanel
-            key={activeRoom.id}
-            production={production}
-            room={activeRoom}
-            pendingCount={pendingRequestCounts[activeRoom.id] || 0}
-            onShare={() => setShowShare(true)}
-          />
-        ) : (
-          <EmptyState onCreate={openAddRoom} />
-        )}
+        <ProjectOverview
+          production={production}
+          slots={projectSlots}
+          calendarEvents={calendarEvents}
+          connectedCalendars={connectedCalendars}
+          prefixRules={prefixRules}
+          businessHours={projectConfig?.businessHours || businessHours}
+        />
       </div>
 
       {/* Share Modal */}

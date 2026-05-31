@@ -6,9 +6,9 @@ import { LayoutGrid, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditC
 // pinned to the bottom ("settings"). Keeps the nav uncluttered and scannable.
 const PRIMARY_NAV = [
   { to: '/', label: 'Projects', icon: LayoutGrid },
-  { to: '/booking-pages', label: 'Booking', icon: CalendarCheck },
 ]
 const UTILITY_NAV = [
+  { to: '/booking-pages', label: 'Booking', icon: CalendarCheck },
   { to: '/availability', label: 'Availability', icon: CalendarDays },
   { to: '/calendars', label: 'Settings', icon: Settings },
 ]

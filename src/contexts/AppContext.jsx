@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid'
 import { SEED_DATA } from '../data/seed'
 import { supabase } from '../utils/supabase'
 import { buildSlotStates } from '../utils/availability'
+import { logEvent, STATUS } from '../utils/diag'
 
 const AppContext = createContext(null)
 const STORAGE_KEY = 'coordie-app'
@@ -775,12 +776,18 @@ export function AppProvider({ children }) {
     setCalendarSyncing(true)
     try {
       const { error } = await supabase.functions.invoke('sync-calendar')
-      if (error) { console.warn('sync-calendar:', error); return false }
+      if (error) {
+        console.warn('sync-calendar:', error)
+        logEvent('calendar_sync', { actor: 'owner', status: STATUS.ERROR, summary: 'Manual sync failed', error })
+        return false
+      }
+      let rowCount = 0
       if (user?.id) {
         const { data: rows } = await supabase.from('owner_calendar_events').select('*').eq('owner_id', user.id)
-        if (rows) setCalendarEvents(rows.map(mapOwnerEventRow))
+        if (rows) { setCalendarEvents(rows.map(mapOwnerEventRow)); rowCount = rows.length }
       }
       setLastSynced(new Date().toISOString())
+      logEvent('calendar_sync', { actor: 'owner', status: STATUS.OK, summary: `Synced — ${rowCount} events`, eventCount: rowCount })
       return true
     } finally {
       setCalendarSyncing(false)
@@ -959,7 +966,14 @@ export function AppProvider({ children }) {
     const finalMember = { id: `mem-${Date.now()}`, roomId, room_id: roomId, name, email: email || '', inviteToken: token, invite_token: token }
     setRoomMembers(prev => [...prev, finalMember])
     supabase.from('room_members').insert({ id: finalMember.id, room_id: roomId, name, email: email || '', invite_token: token })
-      .then(({ error }) => { if (error) console.error('addRoomMember:', error) })
+      .then(({ error }) => {
+        if (error) console.error('addRoomMember:', error)
+        logEvent('member_add', {
+          actor: 'owner', roomId, status: error ? STATUS.ERROR : STATUS.OK,
+          summary: error ? `Failed to add ${name}` : `Added ${name}`,
+          memberName: name, email: email || '', error,
+        })
+      })
     return finalMember
   }, [])
 
@@ -1150,6 +1164,11 @@ export function AppProvider({ children }) {
       slot_map: slotMap || null,
     }
     const { error } = await supabase.from('date_requests').insert(request)
+    logEvent('guest_tap_days', {
+      actor: requesterName || 'unknown guest', roomId, status: error ? STATUS.ERROR : STATUS.OK,
+      summary: error ? 'Failed to submit tapped days' : `Tapped ${dates?.length ?? 0} day(s)`,
+      dayCount: dates?.length ?? 0, hasSlotMap: !!slotMap, error,
+    })
     if (error) { console.error('createDateRequest:', error); return false }
 
     // Find room + production names for the notification email

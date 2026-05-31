@@ -8,6 +8,7 @@ import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
 import { eventOverlapsSlot, dateToStr } from '../utils/availability'
 import { CalendarDays, CheckCircle2 } from 'lucide-react'
+import { startRun, logEvent, STATUS } from '../utils/diag'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
@@ -158,25 +159,26 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
   const [guestEvents, setGuestEvents] = useState(() => {
     try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
   })
-  // Server-side breadcrumb so guest-connect outcomes are visible without the guest's console.
-  const diag = (event, detail) => { try { supabase.from('diagnostics').insert({ event, detail }).then(() => {}, () => {}) } catch (e) { /* */ } }
-
   async function connectGuestCalendar(events) {
     setGuestEvents(events)
     try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch (e) { /* */ }
-    diag('guest_connect_start', { roomId, guestName, slotCount: slots?.length ?? 0, eventCount: events?.length ?? 0 })
+
+    const run = startRun('guest_connect_calendar', { actor: guestName || 'unknown guest', roomId })
+    run.step('received calendar events', STATUS.OK, { eventCount: events?.length ?? 0, slotCount: slots?.length ?? 0 })
 
     // Persist free/busy to shared_availability so the owner sees it without the
     // guest tapping anything. This IS the connect-calendar value — surface any
     // failure loudly so it never silently no-ops.
     if (!roomId || !guestName) {
       console.warn('[coordie] guest calendar not shared — missing roomId or guestName', { roomId, guestName })
-      diag('guest_connect_skip', { reason: 'missing roomId or guestName', roomId, guestName, eventCount: events?.length ?? 0 })
+      run.step('aborted: missing identity', STATUS.SKIP, { roomId, guestName })
+      run.finish(STATUS.SKIP, 'Skipped — missing roomId or guestName (guest may be viewing as owner)')
       return
     }
     if (!slots?.length) {
       console.warn('[coordie] guest calendar not shared — no slots resolved for this project')
-      diag('guest_connect_skip', { reason: 'no slots', roomId, guestName, eventCount: events?.length ?? 0 })
+      run.step('aborted: no slots', STATUS.SKIP)
+      run.finish(STATUS.SKIP, 'Skipped — no availability slots resolved for this project')
       return
     }
     const today = new Date()
@@ -190,21 +192,33 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
       )
       if (isFree) freeDays.push({ room_id: roomId, guest_name: guestName, date: ds, is_available: true })
     }
+    run.step('computed free days (next 60d)', STATUS.OK, { freeDays: freeDays.length })
+
     const { error: delErr } = await supabase.from('shared_availability').delete().eq('room_id', roomId).eq('guest_name', guestName)
-    if (delErr) console.error('[coordie] failed clearing previous shared availability:', delErr.message)
+    if (delErr) {
+      console.error('[coordie] failed clearing previous shared availability:', delErr.message)
+      run.step('clear previous rows', STATUS.ERROR, { error: delErr.message })
+    }
     let insErr = null
     if (freeDays.length) {
       const r = await supabase.from('shared_availability').insert(freeDays)
       insErr = r.error
-      if (insErr) console.error('[coordie] failed sharing calendar availability:', insErr.message)
-      else console.info(`[coordie] shared ${freeDays.length} free days for ${guestName}`)
+      if (insErr) {
+        console.error('[coordie] failed sharing calendar availability:', insErr.message)
+        run.step('insert free days', STATUS.ERROR, { error: insErr.message })
+      } else {
+        console.info(`[coordie] shared ${freeDays.length} free days for ${guestName}`)
+        run.step('insert free days', STATUS.OK, { rows: freeDays.length })
+      }
     } else {
       console.info('[coordie] calendar connected but no free days found in the next 60 days')
+      run.step('no free days to write', STATUS.SKIP)
     }
-    diag('guest_connect_done', {
-      roomId, guestName, slotCount: slots.length, eventCount: events?.length ?? 0,
-      freeDays: freeDays.length, deleteError: delErr?.message ?? null, insertError: insErr?.message ?? null,
-    })
+    const failed = !!(delErr || insErr)
+    run.finish(
+      failed ? STATUS.ERROR : STATUS.OK,
+      failed ? 'Calendar connected but writing availability failed' : `Shared ${freeDays.length} free days for ${guestName}`,
+    )
   }
   async function disconnectGuestCalendar() {
     setGuestEvents(null)

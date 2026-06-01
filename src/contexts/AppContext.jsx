@@ -287,9 +287,9 @@ export function AppProvider({ children }) {
 
   const isAdmin = role === 'admin'
 
-  // Supabase-backed — seeded from localStorage cache so pages render instantly
-  const [productions, setProductions] = useState(() => stored?.productions ?? [])
-  const [roomMembers, setRoomMembers] = useState(() => stored?.roomMembers ?? [])
+  // Supabase-backed
+  const [productions, setProductions] = useState([])
+  const [roomMembers, setRoomMembers] = useState([])
   const [bookingPages, setBookingPages] = useState([])
 
   const canAddProject = useCallback(() => {
@@ -308,8 +308,7 @@ export function AppProvider({ children }) {
     if (isProPlan) return true
     return bookingPages.length < FREE_BOOKING_PAGE_LIMIT
   }, [isProPlan, bookingPages])
-  // false if we have cached productions — pages render immediately, then refresh silently
-  const [loading, setLoading] = useState(() => !stored?.productions)
+  const [loading, setLoading] = useState(true)
 
   // localStorage-backed
   const [slots, setSlots] = useState(() => stored?.slots ?? SEED_DATA.slots)
@@ -576,9 +575,7 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (authLoading) return
     const ownerId = user?.id ?? null
-    // Only block with a loading spinner on the very first load (no cache).
-    // Subsequent refreshes update silently in the background.
-    if (!productions.length) setLoading(true)
+    setLoading(true)
 
     console.log('[Coordie] Loading data for:', ownerId || 'guest')
 
@@ -634,14 +631,12 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     saveToStorage({
-      productions, roomMembers,
       slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced,
       theme, slotStateCustomizations, businessHours, guestCalendarEnabled,
       availabilityMode, blockDuration, timezone,
     })
-  }, [productions, roomMembers,
-      slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
+  }, [slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced, theme, slotStateCustomizations,
       businessHours, guestCalendarEnabled, availabilityMode, blockDuration, timezone])
 

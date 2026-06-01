@@ -27,8 +27,16 @@ function LoadingScreen() {
   )
 }
 
+// True if Supabase stored a session on a previous visit — used to skip the
+// auth-loading blank screen for returning users. Checked once at module load.
+const hadStoredSession = !!localStorage.getItem('sb-xwuekcysigkujhyucugi-auth-token')
+
 function AuthGate() {
   const { isOwner, authLoading } = useApp()
+  // Returning user: render the shell immediately while auth resolves in the
+  // background. If auth comes back negative they'll be redirected to login.
+  if (authLoading && hadStoredSession) return <AppShell />
+  // New visitor or cleared session: show a brief spinner (unavoidable).
   if (authLoading) return <LoadingScreen />
   if (!isOwner) return <AuthPage />
   return <AppShell />
@@ -37,6 +45,7 @@ function AuthGate() {
 // Root: marketing for visitors, dashboard for signed-in users
 function RootRoute() {
   const { isOwner, authLoading } = useApp()
+  if (authLoading && hadStoredSession) return <AppShell />
   if (authLoading) return <LoadingScreen />
   if (!isOwner) return <HomePage />
   return <AppShell />

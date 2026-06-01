@@ -307,7 +307,7 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
       <button
         onClick={() => tokenClientRef.current?.requestAccessToken()}
         disabled={!gisReady || loading}
-        title="Only your availability is shared — never event titles or details."
+        title="Only your availability — free or busy — is shared."
         className="inline-flex items-center gap-1.5 text-[12px] font-medium text-zinc-200 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-full px-3.5 py-1.5 transition-colors disabled:opacity-50"
       >
         <CalendarDays size={13} strokeWidth={1.75} className="text-zinc-400" />
@@ -564,7 +564,7 @@ export function BookingPageView() {
                   <>
                     {guestEvents === null && (
                       <p className="text-[12px] text-zinc-500 mb-3 max-w-md mx-auto leading-relaxed">
-                        Connect your calendar to highlight the days you&rsquo;re both open. Only your availability is shared — never event titles or details.
+                        Connect your calendar to highlight the days you&rsquo;re both open. Only your availability — free or busy — is shared.
                       </p>
                     )}
                     <div className="flex justify-center">

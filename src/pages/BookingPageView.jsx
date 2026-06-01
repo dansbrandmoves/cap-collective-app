@@ -558,13 +558,27 @@ export function BookingPageView() {
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.24, ease: IOS_EASE }}>
 
-              {/* Above the calendar: the overlap value + connect calendar (its effect —
-                  highlighting the days you're both free — is visible right here). */}
+              {/* Above the calendar — two calm parts, stacked & centered:
+                  (1) optional connect-calendar power-up, (2) time-of-day filter. */}
               <div className="text-center mb-6">
                 <p className="text-[15px] font-semibold text-zinc-100 mb-3">When are we both free?</p>
 
-                {/* Time-of-day filter (always filters the times) + connect calendar */}
-                <div className="inline-flex flex-wrap items-center justify-center gap-2 mb-2">
+                {/* Part 1 — connect (optional power-up) */}
+                {ownerGuestCalendarEnabled && (
+                  <div className="mb-4">
+                    {guestEvents === null && (
+                      <p className="text-[12px] text-zinc-500 mb-2 max-w-xs mx-auto leading-relaxed">
+                        Connect your calendar to get recommended times you&rsquo;re both free.
+                      </p>
+                    )}
+                    <div className="flex justify-center">
+                      <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Part 2 — time-of-day filter (always filters) */}
+                <div className="flex justify-center">
                   <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">
                     {WINDOW_ORDER.map(key => (
                       <button key={key} onClick={() => setWindowKey(key)}
@@ -575,16 +589,7 @@ export function BookingPageView() {
                       </button>
                     ))}
                   </div>
-                  {ownerGuestCalendarEnabled && (
-                    <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
-                  )}
                 </div>
-
-                {ownerGuestCalendarEnabled && guestEvents === null && (
-                  <p className="text-[12px] text-zinc-500 max-w-md mx-auto leading-relaxed">
-                    Connect calendar to get recommended time blocks.
-                  </p>
-                )}
               </div>
 
               <MonthCalendar

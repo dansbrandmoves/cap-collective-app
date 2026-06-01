@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
-import { LayoutGrid, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditCard, Shield, Activity } from 'lucide-react'
+import { useResizablePanel, ResizeHandle } from '../../hooks/useResizablePanel'
+import { LayoutGrid, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditCard, Shield, Activity, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 // Primary destinations live at the top ("what you do"); configuration/utility is
 // pinned to the bottom ("settings"). Keeps the nav uncluttered and scannable.
@@ -13,8 +14,12 @@ const UTILITY_NAV = [
   { to: '/calendars', label: 'Settings', icon: Settings },
 ]
 
+const RAIL = 60 // collapsed icon-rail width
+
 export function Sidebar({ mobileOpen = false, onMobileClose }) {
   const { productions, user, signOut, theme, isProPlan, isAdmin } = useApp()
+  const panel = useResizablePanel('coordie-nav', { defaultWidth: 224, min: 200, max: 340, side: 'right' })
+  const railed = panel.collapsed
 
   const navItem = ({ to, label, icon: Icon }) => (
     <NavLink
@@ -22,8 +27,9 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
       to={to}
       end={to === '/'}
       onClick={onMobileClose}
+      title={railed ? label : undefined}
       className={({ isActive }) =>
-        `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 ${
+        `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 ${railed ? 'justify-center' : ''} ${
           isActive
             ? 'bg-accent/10 text-zinc-100 border border-accent/15'
             : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800 border border-transparent'
@@ -33,7 +39,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
       {({ isActive }) => (
         <>
           <Icon size={16} strokeWidth={1.75} className={`flex-shrink-0 ${isActive ? 'text-accent' : 'opacity-70'}`} />
-          <span className="flex-1">{label}</span>
+          {!railed && <span className="flex-1">{label}</span>}
         </>
       )}
     </NavLink>
@@ -44,14 +50,27 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
       {mobileOpen && (
         <div className="fixed inset-0 bg-black/60 z-40 md:hidden" onClick={onMobileClose} />
       )}
-      <aside className={`w-56 flex-shrink-0 bg-surface-900 border-r border-surface-700 flex flex-col
-        fixed inset-y-0 left-0 z-50 transition-transform duration-200
+      <aside
+        style={{ width: railed ? RAIL : panel.width }}
+        className={`relative flex-shrink-0 bg-surface-900 border-r border-surface-700 flex flex-col
+        ${panel.dragging ? '' : 'transition-[width] duration-150'}
+        fixed inset-y-0 left-0 z-50
         md:sticky md:top-0 md:h-screen md:translate-x-0 md:z-auto
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
 
-        {/* Logo */}
-        <div className="px-5 py-5 border-b border-surface-700 flex-shrink-0">
-          <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
+        {/* Desktop drag-resize handle (hidden when railed) */}
+        {!railed && <ResizeHandle onPointerDown={panel.startDrag} onDoubleClick={panel.reset} side="right" dragging={panel.dragging} />}
+
+        {/* Logo + collapse toggle */}
+        <div className={`py-5 border-b border-surface-700 flex-shrink-0 flex items-center ${railed ? 'px-0 justify-center' : 'px-5 justify-between'}`}>
+          {!railed && <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />}
+          <button
+            onClick={panel.toggle}
+            title={railed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="hidden md:flex items-center justify-center text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-surface-800"
+          >
+            {railed ? <PanelLeftOpen size={16} strokeWidth={1.75} /> : <PanelLeftClose size={16} strokeWidth={1.75} />}
+          </button>
         </div>
 
         {/* Nav — primary at top, project list beneath, utility pinned to the bottom */}
@@ -60,8 +79,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
             {PRIMARY_NAV.map(navItem)}
           </div>
 
-          {/* Projects — sub-list under the Projects destination (no redundant header) */}
-          {productions.length > 0 && (
+          {/* Projects sub-list — hidden when railed (no room for names) */}
+          {!railed && productions.length > 0 && (
             <div className="mt-1.5 ml-3 pl-2 border-l border-surface-700/60 space-y-0.5">
               {productions.map(p => (
                 <NavLink
@@ -93,11 +112,12 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 <NavLink
                   to="/billing"
                   onClick={onMobileClose}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-accent hover:bg-accent/10 transition-colors"
+                  title={railed ? 'Upgrade to Pro' : undefined}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-accent hover:bg-accent/10 transition-colors ${railed ? 'justify-center' : ''}`}
                 >
                   <Zap size={16} strokeWidth={1.75} className="flex-shrink-0" />
-                  <span className="flex-1">Upgrade to Pro</span>
-                  <span className="text-[10px] font-bold bg-accent/15 border border-accent/25 text-accent px-1.5 py-0.5 rounded-full">$10/mo</span>
+                  {!railed && <><span className="flex-1">Upgrade to Pro</span>
+                  <span className="text-[10px] font-bold bg-accent/15 border border-accent/25 text-accent px-1.5 py-0.5 rounded-full">$10/mo</span></>}
                 </NavLink>
               )}
 
@@ -105,14 +125,15 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 <NavLink
                   to="/billing"
                   onClick={onMobileClose}
+                  title={railed ? 'Billing' : undefined}
                   className={({ isActive }) =>
-                    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${railed ? 'justify-center' : ''} ${
                       isActive ? 'bg-surface-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
                     }`
                   }
                 >
                   <CreditCard size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
-                  <span>Billing</span>
+                  {!railed && <span>Billing</span>}
                 </NavLink>
               )}
 
@@ -120,14 +141,15 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 <NavLink
                   to="/admin"
                   onClick={onMobileClose}
+                  title={railed ? 'Admin' : undefined}
                   className={({ isActive }) =>
-                    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${railed ? 'justify-center' : ''} ${
                       isActive ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-zinc-400 hover:text-amber-400 hover:bg-amber-500/5 border border-transparent'
                     }`
                   }
                 >
                   <Shield size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
-                  <span>Admin</span>
+                  {!railed && <span>Admin</span>}
                 </NavLink>
               )}
 
@@ -135,33 +157,35 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 <NavLink
                   to="/admin/diagnostics"
                   onClick={onMobileClose}
+                  title={railed ? 'Diagnostics' : undefined}
                   className={({ isActive }) =>
-                    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${railed ? 'justify-center' : ''} ${
                       isActive ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-zinc-400 hover:text-amber-400 hover:bg-amber-500/5 border border-transparent'
                     }`
                   }
                 >
                   <Activity size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
-                  <span>Diagnostics</span>
+                  {!railed && <span>Diagnostics</span>}
                 </NavLink>
               )}
 
               {user && (
                 <button
                   onClick={signOut}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  title={railed ? 'Sign out' : undefined}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors ${railed ? 'justify-center' : ''}`}
                 >
                   <LogOut size={16} strokeWidth={1.75} className="flex-shrink-0" />
-                  Sign out
+                  {!railed && 'Sign out'}
                 </button>
               )}
             </div>
           </div>
         </nav>
 
-        {/* Footer: user info only */}
+        {/* Footer: user info */}
         {user && (
-          <div className="px-5 py-3 border-t border-surface-700 flex-shrink-0 flex items-center gap-2 safe-bottom-sm">
+          <div className={`py-3 border-t border-surface-700 flex-shrink-0 flex items-center gap-2 safe-bottom-sm ${railed ? 'px-0 justify-center' : 'px-5'}`}>
             {user.user_metadata?.avatar_url ? (
               <img src={user.user_metadata.avatar_url} alt="" className="w-6 h-6 rounded-full flex-shrink-0" />
             ) : (
@@ -169,7 +193,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 {(user.user_metadata?.full_name || user.email)?.[0]?.toUpperCase() ?? '?'}
               </div>
             )}
-            <span className="text-xs text-zinc-400 truncate">{user.user_metadata?.full_name || user.email}</span>
+            {!railed && <span className="text-xs text-zinc-400 truncate">{user.user_metadata?.full_name || user.email}</span>}
           </div>
         )}
       </aside>

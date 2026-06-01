@@ -6,9 +6,8 @@ import { Badge } from '../components/ui/Badge'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured, connectGuestCalendarOffline, triggerGuestSync, disconnectGuestCalendar as disconnectGuestCalendarServer } from '../utils/googleCalendar'
-import { eventOverlapsSlot, dateToStr } from '../utils/availability'
 import { CalendarDays, CheckCircle2 } from 'lucide-react'
-import { startRun, logEvent, STATUS } from '../utils/diag'
+import { startRun, STATUS } from '../utils/diag'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 

@@ -1,12 +1,10 @@
 import { useState, useMemo } from 'react'
-import { Users, CalendarDays, Check, UserPlus, Copy, X } from 'lucide-react'
-import { useApp } from '../../contexts/AppContext'
 import { DayInspectorPanel } from '../availability/AvailabilityCalendar'
-import { useProjectAvailability } from '../../hooks/useProjectAvailability'
 import {
   getMonthGrid, dateToStr, deriveSlotState,
-  aggregateProjectDay, projectDaySignal, projectKnownPeople,
+  aggregateProjectDay, projectKnownPeople,
 } from '../../utils/availability'
+import { OWNER_LABEL } from '../../hooks/useProjectPeople'
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
@@ -14,8 +12,6 @@ const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // Day-cell tints per signal. Kept inline (not slotStates) — this is a distinct,
 // project-level traffic-light language: everyone clear → mostly → conflict → unknown.
-// Tints are deliberately gentle at rest so the month grid reads calm; they firm up
-// on hover. The legend dots and the count text carry the stronger color signal.
 const SIGNAL = {
   green: { dot: '#22c55e', cell: 'bg-green-500/[0.06] border-green-500/15 hover:bg-green-500/[0.12] hover:border-green-500/35', count: 'text-green-400/90' },
   amber: { dot: '#f59e0b', cell: 'bg-amber-500/[0.05] border-amber-500/15 hover:bg-amber-500/[0.10] hover:border-amber-500/35', count: 'text-amber-400/90' },
@@ -23,98 +19,28 @@ const SIGNAL = {
   gray:  { dot: '#52525b', cell: 'bg-white/[0.02] border-white/[0.05] hover:border-white/12', count: 'text-zinc-600' },
 }
 
-const isActiveReq = r => r.status !== 'declined' && r.status !== 'archived'
+function signalFor(freeCount, knownCount) {
+  if (knownCount === 0) return 'gray'
+  if (freeCount === knownCount) return 'green'
+  if (freeCount > 0) return 'amber'
+  return 'red'
+}
 
-export function ProjectOverview({ production, slots, calendarEvents, connectedCalendars, prefixRules, businessHours }) {
-  const { loading, dateRequestsByRoom, sharedAvailByRoom } = useProjectAvailability(production)
-  const { roomMembers, addRoomMember, removeRoomMember, getRoomLink } = useApp()
+// Calendar-only project view. People selection now lives in the project left
+// panel (PeopleRoster); this component receives the shared availability data +
+// the current exclusion set and renders Best Days + the month grid + inspector.
+export function ProjectOverview({
+  production, slots, calendarEvents, connectedCalendars, prefixRules, businessHours,
+  loading, dateRequestsByRoom = {}, sharedAvailByRoom = {}, excluded, includedOwner, totalPeople = 0,
+}) {
   const rooms = production.rooms || []
-  // One project = one flat people list. People live on the project's primary room;
-  // multiple rooms are a legacy implementation detail we no longer surface.
-  const primaryRoom = rooms[0] || null
-
-  // The owner is a first-class participant in the joint view — their connected
-  // calendar counts as one of the people, not just a yes/no gate. This is what
-  // makes "you + one guest" produce a real overlap.
-  const OWNER_LABEL = 'You'
-
-  // Day signal when the owner is folded into the counts (owner is just a person).
-  function signalFor(freeCount, knownCount) {
-    if (knownCount === 0) return 'gray'
-    if (freeCount === knownCount) return 'green'
-    if (freeCount > 0) return 'amber'
-    return 'red'
-  }
 
   const today = new Date()
   const [month, setMonth] = useState(today.getMonth())
   const [year, setYear] = useState(today.getFullYear())
   const [inspected, setInspected] = useState(null) // dateStr
-  const [excluded, setExcluded] = useState(() => new Set()) // names left out of the aggregate
-  const [adding, setAdding] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [copiedToken, setCopiedToken] = useState(null)
 
-  // The roster: everyone the owner has added (room_members) plus anyone who has
-  // responded (tapped days or connected a calendar), merged by name. Added-but-not-
-  // yet-responded people still appear so the owner can select them and share a link.
-  const members = useMemo(
-    () => roomMembers.filter(m => primaryRoom && (m.room_id === primaryRoom.id || m.roomId === primaryRoom.id)),
-    [roomMembers, primaryRoom]
-  )
-
-  const people = useMemo(() => {
-    const map = new Map() // name -> { sources:Set, memberId, inviteToken }
-    const ensure = (name) => map.get(name) || map.set(name, { sources: new Set() }).get(name)
-    for (const m of members) {
-      if (!m.name) continue
-      const e = ensure(m.name)
-      e.memberId = m.id
-      e.inviteToken = m.inviteToken || m.invite_token || null
-    }
-    for (const arr of Object.values(dateRequestsByRoom)) {
-      for (const r of arr.filter(isActiveReq)) {
-        if (r.requester_name) ensure(r.requester_name).sources.add('tapped')
-      }
-    }
-    for (const arr of Object.values(sharedAvailByRoom)) {
-      for (const a of arr) {
-        if (a.is_available && a.guest_name) ensure(a.guest_name).sources.add('calendar')
-      }
-    }
-    const guests = [...map.entries()]
-      .map(([name, v]) => ({ name, sources: [...v.sources], memberId: v.memberId, inviteToken: v.inviteToken }))
-      .sort((a, b) => a.name.localeCompare(b.name))
-    // Owner first, always — it's "you" in the overlap.
-    return [{ name: OWNER_LABEL, isOwner: true, sources: [], memberId: null, inviteToken: null }, ...guests]
-  }, [members, dateRequestsByRoom, sharedAvailByRoom])
-
-  const includedOwner = !excluded.has(OWNER_LABEL)
-  const totalPeople = people.length
-  const includedCount = useMemo(() => people.filter(p => !excluded.has(p.name)).length, [people, excluded])
-
-  function togglePerson(name) {
-    setExcluded(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
-  }
-
-  async function handleAddPerson(e) {
-    e?.preventDefault()
-    const name = newName.trim()
-    if (!name || !primaryRoom) return
-    addRoomMember(primaryRoom.id, { name, email: '' })
-    setNewName('')
-    setAdding(false)
-  }
-
-  function copyInvite(token) {
-    if (!token) return
-    navigator.clipboard.writeText(getRoomLink(token))
-    setCopiedToken(token)
-    setTimeout(() => setCopiedToken(null), 2000)
-  }
-
-  // Filtered copies of the room maps with excluded people removed — everything
-  // downstream (signals, best days, inspector) computes from these.
+  // Filtered copies of the room maps with excluded people removed.
   const fReq = useMemo(() => {
     const out = {}
     for (const [rid, arr] of Object.entries(dateRequestsByRoom)) out[rid] = arr.filter(r => !excluded.has(r.requester_name))
@@ -133,7 +59,6 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
       deriveSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules, businessHours).state === 'available')
   }
 
-  // Per-day aggregate for the visible grid.
   const dayInfo = useMemo(() => {
     const map = {}
     for (const { date, inMonth } of grid) {
@@ -152,7 +77,7 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
     [rooms, fReq, fAvail, includedOwner]
   )
 
-  // Best days: scan next 60 days for the highest free-counts where owner is free.
+  // Best days: scan next 60 days for highest free-counts; owner folded in.
   const bestDays = useMemo(() => {
     if (includedKnown === 0) return []
     const out = []
@@ -164,11 +89,9 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
       const freeCount = base.freeCount + (includedOwner && ownerFreeOn(date) ? 1 : 0)
       if (freeCount > 0) out.push({ ds, date, freeCount, knownCount })
     }
-    // Most people free first; break ties by soonest.
     return out.sort((a, b) => b.freeCount - a.freeCount || new Date(a.ds) - new Date(b.ds)).slice(0, 3)
   }, [includedKnown, includedOwner, rooms, fReq, fAvail, slots, calendarEvents, connectedCalendars, prefixRules, businessHours]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Build the combined, date-filtered data the inspector expects (respects the filter).
   const inspectorData = useMemo(() => {
     if (!inspected) return null
     const reqs = []
@@ -181,8 +104,6 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
         if (a.date === inspected && a.is_available) avail.push(a)
       }
     }
-    // Surface the owner ("You") in the inspector too, so it matches the day's
-    // count. Reuses the shared-availability shape the panel already renders.
     if (includedOwner && ownerFreeOn(new Date(inspected + 'T00:00:00'))) {
       avail.push({ date: inspected, is_available: true, guest_name: OWNER_LABEL })
     }
@@ -200,112 +121,8 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
       <div className="lg:flex lg:gap-5 lg:items-start">
       <div className="flex-1 min-w-0">
 
-      {/* People roster — always visible. Add people, then tap to include/exclude
-          them from the calendar below. This is the core "pick people → see when
-          they're free" loop. */}
-      <div className="mb-6 bg-surface-900 border border-white/[0.06] rounded-xl p-4">
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2">
-            <Users size={15} strokeWidth={1.75} className="text-zinc-500" />
-            <span className="text-[13px] font-semibold text-zinc-200">People</span>
-            {totalPeople > 0 && (
-              <span className="text-[12px] text-zinc-600">· {includedCount} of {totalPeople} selected</span>
-            )}
-          </div>
-          {!adding && (
-            <button
-              onClick={() => setAdding(true)}
-              disabled={!primaryRoom}
-              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-accent hover:text-accent/80 transition-colors disabled:opacity-40"
-            >
-              <UserPlus size={14} strokeWidth={2} /> Add person
-            </button>
-          )}
-        </div>
-
-        {adding && (
-          <form onSubmit={handleAddPerson} className="flex items-center gap-2 mb-3">
-            <input
-              autoFocus
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Escape') { setAdding(false); setNewName('') } }}
-              placeholder="Name"
-              className="flex-1 bg-surface-800 border border-white/[0.08] rounded-lg px-3 py-1.5 text-[13px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all"
-            />
-            <button type="submit" disabled={!newName.trim()}
-              className="text-[12px] font-semibold px-3 py-1.5 rounded-lg bg-accent text-white disabled:opacity-40 transition-opacity">
-              Add
-            </button>
-            <button type="button" onClick={() => { setAdding(false); setNewName('') }}
-              className="text-zinc-600 hover:text-zinc-300 transition-colors p-1">
-              <X size={15} />
-            </button>
-          </form>
-        )}
-
-        {totalPeople > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {people.map(({ name, sources, memberId, inviteToken, isOwner }) => {
-              const inc = !excluded.has(name)
-              const viaCalendar = sources.includes('calendar')
-              const responded = sources.length > 0
-              return (
-                <span
-                  key={name}
-                  className={`group inline-flex items-center gap-1.5 text-[12px] font-medium pl-2 pr-1.5 py-1 rounded-full border transition-colors ${
-                    inc
-                      ? 'bg-accent/10 border-accent/25 text-zinc-100'
-                      : 'bg-white/[0.02] border-white/[0.06] text-zinc-600'
-                  }`}
-                >
-                  <button
-                    onClick={() => togglePerson(name)}
-                    title={isOwner ? 'Your calendar' : (responded ? (viaCalendar ? 'Shared via Google Calendar' : 'Tapped their free days') : 'Hasn’t responded yet')}
-                    className="inline-flex items-center gap-1.5"
-                  >
-                    <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 ${inc ? 'bg-accent text-white' : 'border border-white/20'}`}>
-                      {inc && <Check size={9} strokeWidth={3} />}
-                    </span>
-                    {(viaCalendar || isOwner) && <CalendarDays size={11} strokeWidth={2} className={inc ? 'text-accent' : 'text-zinc-600'} />}
-                    <span className={inc ? '' : 'line-through'}>{name}</span>
-                    {isOwner
-                      ? <span className="text-[10px] text-zinc-500">you</span>
-                      : (!responded && <span className="text-[10px] text-zinc-600 italic">invited</span>)}
-                  </button>
-                  {inviteToken && (
-                    <button
-                      onClick={() => copyInvite(inviteToken)}
-                      title="Copy invite link"
-                      className="text-zinc-500 hover:text-accent transition-colors"
-                    >
-                      {copiedToken === inviteToken ? <Check size={11} strokeWidth={3} className="text-green-400" /> : <Copy size={11} strokeWidth={2} />}
-                    </button>
-                  )}
-                  {memberId && (
-                    <button
-                      onClick={() => removeRoomMember(memberId)}
-                      title="Remove person"
-                      className="text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <X size={11} strokeWidth={2.5} />
-                    </button>
-                  )}
-                </span>
-              )
-            })}
-          </div>
-        ) : (
-          !adding && (
-            <p className="text-[13px] text-zinc-500 leading-relaxed">
-              Add the people you’re coordinating with. Each gets a private link to share their free days — then their availability shows up on the calendar below.
-            </p>
-          )
-        )}
-      </div>
-
       {/* Best days */}
-      {includedKnown > 0 && bestDays.length > 0 && (
+      {includedKnown > 0 && bestDays.length > 0 ? (
         <div className="mb-6 bg-surface-800/40 border border-white/[0.06] rounded-xl px-4 py-3">
           <div className="flex items-center gap-2 mb-2.5">
             <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Best days for everyone</span>
@@ -325,7 +142,14 @@ export function ProjectOverview({ production, slots, calendarEvents, connectedCa
             ))}
           </div>
         </div>
-      )}
+      ) : totalPeople <= 1 ? (
+        <div className="mb-6 border border-dashed border-white/10 rounded-xl px-5 py-4">
+          <p className="text-sm font-medium text-zinc-200 mb-0.5">No availability yet</p>
+          <p className="text-xs text-zinc-500 leading-relaxed">
+            Add people in the panel on the left and share their links. As they connect a calendar or tap their free days, the best days for everyone appear here.
+          </p>
+        </div>
+      ) : null}
 
       {/* Legend */}
       <div className="flex items-center gap-x-4 gap-y-2 mb-4 flex-wrap">

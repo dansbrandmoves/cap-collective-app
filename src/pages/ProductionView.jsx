@@ -7,7 +7,12 @@ import { UpgradeModal } from '../components/ui/UpgradeModal'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { ProjectOverview } from '../components/project/ProjectOverview'
+import { PeopleRoster } from '../components/project/PeopleRoster'
+import { useProjectAvailability } from '../hooks/useProjectAvailability'
+import { useProjectPeople } from '../hooks/useProjectPeople'
+import { useResizablePanel, ResizeHandle } from '../hooks/useResizablePanel'
 import { projectSlotsFromConfig } from '../utils/availability'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { supabase } from '../utils/supabase'
 import { Lock, Menu, X, Share2, ExternalLink, Check, Archive, XCircle, Eye, EyeOff, LayoutGrid } from 'lucide-react'
 
@@ -70,6 +75,16 @@ export function ProductionView() {
   const projectConfig = production.availabilityConfig || production.availability_config
   const projectSlots = projectSlotsFromConfig(projectConfig, effectiveSlots)
 
+  // Shared availability data + people roster — one source of truth for both the
+  // left-panel roster and the calendar (which filters by the same selection).
+  const availability = useProjectAvailability(production)
+  const peopleState = useProjectPeople(production, {
+    dateRequestsByRoom: availability.dateRequestsByRoom,
+    sharedAvailByRoom: availability.sharedAvailByRoom,
+  })
+  const sidePanel = useResizablePanel('coordie-project-panel', { defaultWidth: 288, min: 240, max: 420, side: 'right' })
+  const PANEL_RAIL = 48
+
   function openAddRoom() {
     if (!canAddRoom(id)) { setShowUpgrade(true); return }
     setShowNewRoom(true)
@@ -125,13 +140,31 @@ export function ProductionView() {
         />
       )}
 
+      {/* Collapsed rail — click to re-expand (desktop only) */}
+      {sidePanel.collapsed && (
+        <div className="hidden md:flex flex-col items-center w-12 flex-shrink-0 bg-surface-900 border-r border-white/[0.06] py-4">
+          <button
+            onClick={sidePanel.toggle}
+            title="Expand panel"
+            className="text-zinc-500 hover:text-zinc-100 transition-colors p-1.5 rounded-md hover:bg-surface-800"
+          >
+            <PanelLeftOpen size={16} strokeWidth={1.75} />
+          </button>
+        </div>
+      )}
+
       {/* Sidebar */}
-      <div className={`
-        fixed inset-y-0 left-0 z-30 w-72 bg-surface-900 border-r border-white/[0.06] flex flex-col
+      <div
+        style={{ width: sidePanel.collapsed ? undefined : sidePanel.width }}
+        className={`
+        relative fixed inset-y-0 left-0 z-30 w-72 bg-surface-900 border-r border-white/[0.06] flex flex-col
         md:relative md:z-auto md:translate-x-0
-        transition-transform duration-300 ease-ios
+        ${sidePanel.dragging ? '' : 'transition-transform duration-300 ease-ios'}
         ${mobileShowSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        ${sidePanel.collapsed ? 'md:hidden' : ''}
       `}>
+        {/* Desktop drag-resize handle */}
+        <ResizeHandle onPointerDown={sidePanel.startDrag} onDoubleClick={sidePanel.reset} side="right" dragging={sidePanel.dragging} />
         {/* Project header */}
         <div className="px-5 py-5 border-b border-white/[0.05]">
           <div className="flex items-center justify-between mb-3">
@@ -156,14 +189,32 @@ export function ProductionView() {
             <div className="flex items-center gap-0.5 flex-shrink-0">
               <button onClick={() => setShowEditProject(true)} className="text-[11px] text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded px-2 py-1 transition-colors">Edit</button>
               <button onClick={() => setShowDeleteConfirm(true)} className="text-[11px] text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded px-2 py-1 transition-colors">Delete</button>
+              <button onClick={sidePanel.toggle} title="Collapse panel" className="hidden md:flex text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded p-1 transition-colors ml-0.5">
+                <PanelLeftClose size={14} strokeWidth={1.75} />
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Share — one open link for the whole project. People are managed on the
-            calendar itself (the roster), so there's no separate "groups" concept. */}
-        <div className="flex-1 overflow-y-auto px-3 py-4">
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest px-2 mb-2">Share</p>
+        {/* Left panel: People roster leads (pick who → calendar reacts), then a
+            compact Share section. "Who" on the left, "when" on the right. */}
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+          <div className="px-1">
+            <PeopleRoster
+              people={peopleState.people}
+              excluded={peopleState.excluded}
+              totalPeople={peopleState.totalPeople}
+              includedCount={peopleState.includedCount}
+              togglePerson={peopleState.togglePerson}
+              addPerson={peopleState.addPerson}
+              removePerson={peopleState.removePerson}
+              inviteLink={peopleState.inviteLink}
+              canAdd={!!primaryRoom}
+            />
+          </div>
+
+          <div className="border-t border-white/[0.05] pt-4">
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest px-1 mb-2">Share</p>
           {primaryRoom?.openToken ? (
             <>
               <button
@@ -186,13 +237,14 @@ export function ProductionView() {
                 <ExternalLink size={15} strokeWidth={1.75} className="opacity-70" />
                 Preview as guest
               </a>
-              <p className="text-[11px] text-zinc-600 leading-relaxed px-2 mt-3">
-                Anyone with this link can add their availability. To invite specific people, use “Add person” on the calendar — each gets their own link.
+              <p className="text-[11px] text-zinc-600 leading-relaxed px-1 mt-3">
+                Anyone with this link can add their availability. To invite specific people, use “Add person” above — each gets their own link.
               </p>
             </>
           ) : (
-            <p className="text-[11px] text-zinc-600 px-2">No shareable link yet.</p>
+            <p className="text-[11px] text-zinc-600 px-1">No shareable link yet.</p>
           )}
+          </div>
         </div>
 
         {/* Private notes */}
@@ -234,7 +286,7 @@ export function ProductionView() {
             className="flex items-center gap-1.5 text-[12px] text-zinc-400 hover:text-zinc-100 transition-colors flex-shrink-0"
           >
             <Menu size={15} />
-            <span>Details</span>
+            <span>People{peopleState.totalPeople > 1 ? ` · ${peopleState.includedCount}/${peopleState.totalPeople}` : ''}</span>
           </button>
         </div>
 
@@ -245,6 +297,12 @@ export function ProductionView() {
           connectedCalendars={connectedCalendars}
           prefixRules={prefixRules}
           businessHours={projectConfig?.businessHours || businessHours}
+          loading={availability.loading}
+          dateRequestsByRoom={availability.dateRequestsByRoom}
+          sharedAvailByRoom={availability.sharedAvailByRoom}
+          excluded={peopleState.excluded}
+          includedOwner={peopleState.includedOwner}
+          totalPeople={peopleState.totalPeople}
         />
       </div>
 

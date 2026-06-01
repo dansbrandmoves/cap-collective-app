@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { useResizablePanel, ResizeHandle } from '../../hooks/useResizablePanel'
-import { LayoutGrid, CalendarCheck, CalendarDays, Settings, LogOut, Zap, CreditCard, Shield, Activity, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { LayoutGrid, CalendarCheck, CalendarDays, Settings, LogOut, CreditCard, Shield, Activity, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 // Primary destinations live at the top ("what you do"); configuration/utility is
 // pinned to the bottom ("settings"). Keeps the nav uncluttered and scannable.
@@ -108,34 +108,25 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
             </div>
 
             <div className="pt-2 mt-2 border-t border-surface-800 space-y-0.5">
-              {!isProPlan && (
-                <NavLink
-                  to="/billing"
-                  onClick={onMobileClose}
-                  title={railed ? 'Upgrade to Pro' : undefined}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-accent hover:bg-accent/10 transition-colors ${railed ? 'justify-center' : ''}`}
-                >
-                  <Zap size={16} strokeWidth={1.75} className="flex-shrink-0" />
-                  {!railed && <><span className="flex-1">Upgrade to Pro</span>
-                  <span className="text-[10px] font-bold bg-accent/15 border border-accent/25 text-accent px-1.5 py-0.5 rounded-full">$10/mo</span></>}
-                </NavLink>
-              )}
-
-              {isProPlan && (
-                <NavLink
-                  to="/billing"
-                  onClick={onMobileClose}
-                  title={railed ? 'Billing' : undefined}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${railed ? 'justify-center' : ''} ${
-                      isActive ? 'bg-surface-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
-                    }`
-                  }
-                >
-                  <CreditCard size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
-                  {!railed && <span>Billing</span>}
-                </NavLink>
-              )}
+              {/* Calm Billing link for everyone — the upgrade pitch surfaces
+                  contextually via UpgradeModal when a free limit is actually hit,
+                  not as a persistent nag in the nav. */}
+              <NavLink
+                to="/billing"
+                onClick={onMobileClose}
+                title={railed ? 'Billing' : undefined}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${railed ? 'justify-center' : ''} ${
+                    isActive ? 'bg-surface-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
+                  }`
+                }
+              >
+                <CreditCard size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
+                {!railed && <span className="flex-1">Billing</span>}
+                {!railed && !isProPlan && (
+                  <span className="text-[10px] font-medium text-zinc-600">Free</span>
+                )}
+              </NavLink>
 
               {isAdmin && (
                 <NavLink

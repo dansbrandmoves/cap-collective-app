@@ -39,6 +39,17 @@ function generateTimeSlots(start, end, duration) {
   return slots
 }
 
+// Time-of-day windows — same language as the project view. Filters the slots.
+const WINDOWS = {
+  any:       { label: 'Any time',  start: 0,        end: 24 * 60 },
+  morning:   { label: 'Morning',   start: 5 * 60,   end: 12 * 60 },
+  afternoon: { label: 'Afternoon', start: 12 * 60,  end: 17 * 60 },
+  evening:   { label: 'Evening',   start: 17 * 60,  end: 23 * 60 },
+}
+const WINDOW_ORDER = ['any', 'morning', 'afternoon', 'evening']
+const toMin = (t) => { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + m }
+const slotInWindow = (slot, w) => { const s = toMin(slot.startTime); return s >= w.start && s < w.end }
+
 function formatDate(ds) {
   return new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 }
@@ -275,42 +286,35 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
 
   if (!configured) return null
 
-  // Connected — compact chip
+  // Connected — compact chip inline
   if (guestEvents !== null) {
     return (
-      <div className="flex items-center gap-2 mt-4">
-        <div className="flex items-center gap-1.5 text-[11px] text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5">
-          <CheckCircle2 size={11} strokeWidth={2} />
-          Your calendar connected
-        </div>
-        <button onClick={onDisconnect} className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
+      <div className="inline-flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-3 py-1.5">
+          <CheckCircle2 size={12} strokeWidth={2} />
+          Calendar connected
+        </span>
+        <button onClick={onDisconnect} className="text-[12px] text-zinc-500 hover:text-zinc-300 transition-colors">
           Disconnect
         </button>
       </div>
     )
   }
 
-  // Not connected — invite to connect
+  // Not connected — one compact CTA (it sits in the work area above the calendar)
   return (
-    <>
-      <div className="border border-dashed border-white/10 rounded-xl px-4 py-3 mt-4">
-        <div className="flex items-center gap-3">
-          <CalendarDays size={15} strokeWidth={1.75} className="text-zinc-500 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-zinc-300">Spot your free time at a glance</p>
-            <p className="text-[11px] text-zinc-500 leading-relaxed">We'll dim slots where you're already busy. Free/busy only — never event details, nothing leaves your browser.</p>
-          </div>
-        </div>
-        <button
-          onClick={() => tokenClientRef.current?.requestAccessToken()}
-          disabled={!gisReady || loading}
-          className="mt-2 w-full text-xs font-medium text-zinc-300 hover:text-zinc-100 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
-        >
-          {loading ? 'Connecting...' : 'Connect Calendar'}
-        </button>
-        {error && <p className="text-[11px] text-red-400 mt-1.5">{error}</p>}
-      </div>
-    </>
+    <span className="inline-flex items-center gap-2">
+      <button
+        onClick={() => tokenClientRef.current?.requestAccessToken()}
+        disabled={!gisReady || loading}
+        title="Free/busy only — never event details, nothing leaves your browser."
+        className="inline-flex items-center gap-1.5 text-[12px] font-medium text-zinc-200 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-full px-3.5 py-1.5 transition-colors disabled:opacity-50"
+      >
+        <CalendarDays size={13} strokeWidth={1.75} className="text-zinc-400" />
+        {loading ? 'Connecting…' : 'Connect your calendar'}
+      </button>
+      {error && <span className="text-[11px] text-red-400">{error}</span>}
+    </span>
   )
 }
 
@@ -333,6 +337,7 @@ export function BookingPageView() {
   const [ownerLogoDark, setOwnerLogoDark] = useState(true)
   const [ownerGuestCalendarEnabled, setOwnerGuestCalendarEnabled] = useState(true)
   const [ownerTheme, setOwnerTheme] = useState(null) // 'light' | 'dark' — the owner's app theme
+  const [windowKey, setWindowKey] = useState('any')   // time-of-day slot filter
 
   // Render the page in the owner's chosen theme (their branded page). An embed
   // ?theme= param overrides; default light when nothing is set.
@@ -523,208 +528,105 @@ export function BookingPageView() {
   const step = selectedSlot ? 'confirm' : selectedDate ? 'time' : 'date'
 
   return (
-    <div className="bg-surface-950 ambient-glow relative">
+    <div className="min-h-screen bg-surface-950 ambient-glow">
+      <div className="mx-auto max-w-[940px] px-5 sm:px-8 py-8 sm:py-12 safe-top safe-bottom">
 
-      {/* ═══ DESKTOP (md+): asymmetric full-bleed ═══ */}
-      <div className="hidden md:grid md:grid-cols-[minmax(0,440px)_1fr] lg:grid-cols-[minmax(0,520px)_1fr] h-screen overflow-hidden">
-
-        {/* LEFT — brand canvas */}
-        <aside className="flex flex-col justify-between px-10 lg:px-16 py-12 lg:py-20 border-r border-white/[0.06] relative overflow-y-auto">
-          {/* Subtle accent line */}
-          <div className="absolute top-0 left-0 w-px h-32 bg-gradient-to-b from-accent/50 to-transparent" />
-
-          <div>
-            {!hideLogo && (
-              <div className="mb-10">
-                {displayLogo ? (
-                  <div className={`rounded-xl px-3 py-2 inline-flex ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
-                    <img src={displayLogo} alt="" className="max-h-7 max-w-[120px] object-contain" />
-                  </div>
-                ) : (
-                  <img src="/coordie-logo.svg" alt="Coordie" className="h-6" style={{ filter: 'invert(1)' }} />
-                )}
-              </div>
-            )}
-            <h1 className={`text-3xl lg:text-[40px] font-semibold text-zinc-50 leading-[1.1] tracking-tight mb-4 ${hideLogo ? 'mt-2' : ''}`}>
-              {page.name}
-            </h1>
-            {page.description && !hideDesc && (
-              <p className="text-base text-zinc-400 leading-relaxed mb-8 max-w-md">{page.description}</p>
-            )}
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/[0.05] border border-white/[0.06] px-3.5 py-1.5 text-sm text-zinc-300">
-              <Clock size={13} strokeWidth={1.75} className="text-zinc-500" />
-              {page.duration_minutes} minutes
-            </div>
-          </div>
-
-          <div className="space-y-6 pt-10">
-            {ownerGuestCalendarEnabled && <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />}
-            <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
-              <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
-              Powered by Coordie
-            </a>
-          </div>
-        </aside>
-
-        {/* RIGHT — booking flow: full calendar → slot picker slides in */}
-        <main className="flex items-center justify-center px-8 lg:px-12 py-10 overflow-y-auto">
-          <AnimatePresence mode="wait">
-            {step === 'date' && (
-              <motion.div
-                key="calendar"
-                className="w-full max-w-[920px]"
-                initial={{ opacity: 0, x: 28 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -28 }}
-                transition={{ duration: 0.28, ease: IOS_EASE }}
-              >
-                <MonthCalendar
-                  availableDays={page.available_days || [1, 2, 3, 4, 5]}
-                  selectedDate={selectedDate}
-                  onSelectDate={handleDateSelect}
-                  guestFreeDates={guestFreeDates}
-                />
-              </motion.div>
-            )}
-
-            {step === 'time' && (
-              <motion.div
-                key="time"
-                className="w-full max-w-[420px]"
-                initial={{ opacity: 0, x: 28 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -28 }}
-                transition={{ duration: 0.28, ease: IOS_EASE }}
-              >
-                <div className="flex items-center gap-3 mb-8">
-                  <button
-                    onClick={() => { setSelectedDate(null); setSelectedSlot(null) }}
-                    className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2"
-                  >
-                    <ChevronLeft size={18} strokeWidth={1.75} />
-                  </button>
-                  <div>
-                    <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{lastDateHeaderRef.current?.weekday}</p>
-                    <p className="text-2xl font-semibold text-zinc-100 tracking-tight">{lastDateHeaderRef.current?.day}</p>
-                  </div>
-                </div>
-                <TimeSlotPicker
-                  slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} guestEvents={guestEvents}
-                  selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect}
-                />
-              </motion.div>
-            )}
-
-            {step === 'confirm' && (
-              <motion.div
-                key="confirm"
-                className="w-full max-w-[460px]"
-                initial={{ opacity: 0, x: 28 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -28 }}
-                transition={{ duration: 0.28, ease: IOS_EASE }}
-              >
-                <div className="flex items-center gap-3 mb-8">
-                  <button
-                    onClick={() => setSelectedSlot(null)}
-                    className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2"
-                  >
-                    <ChevronLeft size={18} strokeWidth={1.75} />
-                  </button>
-                  <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Your details</p>
-                </div>
-                <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={lastSlotRef.current}
-                  onConfirm={handleConfirm} submitting={submitting} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </main>
-      </div>
-
-      {/* ═══ MOBILE: stacked full-bleed ═══ */}
-      <div className="md:hidden min-h-screen flex flex-col">
-        {/* Header */}
-        <header className="px-6 pt-6 safe-top pb-6 relative">
-          <div className="absolute top-0 left-0 w-px h-16 bg-gradient-to-b from-accent/50 to-transparent" />
+        {/* Minimal header — small logo + title + duration on one line */}
+        <header className="flex items-center gap-3 mb-8">
           {!hideLogo && (
-            <div className="mb-5">
-              {displayLogo ? (
-                <div className={`rounded-xl px-2.5 py-1.5 inline-flex ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
-                  <img src={displayLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
-                </div>
-              ) : (
-                <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
-              )}
-            </div>
+            displayLogo ? (
+              <div className={`rounded-lg px-2 py-1 inline-flex flex-shrink-0 ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e] border border-white/10'}`}>
+                <img src={displayLogo} alt="" className="max-h-5 max-w-[84px] object-contain" />
+              </div>
+            ) : (
+              <img src="/coordie-logo.svg" alt="Coordie" className="h-5 flex-shrink-0" style={{ filter: 'invert(1)' }} />
+            )
           )}
-          <h1 className="text-[26px] font-semibold text-zinc-50 leading-[1.15] tracking-tight mb-2">{page.name}</h1>
-          {page.description && !hideDesc && <p className="text-[15px] text-zinc-400 leading-relaxed mb-4">{page.description}</p>}
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] border border-white/[0.06] px-3 py-1 text-xs text-zinc-300">
-            <Clock size={11} strokeWidth={1.75} className="text-zinc-500" />
-            {page.duration_minutes} minutes
+          <div className="min-w-0">
+            <h1 className="text-[19px] sm:text-[22px] font-semibold text-zinc-50 tracking-tight leading-tight truncate">{page.name}</h1>
+            <p className="text-[13px] text-zinc-500 truncate">
+              {page.duration_minutes} min{page.description && !hideDesc ? ` · ${page.description}` : ''}
+            </p>
           </div>
         </header>
 
-        <div className="border-t border-white/[0.05] mx-6" />
+        <AnimatePresence mode="wait">
+          {step === 'date' && (
+            <motion.div key="date"
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.24, ease: IOS_EASE }}>
 
-        {/* Steps */}
-        <div className="flex-1 px-6 py-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={mobileStep}
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              transition={{ duration: 0.22, ease: IOS_EASE }}
-            >
-              {mobileStep === 1 && (
-                <MonthCalendar
-                  availableDays={page.available_days || [1, 2, 3, 4, 5]}
-                  selectedDate={selectedDate}
-                  onSelectDate={handleDateSelect}
-                />
-              )}
-
-              {mobileStep === 2 && (
-                <div>
-                  <div className="flex items-center gap-3 mb-6">
-                    <button onClick={() => setMobileStep(1)}
-                      className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2">
-                      <ChevronLeft size={18} strokeWidth={1.75} />
+              {/* Thin work area above the calendar: time-of-day filter + connect calendar */}
+              <div className="flex flex-wrap items-center gap-2 mb-5">
+                <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">
+                  {WINDOW_ORDER.map(key => (
+                    <button key={key} onClick={() => setWindowKey(key)}
+                      className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                        windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
+                      }`}>
+                      {WINDOWS[key].label}
                     </button>
-                    <div>
-                      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{lastDateHeaderRef.current?.weekday}</p>
-                      <p className="text-xl font-semibold text-zinc-100 tracking-tight">{lastDateHeaderRef.current?.day}</p>
-                    </div>
-                  </div>
-                  <TimeSlotPicker slots={timeSlots} takenSlots={takenSlots} ownerEvents={ownerEvents} guestEvents={guestEvents} selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect} />
+                  ))}
                 </div>
-              )}
+                {ownerGuestCalendarEnabled && (
+                  <>
+                    <span className="text-zinc-700 mx-0.5 hidden sm:inline">·</span>
+                    <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
+                  </>
+                )}
+              </div>
 
-              {mobileStep === 3 && (
-                <div>
-                  <div className="flex items-center gap-3 mb-6">
-                    <button onClick={() => { setSelectedSlot(null); setMobileStep(2) }}
-                      className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2">
-                      <ChevronLeft size={18} strokeWidth={1.75} />
-                    </button>
-                    <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Your details</p>
-                  </div>
-                  <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={lastSlotRef.current}
-                    onConfirm={handleConfirm} submitting={submitting} />
-                </div>
-              )}
+              <MonthCalendar
+                availableDays={page.available_days || [1, 2, 3, 4, 5]}
+                selectedDate={selectedDate}
+                onSelectDate={handleDateSelect}
+                guestFreeDates={guestFreeDates}
+              />
             </motion.div>
-          </AnimatePresence>
-        </div>
-
-        <footer className="px-6 pb-6 safe-bottom space-y-4">
-          {ownerGuestCalendarEnabled && (
-            <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
           )}
+
+          {step === 'time' && (
+            <motion.div key="time" className="max-w-[460px]"
+              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.24, ease: IOS_EASE }}>
+              <div className="flex items-center gap-3 mb-6">
+                <button onClick={() => { setSelectedDate(null); setSelectedSlot(null) }}
+                  className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2">
+                  <ChevronLeft size={18} strokeWidth={1.75} />
+                </button>
+                <div>
+                  <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{lastDateHeaderRef.current?.weekday}</p>
+                  <p className="text-2xl font-semibold text-zinc-100 tracking-tight">{lastDateHeaderRef.current?.day}</p>
+                </div>
+              </div>
+              <TimeSlotPicker
+                slots={timeSlots.filter(s => slotInWindow(s, WINDOWS[windowKey]))}
+                takenSlots={takenSlots} ownerEvents={ownerEvents} guestEvents={guestEvents}
+                selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect}
+              />
+            </motion.div>
+          )}
+
+          {step === 'confirm' && (
+            <motion.div key="confirm" className="max-w-[480px]"
+              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.24, ease: IOS_EASE }}>
+              <div className="flex items-center gap-3 mb-6">
+                <button onClick={() => setSelectedSlot(null)}
+                  className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2">
+                  <ChevronLeft size={18} strokeWidth={1.75} />
+                </button>
+                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Your details</p>
+              </div>
+              <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={lastSlotRef.current}
+                onConfirm={handleConfirm} submitting={submitting} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <footer className="mt-10">
           <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
+            className="inline-flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
             <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
             Powered by Coordie
           </a>
@@ -733,3 +635,4 @@ export function BookingPageView() {
     </div>
   )
 }
+

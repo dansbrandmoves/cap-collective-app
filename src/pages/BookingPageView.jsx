@@ -531,20 +531,20 @@ export function BookingPageView() {
     <div className="min-h-screen bg-surface-950 ambient-glow">
       <div className="mx-auto max-w-[940px] px-5 sm:px-8 py-8 sm:py-12 safe-top safe-bottom">
 
-        {/* Minimal header — centered: logo, title, duration */}
-        <header className="flex flex-col items-center text-center gap-3 mb-8">
+        {/* Header — one tight object (logo + title/time), centered in the column */}
+        <header className="flex items-center justify-center gap-3 mb-8">
           {!hideLogo && (
             displayLogo ? (
-              <div className={`rounded-lg px-2.5 py-1.5 inline-flex ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e] border border-white/10'}`}>
-                <img src={displayLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
+              <div className={`rounded-lg px-2.5 py-1.5 inline-flex flex-shrink-0 ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e] border border-white/10'}`}>
+                <img src={displayLogo} alt="" className="max-h-7 max-w-[110px] object-contain" />
               </div>
             ) : (
-              <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
+              <img src="/coordie-logo.svg" alt="Coordie" className="h-6 flex-shrink-0" style={{ filter: 'invert(1)' }} />
             )
           )}
-          <div>
-            <h1 className="text-[22px] sm:text-[26px] font-semibold text-zinc-50 tracking-tight leading-tight">{page.name}</h1>
-            <p className="text-[13px] text-zinc-500 mt-1">
+          <div className="text-left min-w-0">
+            <h1 className="text-[20px] sm:text-[23px] font-semibold text-zinc-50 tracking-tight leading-tight truncate">{page.name}</h1>
+            <p className="text-[13px] text-zinc-500 truncate">
               {page.duration_minutes} min{page.description && !hideDesc ? ` · ${page.description}` : ''}
             </p>
           </div>
@@ -556,10 +556,13 @@ export function BookingPageView() {
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.24, ease: IOS_EASE }}>
 
-              {/* Work area above the calendar — labeled so new visitors get why it's here */}
+              {/* Work area above the calendar — north-star value framing + why it's here */}
               <div className="text-center mb-6">
-                <p className="text-[12px] text-zinc-500 mb-2.5">
-                  Prefer a time of day?{ownerGuestCalendarEnabled ? ' Connect your calendar to spot your free days.' : ''}
+                <h2 className="text-[20px] sm:text-[24px] font-semibold text-zinc-50 tracking-tight mb-1">When are we both free?</h2>
+                <p className="text-[12px] text-zinc-500 mb-3">
+                  {ownerGuestCalendarEnabled
+                    ? 'Connect your calendar to see where you overlap — or pick a time of day.'
+                    : 'Pick a time of day to narrow it down.'}
                 </p>
                 <div className="inline-flex flex-wrap items-center justify-center gap-2">
                   <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">

@@ -676,11 +676,11 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
         onClick={onClose}
       />
 
-      {/* Panel: bottom sheet on small screens; on lg+ a sticky in-flow right column so
-          the calendar shrinks beside it (split layout) — it never covers the workspace. */}
+      {/* Panel: bottom sheet on small screens; on lg+ a real flush sidebar — full
+          height, anchored to the right edge with a left divider (no floating card). */}
       <div className="bg-surface-900 flex flex-col safe-bottom
         fixed inset-x-0 bottom-0 z-50 max-h-[88vh] rounded-t-[20px] border-t border-white/[0.06] shadow-[0_-12px_40px_-8px_rgb(0_0_0/0.6)] animate-slideUp
-        lg:sticky lg:inset-auto lg:top-4 lg:z-auto lg:max-h-[calc(100vh-2rem)] lg:w-[360px] lg:shrink-0 lg:self-start lg:rounded-2xl lg:border lg:shadow-lift lg:animate-none">
+        lg:sticky lg:inset-auto lg:top-0 lg:z-auto lg:h-screen lg:max-h-screen lg:w-[380px] lg:shrink-0 lg:self-start lg:rounded-none lg:border-0 lg:border-l lg:border-white/[0.07] lg:shadow-none lg:animate-none">
 
         {/* Mobile grab handle */}
         <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">

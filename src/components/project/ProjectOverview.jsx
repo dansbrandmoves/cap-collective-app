@@ -187,9 +187,9 @@ export function ProjectOverview({
               const allFree = freeCount === knownCount
               return (
                 <button key={ds} onClick={() => setInspected(ds)}
-                  className={`inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-[12px] font-medium border transition-all duration-150 active:scale-[0.98] ${
+                  className={`inline-flex items-center gap-1.5 rounded-full pl-2.5 pr-3 py-1.5 text-[12px] font-medium border transition-all duration-150 active:scale-[0.98] text-zinc-100 ${
                     allFree
-                      ? 'bg-green-500/[0.10] border-green-500/25 text-green-300 hover:bg-green-500/[0.16]'
+                      ? 'bg-green-500/[0.10] border-green-500/25 hover:bg-green-500/[0.16]'
                       : 'border-white/[0.08] text-zinc-300 hover:bg-white/[0.04] hover:border-white/[0.16]'
                   }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${allFree ? 'bg-green-400' : 'bg-zinc-500'}`} />
@@ -252,16 +252,14 @@ export function ProjectOverview({
                 disabled={!inMonth}
                 onClick={() => inMonth && setInspected(ds)}
                 title={hasData ? `${info.freeCount} of ${info.knownCount} free` : undefined}
-                className={`relative aspect-square border-r border-b border-white/[0.04] flex items-start justify-start p-1.5 sm:p-2 transition-colors ${
-                  !inMonth ? 'pointer-events-none' : 'hover:bg-white/[0.03] cursor-pointer'
-                } ${loading ? 'opacity-60' : ''}`}
+                className={`relative min-h-[64px] sm:min-h-[84px] border-r border-b border-white/[0.04] flex items-start justify-start p-2 sm:p-2.5 transition-colors ${
+                  !inMonth ? 'pointer-events-none' :
+                  allFree ? 'bg-green-500/[0.09] hover:bg-green-500/[0.15] cursor-pointer' :
+                  'hover:bg-white/[0.03] cursor-pointer'
+                } ${isToday && inMonth ? 'ring-1 ring-inset ring-accent/40' : ''} ${loading ? 'opacity-60' : ''}`}
               >
                 {inMonth && (
-                  <span className={`flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full text-[13px] sm:text-[15px] font-medium transition-colors ${
-                    allFree ? 'bg-green-500/85 text-white' :
-                    isToday ? 'bg-accent text-white' :
-                    'text-zinc-200'
-                  }`}>
+                  <span className={`text-[13px] sm:text-[15px] font-medium ${isToday ? 'text-accent' : 'text-zinc-200'}`}>
                     {date.getDate()}
                   </span>
                 )}

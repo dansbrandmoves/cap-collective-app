@@ -14,13 +14,13 @@ import { useResizablePanel, ResizeHandle } from '../hooks/useResizablePanel'
 import { projectSlotsFromConfig } from '../utils/availability'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { supabase } from '../utils/supabase'
-import { Lock, Menu, X, Share2, ExternalLink, Check, Archive, XCircle, Eye, EyeOff, LayoutGrid } from 'lucide-react'
+import { Menu, X, Share2, ExternalLink, Check, Archive, XCircle, Eye, EyeOff } from 'lucide-react'
 
 export function ProductionView() {
   const { id } = useParams()
   const navigate = useNavigate()
   const {
-    getProduction, updateProduction, updateProductionNotes, deleteProduction,
+    getProduction, updateProduction, deleteProduction,
     createRoom, updateRoomName, deleteRoom, getRoomLink,
     effectiveSlots, calendarEvents, connectedCalendars, availabilityRules,
     prefixRules, slotStates, canAddRoom, FREE_ROOM_LIMIT, pendingRequestCounts,
@@ -33,8 +33,6 @@ export function ProductionView() {
   const [mobileShowSidebar, setMobileShowSidebar] = useState(false)
   const [showNewRoom, setShowNewRoom] = useState(false)
   const [newRoomName, setNewRoomName] = useState('')
-  const [editingNotes, setEditingNotes] = useState(false)
-  const [notesValue, setNotesValue] = useState('')
   const [showEditProject, setShowEditProject] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [renamingRoomId, setRenamingRoomId] = useState(null)
@@ -100,10 +98,6 @@ export function ProductionView() {
     setMobileShowSidebar(false)
   }
 
-  function handleNotesBlur() {
-    updateProductionNotes(id, notesValue)
-    setEditingNotes(false)
-  }
 
   async function handleDeleteProject() {
     await deleteProduction(id)

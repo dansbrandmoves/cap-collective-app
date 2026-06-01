@@ -558,39 +558,20 @@ export function BookingPageView() {
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.24, ease: IOS_EASE }}>
 
-              {/* Above the calendar — two calm parts, stacked & centered:
-                  (1) optional connect-calendar power-up, (2) time-of-day filter. */}
-              <div className="text-center mb-6">
-                <p className="text-[15px] font-semibold text-zinc-100 mb-3">When are we both free?</p>
-
-                {/* Part 1 — connect (optional power-up) */}
-                {ownerGuestCalendarEnabled && (
-                  <div className="mb-4">
-                    {guestEvents === null && (
-                      <p className="text-[12px] text-zinc-500 mb-2 max-w-xs mx-auto leading-relaxed">
-                        Connect your calendar to get recommended times you&rsquo;re both free.
-                      </p>
-                    )}
-                    <div className="flex justify-center">
-                      <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Part 2 — time-of-day filter (always filters) */}
-                <div className="flex justify-center">
-                  <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">
-                    {WINDOW_ORDER.map(key => (
-                      <button key={key} onClick={() => setWindowKey(key)}
-                        className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                          windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
-                        }`}>
-                        {WINDOWS[key].label}
-                      </button>
-                    ))}
+              {/* Above the calendar: just the optional connect-calendar power-up.
+                  (Time-of-day filtering lives on the slot picker, where it acts.) */}
+              {ownerGuestCalendarEnabled && (
+                <div className="text-center mb-6">
+                  {guestEvents === null && (
+                    <p className="text-[12px] text-zinc-500 mb-2 max-w-xs mx-auto leading-relaxed">
+                      Connect your calendar to get recommended times you&rsquo;re both free.
+                    </p>
+                  )}
+                  <div className="flex justify-center">
+                    <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
                   </div>
                 </div>
-              </div>
+              )}
 
               <MonthCalendar
                 availableDays={page.available_days || [1, 2, 3, 4, 5]}

@@ -582,8 +582,7 @@ export function BookingPageView() {
 
                 {ownerGuestCalendarEnabled && guestEvents === null && (
                   <p className="text-[12px] text-zinc-500 max-w-md mx-auto leading-relaxed">
-                    Connect your calendar to highlight when we&rsquo;re both free.
-                    <span className="block text-zinc-600 mt-0.5">Only your availability — free or busy — is shared.</span>
+                    Connect calendar to get recommended time blocks.
                   </p>
                 )}
               </div>

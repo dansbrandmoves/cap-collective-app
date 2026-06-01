@@ -421,6 +421,17 @@ export function BookingPageView() {
     return result
   }, [guestEvents, timeSlots, windowKey])
 
+  // Once connected: the soonest days you're both free (in the chosen window),
+  // surfaced as quick "top picks" — like the project view's best days.
+  const topPicks = useMemo(() => {
+    if (!guestFreeDates || !page) return []
+    const availDays = page.available_days || [1, 2, 3, 4, 5]
+    return [...guestFreeDates]
+      .filter(ds => availDays.includes(new Date(ds + 'T00:00:00').getDay()))
+      .sort()
+      .slice(0, 3)
+  }, [guestFreeDates, page])
+
   function handleDateSelect(ds) {
     setSelectedDate(ds)
     setSelectedSlot(null)
@@ -527,72 +538,101 @@ export function BookingPageView() {
   if (dateHeader !== null) lastDateHeaderRef.current = dateHeader
   const step = selectedSlot ? 'confirm' : selectedDate ? 'time' : 'date'
 
+  // Title block (logo + name + duration), reused: left-aligned in the date step's
+  // left column, centered on the time/confirm steps.
+  const titleBlock = (
+    <div className="flex items-center gap-3">
+      {!hideLogo && (
+        displayLogo ? (
+          <div className={`rounded-lg px-2.5 py-1.5 inline-flex flex-shrink-0 ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e] border border-white/10'}`}>
+            <img src={displayLogo} alt="" className="max-h-7 max-w-[110px] object-contain" />
+          </div>
+        ) : (
+          <img src="/coordie-logo.svg" alt="Coordie" className="h-6 flex-shrink-0" style={{ filter: 'invert(1)' }} />
+        )
+      )}
+      <div className="text-left min-w-0">
+        <h1 className="text-[20px] sm:text-[23px] font-semibold text-zinc-50 tracking-tight leading-tight">{page.name}</h1>
+        <p className="text-[13px] text-zinc-500">
+          {page.duration_minutes} min{page.description && !hideDesc ? ` · ${page.description}` : ''}
+        </p>
+      </div>
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-surface-950 ambient-glow">
       <div className="mx-auto max-w-[940px] px-5 sm:px-8 py-8 sm:py-12 safe-top safe-bottom">
 
-        {/* Header — one tight object (logo + title/time), centered in the column */}
-        <header className="flex items-center justify-center gap-3 mb-8">
-          {!hideLogo && (
-            displayLogo ? (
-              <div className={`rounded-lg px-2.5 py-1.5 inline-flex flex-shrink-0 ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e] border border-white/10'}`}>
-                <img src={displayLogo} alt="" className="max-h-7 max-w-[110px] object-contain" />
-              </div>
-            ) : (
-              <img src="/coordie-logo.svg" alt="Coordie" className="h-6 flex-shrink-0" style={{ filter: 'invert(1)' }} />
-            )
-          )}
-          <div className="text-left min-w-0">
-            <h1 className="text-[20px] sm:text-[23px] font-semibold text-zinc-50 tracking-tight leading-tight truncate">{page.name}</h1>
-            <p className="text-[13px] text-zinc-500 truncate">
-              {page.duration_minutes} min{page.description && !hideDesc ? ` · ${page.description}` : ''}
-            </p>
-          </div>
-        </header>
+        {/* On the slot/confirm steps the title sits centered up top; on the date
+            step it lives in the left column (below). */}
+        {step !== 'date' && <header className="flex items-center justify-center gap-3 mb-8">{titleBlock}</header>}
 
         <AnimatePresence mode="wait">
           {step === 'date' && (
             <motion.div key="date"
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.24, ease: IOS_EASE }}>
+              transition={{ duration: 0.24, ease: IOS_EASE }}
+              className="md:flex md:gap-8 lg:gap-12 md:items-start">
 
-              {/* Above the calendar: just the optional connect-calendar power-up.
-                  (Time-of-day filtering lives on the slot picker, where it acts.) */}
-              {ownerGuestCalendarEnabled && (
-                <div className="text-center mb-6">
-                  {guestEvents === null && (
-                    <p className="text-[12px] text-zinc-500 mb-2 max-w-xs mx-auto leading-relaxed">
-                      Connect your calendar to get recommended times you&rsquo;re both free.
-                    </p>
-                  )}
-                  <div className="flex justify-center">
+              {/* LEFT — title + controls + top picks, left-aligned */}
+              <div className="md:w-[300px] md:flex-shrink-0 mb-8 md:mb-0">
+                {titleBlock}
+
+                {ownerGuestCalendarEnabled && (
+                  <div className="mt-6">
+                    {guestEvents === null && (
+                      <p className="text-[12px] text-zinc-500 mb-2 leading-relaxed">
+                        Connect your calendar to get recommended times you&rsquo;re both free.
+                      </p>
+                    )}
                     <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
+
+                    {guestEvents !== null && (
+                      <>
+                        <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5 mt-4">
+                          {WINDOW_ORDER.map(key => (
+                            <button key={key} onClick={() => setWindowKey(key)}
+                              className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all duration-150 ${
+                                windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
+                              }`}>
+                              {WINDOWS[key].label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {topPicks.length > 0 && (
+                          <div className="mt-5">
+                            <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Top picks</p>
+                            <div className="space-y-1.5">
+                              {topPicks.map(ds => {
+                                const d = new Date(ds + 'T00:00:00')
+                                return (
+                                  <button key={ds} onClick={() => handleDateSelect(ds)}
+                                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-green-500/25 bg-green-500/[0.08] hover:bg-green-500/[0.14] text-left transition-colors">
+                                    <span className="text-[13px] font-medium text-zinc-100">{d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
+                )}
+              </div>
 
-                  {/* Connected → filter the recommended days by time of day (dots react) */}
-                  {guestEvents !== null && (
-                    <div className="flex justify-center mt-3">
-                      <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">
-                        {WINDOW_ORDER.map(key => (
-                          <button key={key} onClick={() => setWindowKey(key)}
-                            className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                              windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
-                            }`}>
-                            {WINDOWS[key].label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <MonthCalendar
-                availableDays={page.available_days || [1, 2, 3, 4, 5]}
-                selectedDate={selectedDate}
-                onSelectDate={handleDateSelect}
-                guestFreeDates={guestFreeDates}
-              />
+              {/* RIGHT — calendar */}
+              <div className="flex-1 min-w-0">
+                <MonthCalendar
+                  availableDays={page.available_days || [1, 2, 3, 4, 5]}
+                  selectedDate={selectedDate}
+                  onSelectDate={handleDateSelect}
+                  guestFreeDates={guestFreeDates}
+                />
+              </div>
             </motion.div>
           )}
 

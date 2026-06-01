@@ -13,12 +13,15 @@
 import { supabase } from './supabase'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
-// GUESTS only share availability → read-only is all they need (and a gentler consent).
+// Both owner and guest connect request ONLY read-only for now. In-app event
+// creation (calendar.events / OWNER_SCOPES) is parked until we submit Google
+// re-verification — until then, "Schedule meeting" opens a prefilled Google
+// Calendar tab (no write scope needed). Flip startGoogleAuth to OWNER_SCOPES +
+// route the inspector button to createCalendarEvent when verification clears.
 const GUEST_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
-// OWNERS also create meetings in-app → add the events (write) scope. Both are
-// "sensitive" (not restricted) scopes; calendar.readonly is already verified, and
-// calendar.events needs a verification resubmission before public write use.
-const OWNER_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events'
+const OWNER_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
+// Write scope, kept for when we re-enable native scheduling post-verification:
+// 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events'
 const CALENDAR_API = 'https://www.googleapis.com/calendar/v3'
 
 /**

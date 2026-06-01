@@ -5,9 +5,8 @@ import { DailyView } from './DailyView'
 import { DateRequestModal } from './DateRequestModal'
 import { useApp } from '../../contexts/AppContext'
 import { getWeekStart, dateToStr, deriveSlotState, eventOverlapsSlot } from '../../utils/availability'
-import { createCalendarEvent } from '../../utils/googleCalendar'
 import { Button } from '../ui/Button'
-import { CalendarPlus, X, Check, CalendarCheck2, ExternalLink, Loader2 } from 'lucide-react'
+import { CalendarPlus, X, Check } from 'lucide-react'
 
 const VIEWS = ['Monthly', 'Weekly', 'Daily']
 
@@ -593,9 +592,6 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
     if (bestSlot) { setStartTime(bestSlot.startTime); setEndTime(bestSlot.endTime) }
   }, [bestSlot?.startTime, bestSlot?.endTime]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [scheduling, setScheduling] = useState(false)
-  const [result, setResult] = useState(null)   // { ok, htmlLink } | { error, needsReconnect }
-
   function buildDescription() {
     const detailsLines = ['Scheduled via Coordie.']
     const selectedList = [...selectedNames]
@@ -613,30 +609,16 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
     return detailsLines.join('\n')
   }
 
-  // Create the event in-app via the server (owner's connected calendar).
-  async function handleCreate(slotOverride = null) {
-    setScheduling(true)
-    setResult(null)
-    const useAllDay = mode === 'allday' && !slotOverride
-    const s = slotOverride ? slotOverride.startTime : startTime
-    const e = slotOverride ? slotOverride.endTime : endTime
-    const res = await createCalendarEvent({
-      title: title.trim() || 'Meeting',
-      date: dateStr,
-      allDay: useAllDay,
-      startTime: s,
-      endTime: e,
-      attendees: selectedEmails,
-      description: buildDescription(),
-      timezone,
-    })
-    setScheduling(false)
-    setResult(res)
-    // If the owner hasn't granted write access yet, fall back to the GCal template.
-    if (res?.needsReconnect) openGCalTemplate(slotOverride)
+  // Native in-app creation (createCalendarEvent + create_event edge action) is
+  // parked until Google re-verification of the calendar.events scope. For now
+  // "Schedule meeting" opens a prefilled Google Calendar tab (no write scope).
+  // To re-enable native: call createCalendarEvent(...) here + flip startGoogleAuth
+  // to OWNER_SCOPES (see googleCalendar.js).
+  function handleCreate(slotOverride = null) {
+    openGCalTemplate(slotOverride)
   }
 
-  // Fallback: open a prefilled Google Calendar template in a new tab (no write scope).
+  // Open a prefilled Google Calendar template in a new tab (no write scope).
   function openGCalTemplate(slot = null) {
     const datePart = dateStr.replace(/-/g, '')
     const useAllDay = mode === 'allday' && !slot
@@ -888,85 +870,46 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
 
         {/* Schedule form */}
         <div className="px-6 py-5 border-t border-white/[0.05] space-y-3">
-          {result?.ok ? (
-            // Success state
-            <div className="text-center py-2">
-              <div className="w-11 h-11 rounded-2xl bg-green-500/15 border border-green-500/25 flex items-center justify-center mx-auto mb-3">
-                <CalendarCheck2 size={20} strokeWidth={1.75} className="text-green-400" />
-              </div>
-              <p className="text-[15px] font-semibold text-zinc-100 mb-1">Meeting scheduled</p>
-              <p className="text-[12px] text-zinc-500 mb-4 leading-relaxed">
-                Added to your calendar{selectedEmails.length > 0 ? ` · ${selectedEmails.length} ${selectedEmails.length === 1 ? 'invite' : 'invites'} sent` : ''}.
-              </p>
-              <div className="flex items-center gap-2">
-                {result.htmlLink && (
-                  <a href={result.htmlLink} target="_blank" rel="noopener noreferrer"
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-white/[0.08] text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.04] text-[13px] font-medium transition-colors">
-                    <ExternalLink size={13} strokeWidth={2} /> View event
-                  </a>
-                )}
-                <button onClick={onClose}
-                  className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-[13px] font-semibold transition-colors">
-                  Done
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Title */}
-              <input
-                value={title}
-                onChange={e => { setTitle(e.target.value); setTitleDirty(true) }}
-                placeholder="Meeting title"
-                className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-[14px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all"
-              />
+          {/* Title */}
+          <input
+            value={title}
+            onChange={e => { setTitle(e.target.value); setTitleDirty(true) }}
+            placeholder="Meeting title"
+            className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-[14px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all"
+          />
 
-              {/* All-day ⟷ time window */}
-              <div className="flex items-center gap-1 bg-surface-800 border border-white/[0.06] rounded-xl p-1">
-                {[['time', 'Time window'], ['allday', 'All day']].map(([key, label]) => (
-                  <button key={key} onClick={() => setMode(key)}
-                    className={`flex-1 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
-                      mode === key ? 'bg-accent text-white' : 'text-zinc-400 hover:text-zinc-200'
-                    }`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {mode === 'time' && (
-                <div className="flex items-center gap-2">
-                  <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-                    className="flex-1 bg-surface-800 border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-zinc-100 focus:outline-none focus:border-accent/60" />
-                  <span className="text-zinc-600 text-sm">–</span>
-                  <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
-                    className="flex-1 bg-surface-800 border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-zinc-100 focus:outline-none focus:border-accent/60" />
-                </div>
-              )}
-
-              {result?.error && !result.needsReconnect && (
-                <p className="text-[12px] text-red-400 leading-relaxed">{result.error}</p>
-              )}
-              {result?.needsReconnect && (
-                <p className="text-[12px] text-amber-400 leading-relaxed">
-                  Calendar write access needed — opened a Google Calendar tab as a fallback. Reconnect your calendar in Account → Calendars to schedule in-app.
-                </p>
-              )}
-
-              <button
-                onClick={() => handleCreate()}
-                disabled={scheduling}
-                className="w-full min-h-touch flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-60 text-white text-[15px] font-semibold transition-all duration-200 ease-ios shadow-[0_8px_24px_-8px_rgb(94_156_140/0.55)]"
-              >
-                {scheduling ? <Loader2 size={16} strokeWidth={2} className="animate-spin" /> : <CalendarCheck2 size={16} strokeWidth={2} />}
-                {scheduling ? 'Scheduling…' : actionLabel}
+          {/* All-day ⟷ time window */}
+          <div className="flex items-center gap-1 bg-surface-800 border border-white/[0.06] rounded-xl p-1">
+            {[['time', 'Time window'], ['allday', 'All day']].map(([key, label]) => (
+              <button key={key} onClick={() => setMode(key)}
+                className={`flex-1 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
+                  mode === key ? 'bg-accent text-white' : 'text-zinc-400 hover:text-zinc-200'
+                }`}>
+                {label}
               </button>
-              <p className="text-[12px] text-zinc-500 text-center leading-relaxed">
-                {selectedEmails.length === 0
-                  ? 'Creates the event on your calendar.'
-                  : `Creates the event and invites ${selectedEmails.length} ${selectedEmails.length === 1 ? 'person' : 'people'}.`}
-              </p>
-            </>
+            ))}
+          </div>
+
+          {mode === 'time' && (
+            <div className="flex items-center gap-2">
+              <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+                className="flex-1 bg-surface-800 border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-zinc-100 focus:outline-none focus:border-accent/60" />
+              <span className="text-zinc-600 text-sm">–</span>
+              <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
+                className="flex-1 bg-surface-800 border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-zinc-100 focus:outline-none focus:border-accent/60" />
+            </div>
           )}
+
+          <button
+            onClick={() => handleCreate()}
+            className="w-full min-h-touch flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white text-[15px] font-semibold transition-all duration-200 ease-ios shadow-[0_8px_24px_-8px_rgb(94_156_140/0.55)]"
+          >
+            <CalendarPlus size={16} strokeWidth={2} />
+            {actionLabel}
+          </button>
+          <p className="text-[12px] text-zinc-500 text-center leading-relaxed">
+            Opens Google Calendar with the details prefilled{selectedEmails.length > 0 ? ` · ${selectedEmails.length} ${selectedEmails.length === 1 ? 'attendee' : 'attendees'}` : ''}.
+          </p>
         </div>
       </div>
     </>

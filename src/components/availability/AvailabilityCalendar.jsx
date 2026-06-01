@@ -13,6 +13,14 @@ const VIEWS = ['Monthly', 'Weekly', 'Daily']
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
 
+// "14:00" → "2:00 PM"
+function fmtTime(t) {
+  if (!t) return ''
+  const [h, m] = t.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
+}
+
 export function AvailabilityCalendar({
   slots, calendarEvents, connectedCalendars, availabilityRules = [], prefixRules = [],
   isOwner = false, slotStates: slotStatesProp, roomId, guestName, onRequestSubmit,
@@ -591,7 +599,6 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
   const [titleDirty, setTitleDirty] = useState(false)
   useEffect(() => { if (!titleDirty) setTitle(defaultTitle) }, [defaultTitle, titleDirty])
 
-  const [mode, setMode] = useState('time')     // 'time' | 'allday'
   // Prefill the time window from the best-overlap slot, else 2–3pm.
   const bestSlot = useMemo(() => {
     if (!slotOverlap.rows.length) return null
@@ -632,16 +639,9 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
   // Open a prefilled Google Calendar template in a new tab (no write scope).
   function openGCalTemplate(slot = null) {
     const datePart = dateStr.replace(/-/g, '')
-    const useAllDay = mode === 'allday' && !slot
-    let dates
-    if (useAllDay) {
-      const next = new Date(dateStr + 'T00:00:00Z'); next.setUTCDate(next.getUTCDate() + 1)
-      dates = `${datePart}/${next.toISOString().slice(0, 10).replace(/-/g, '')}`
-    } else {
-      const st = (slot ? slot.startTime : startTime).replace(':', '')
-      const en = (slot ? slot.endTime : endTime).replace(':', '')
-      dates = `${datePart}T${st}00/${datePart}T${en}00`
-    }
+    const st = (slot ? slot.startTime : startTime).replace(':', '')
+    const en = (slot ? slot.endTime : endTime).replace(':', '')
+    const dates = `${datePart}T${st}00/${datePart}T${en}00`
     const params = new URLSearchParams({
       action: 'TEMPLATE',
       text: title.trim() || 'Meeting',
@@ -936,7 +936,8 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
           )}
         </div>
 
-        {/* Schedule form */}
+        {/* Schedule form — title + one-tap schedule. Time comes from the best-times
+            cards above; no manual time picker (kept lean). */}
         <div className="px-6 py-5 border-t border-white/[0.05] space-y-3">
           {/* Title */}
           <input
@@ -946,28 +947,6 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
             className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-[14px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all"
           />
 
-          {/* All-day ⟷ time window */}
-          <div className="flex items-center gap-1 bg-surface-800 border border-white/[0.06] rounded-xl p-1">
-            {[['time', 'Time window'], ['allday', 'All day']].map(([key, label]) => (
-              <button key={key} onClick={() => setMode(key)}
-                className={`flex-1 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
-                  mode === key ? 'bg-accent text-white' : 'text-zinc-400 hover:text-zinc-200'
-                }`}>
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {mode === 'time' && (
-            <div className="flex items-center gap-2">
-              <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-                className="flex-1 bg-surface-800 border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-zinc-100 focus:outline-none focus:border-accent/60" />
-              <span className="text-zinc-600 text-sm">–</span>
-              <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
-                className="flex-1 bg-surface-800 border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-zinc-100 focus:outline-none focus:border-accent/60" />
-            </div>
-          )}
-
           <button
             onClick={() => handleCreate()}
             className="w-full min-h-touch flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white text-[15px] font-semibold transition-all duration-200 ease-ios shadow-[0_8px_24px_-8px_rgb(94_156_140/0.55)]"
@@ -976,7 +955,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
             {actionLabel}
           </button>
           <p className="text-[12px] text-zinc-500 text-center leading-relaxed">
-            Opens Google Calendar with the details prefilled{selectedEmails.length > 0 ? ` · ${selectedEmails.length} ${selectedEmails.length === 1 ? 'attendee' : 'attendees'}` : ''}.
+            {fmtTime(startTime)} – {fmtTime(endTime)} · opens Google Calendar prefilled{selectedEmails.length > 0 ? ` · ${selectedEmails.length} ${selectedEmails.length === 1 ? 'attendee' : 'attendees'}` : ''}
           </p>
         </div>
       </div>

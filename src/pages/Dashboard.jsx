@@ -56,34 +56,34 @@ function ProjectCard({ production, onUpdate, onDelete }) {
 
   return (
     <>
-      <div className="bg-surface-900 border border-white/[0.06] rounded-2xl overflow-hidden shadow-sm shadow-black/10 hover:border-white/10 hover:shadow-lift transition-all duration-200 ease-ios">
+      <div
+        onClick={() => navigate(`/project/${production.id}`)}
+        className="bg-surface-900 border border-white/[0.06] rounded-2xl overflow-hidden shadow-sm shadow-black/10 hover:border-white/10 hover:shadow-lift transition-all duration-200 ease-ios cursor-pointer"
+      >
         <div className="p-5 sm:p-6">
 
           {/* Header */}
           <div className="flex items-start justify-between gap-3 mb-3">
-            <h3
-              onClick={() => navigate(`/project/${production.id}`)}
-              className="text-[17px] font-semibold text-zinc-100 leading-snug tracking-tight cursor-pointer hover:text-white transition-colors"
-            >
+            <h3 className="text-[17px] font-semibold text-zinc-100 leading-snug tracking-tight">
               {production.name}
             </h3>
             <div className="flex items-center gap-0.5 flex-shrink-0 -mr-1.5">
               <button
-                onClick={() => setEditing(true)}
+                onClick={(e) => { e.stopPropagation(); setEditing(true) }}
                 className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
                 title="Edit project"
               >
                 <Pencil size={14} strokeWidth={1.75} />
               </button>
               <button
-                onClick={() => setConfirmDelete(true)}
+                onClick={(e) => { e.stopPropagation(); setConfirmDelete(true) }}
                 className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                 title="Delete project"
               >
                 <Trash2 size={14} strokeWidth={1.75} />
               </button>
               <button
-                onClick={() => navigate(`/project/${production.id}`)}
+                onClick={(e) => { e.stopPropagation(); navigate(`/project/${production.id}`) }}
                 className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
                 title="Open project"
               >
@@ -111,20 +111,14 @@ function ProjectCard({ production, onUpdate, onDelete }) {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between">
-            {countdown ? (
+          {/* Footer — countdown badge only (the whole card opens the project) */}
+          {countdown && (
+            <div className="flex items-center">
               <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full border ${countdown.style}`}>
                 {countdown.label}
               </span>
-            ) : <span />}
-            <button
-              onClick={() => navigate(`/project/${production.id}`)}
-              className="text-[13px] font-medium text-zinc-500 hover:text-zinc-200 transition-colors flex items-center gap-1"
-            >
-              Open project <ArrowRight size={12} strokeWidth={2} />
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       </div>
 

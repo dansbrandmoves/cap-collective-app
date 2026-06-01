@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
-import { CalendarCheck, Plus, Copy, Check, Trash2, ChevronDown, ChevronUp, ExternalLink, Pencil, Clock, CalendarRange, Code2, X, ImagePlus } from 'lucide-react'
+import { CalendarCheck, Plus, Copy, Check, Trash2, ExternalLink, Pencil, Clock, CalendarRange, Code2, X, ImagePlus, MoreHorizontal } from 'lucide-react'
 import { PageLoader } from '../components/ui/PageLoader'
 
 const DURATIONS = [15, 30, 45, 60]
@@ -17,7 +17,7 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   const [embedHideLogo, setEmbedHideLogo] = useState(false)
   const [embedHideDesc, setEmbedHideDesc] = useState(false)
   const [embedTheme, setEmbedTheme] = useState('dark')
-  const [expanded, setExpanded] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({
     name: page.name,
@@ -28,8 +28,6 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
     days: page.available_days || [1, 2, 3, 4, 5],
     requiredFields: page.required_fields || { name: true, email: true, message: false },
   })
-  const [bookings, setBookings] = useState(null)
-  const [loadingBookings, setLoadingBookings] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
 
   const link = `${window.location.origin}/book/${page.slug}`
@@ -49,15 +47,6 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
     setTimeout(() => setEmbedCopied(false), 2000)
   }
 
-  async function toggleExpand() {
-    if (!expanded && bookings === null) {
-      setLoadingBookings(true)
-      const data = await onFetchBookings(page.id)
-      setBookings(data)
-      setLoadingBookings(false)
-    }
-    setExpanded(!expanded)
-  }
 
   const days = (page.available_days || [1,2,3,4,5]).map(d => DAY_LABELS[d]).join(', ')
   const hours = page.available_hours || { start: '09:00', end: '17:00' }
@@ -71,31 +60,47 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   const selectedDays = page.available_days || [1, 2, 3, 4, 5]
 
   return (
-    <div className={`bg-surface-900 border rounded-2xl overflow-hidden shadow-sm shadow-black/10 transition-all duration-200 ease-ios hover:border-white/10 hover:shadow-lift ${page.is_active ? 'border-white/[0.06]' : 'border-white/[0.04] opacity-60'}`}>
+    <div
+      onClick={() => window.open(link, '_blank', 'noopener,noreferrer')}
+      className={`bg-surface-900 border rounded-2xl overflow-hidden shadow-sm shadow-black/10 transition-all duration-200 ease-ios hover:border-white/10 hover:shadow-lift cursor-pointer ${page.is_active ? 'border-white/[0.06]' : 'border-white/[0.04] opacity-60'}`}>
       <div className="p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3 mb-3">
           <h3 className="text-[17px] font-semibold text-zinc-100 leading-snug tracking-tight min-w-0 flex-1">{page.name}</h3>
-          <div className="flex items-center gap-0.5 flex-shrink-0 -mr-1.5">
-            <button onClick={() => setEditing(true)}
+          {/* All actions tucked into one menu — the card itself opens the page */}
+          <div className="relative flex-shrink-0 -mr-1.5" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setMenuOpen(v => !v)}
               className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
-              title="Edit booking page">
-              <Pencil size={14} strokeWidth={1.75} />
+              title="Options">
+              <MoreHorizontal size={16} strokeWidth={2} />
             </button>
-            <button onClick={() => setShowEmbed(v => !v)}
-              className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${showEmbed ? 'text-accent bg-accent/10' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/5'}`}
-              title="Embed on website">
-              <Code2 size={14} strokeWidth={1.75} />
-            </button>
-            <button onClick={copyLink}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
-              title="Copy booking link">
-              {copied ? <Check size={15} strokeWidth={2} className="text-green-400" /> : <Copy size={14} strokeWidth={1.75} />}
-            </button>
-            <a href={link} target="_blank" rel="noopener noreferrer"
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
-              title="Open booking page">
-              <ExternalLink size={14} strokeWidth={1.75} />
-            </a>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 w-44 bg-surface-800 border border-white/[0.08] rounded-xl shadow-xl shadow-black/40 py-1 animate-fadeIn">
+                  <button onClick={() => { copyLink(); setMenuOpen(false) }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.05] transition-colors">
+                    {copied ? <Check size={13} strokeWidth={2} className="text-green-400" /> : <Copy size={13} strokeWidth={1.75} />} Copy link
+                  </button>
+                  <a href={link} target="_blank" rel="noopener noreferrer" onClick={() => setMenuOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.05] transition-colors">
+                    <ExternalLink size={13} strokeWidth={1.75} /> Open page
+                  </a>
+                  <button onClick={() => { setShowEmbed(v => !v); setMenuOpen(false) }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.05] transition-colors">
+                    <Code2 size={13} strokeWidth={1.75} /> Embed code
+                  </button>
+                  <button onClick={() => { setEditing(true); setMenuOpen(false) }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.05] transition-colors">
+                    <Pencil size={13} strokeWidth={1.75} /> Edit
+                  </button>
+                  <div className="h-px bg-white/[0.06] my-1" />
+                  <button onClick={() => { setMenuOpen(false); if (confirm('Delete this booking page and all its bookings?')) onDelete(page.id) }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-red-400 hover:bg-red-500/10 transition-colors">
+                    <Trash2 size={13} strokeWidth={1.75} /> Delete
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -125,33 +130,22 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onToggle(page.id, !page.is_active)}
-              className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
-                page.is_active
-                  ? 'border-green-500/25 text-green-400 bg-green-500/[0.08] hover:bg-green-500/15'
-                  : 'border-white/10 text-zinc-500 bg-white/[0.03] hover:bg-white/5'
-              }`}
-            >
-              {page.is_active ? 'Active' : 'Inactive'}
-            </button>
-            <button
-              onClick={() => { if (confirm('Delete this booking page and all its bookings?')) onDelete(page.id) }}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-            >
-              <Trash2 size={13} strokeWidth={1.75} />
-            </button>
-          </div>
-          <button onClick={toggleExpand} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-200 transition-colors px-2 py-1.5">
-            Bookings {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => onToggle(page.id, !page.is_active)}
+            className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+              page.is_active
+                ? 'border-green-500/25 text-green-400 bg-green-500/[0.08] hover:bg-green-500/15'
+                : 'border-white/10 text-zinc-500 bg-white/[0.03] hover:bg-white/5'
+            }`}
+          >
+            {page.is_active ? 'Active' : 'Inactive'}
           </button>
         </div>
       </div>
 
       {showEmbed && (
-        <div className="border-t border-surface-800 px-5 py-4 bg-surface-950/50">
+        <div className="border-t border-surface-800 px-5 py-4 bg-surface-950/50" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em]">Embed on your website</p>
             <p className="text-[11px] text-zinc-600">Paste into any page's HTML</p>
@@ -197,50 +191,8 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
         </div>
       )}
 
-      {expanded && (
-        <div className="border-t border-surface-800 px-5 py-3 bg-surface-950/50">
-          {loadingBookings ? (
-            <p className="text-xs text-zinc-600 py-2">Loading bookings...</p>
-          ) : !bookings?.length ? (
-            <p className="text-xs text-zinc-600 py-2">No bookings yet.</p>
-          ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {bookings.map(b => (
-                <div key={b.id} className="flex items-center justify-between text-sm py-1.5 group/booking">
-                  <div className="min-w-0">
-                    <span className="text-zinc-200">{b.guest_name}</span>
-                    {b.guest_email && <span className="text-zinc-600 ml-2 text-xs">{b.guest_email}</span>}
-                    {b.message && <p className="text-xs text-zinc-500 italic mt-0.5 truncate">"{b.message}"</p>}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-xs text-zinc-500">
-                      {new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                    <span className="text-xs text-zinc-500">{formatTime(b.start_time)} – {formatTime(b.end_time)}</span>
-                    <Badge variant={b.status === 'confirmed' ? 'green' : b.status === 'cancelled' ? 'red' : 'ghost'} className="text-[10px]">
-                      {b.status}
-                    </Badge>
-                    <div className="hidden group-hover/booking:flex items-center gap-1">
-                      {b.status === 'confirmed' && (
-                        <button onClick={async () => {
-                          await onUpdateBookingStatus(b.id, 'cancelled')
-                          setBookings(prev => prev.map(x => x.id === b.id ? { ...x, status: 'cancelled' } : x))
-                        }} className="text-[10px] text-zinc-600 hover:text-amber-400 transition-colors px-1">Cancel</button>
-                      )}
-                      <button onClick={async () => {
-                        await onDeleteBooking(b.id)
-                        setBookings(prev => prev.filter(x => x.id !== b.id))
-                      }} className="text-[10px] text-zinc-600 hover:text-red-400 transition-colors px-1">Delete</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Edit Modal */}
+      {/* Edit Modal — stop clicks bubbling to the card's open-page handler */}
+      <div onClick={(e) => e.stopPropagation()}>
       <Modal isOpen={editing} onClose={() => setEditing(false)} title="Edit Booking Page">
         <form onSubmit={async (e) => {
           e.preventDefault()
@@ -391,6 +343,7 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
           </div>
         </form>
       </Modal>
+      </div>
     </div>
   )
 }

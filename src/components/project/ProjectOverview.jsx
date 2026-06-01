@@ -248,6 +248,7 @@ export function ProjectOverview({
             const hasData = info && info.knownCount > 0
             const allFree = hasData && info.freeCount === info.knownCount
             const isSelected = inMonth && ds === inspected
+            const isWeekend = date.getDay() === 0 || date.getDay() === 6
             return (
               <button
                 key={i}
@@ -261,7 +262,7 @@ export function ProjectOverview({
                 } ${isSelected ? 'ring-2 ring-inset ring-accent bg-accent/[0.04]' : ''} ${loading ? 'opacity-60' : ''}`}
               >
                 {inMonth && (
-                  <span className={`text-[13px] sm:text-[15px] font-medium ${isToday ? 'text-accent' : 'text-zinc-200'}`}>
+                  <span className={`text-[13px] sm:text-[15px] font-medium ${isToday ? 'text-accent' : isWeekend ? 'text-zinc-600' : 'text-zinc-200'}`}>
                     {date.getDate()}
                   </span>
                 )}

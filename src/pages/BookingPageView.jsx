@@ -307,7 +307,7 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
       <button
         onClick={() => tokenClientRef.current?.requestAccessToken()}
         disabled={!gisReady || loading}
-        title="Free/busy only — never event details, nothing leaves your browser."
+        title="Only your availability is shared — never event titles or details."
         className="inline-flex items-center gap-1.5 text-[12px] font-medium text-zinc-200 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-full px-3.5 py-1.5 transition-colors disabled:opacity-50"
       >
         <CalendarDays size={13} strokeWidth={1.75} className="text-zinc-400" />
@@ -556,32 +556,24 @@ export function BookingPageView() {
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.24, ease: IOS_EASE }}>
 
-              {/* Work area above the calendar */}
+              {/* Above the calendar: the overlap value + connect calendar (its effect —
+                  highlighting the days you're both free — is visible right here). */}
               <div className="text-center mb-6">
-                <p className="text-[14px] text-zinc-400 mb-3">When are we both free?</p>
-                <div className="inline-flex flex-wrap items-center justify-center gap-2">
-                  {(() => {
-                    // Time-of-day filtering only makes sense once we know the guest's
-                    // free time — gate the chips behind connecting a calendar.
-                    const locked = ownerGuestCalendarEnabled && guestEvents === null
-                    return (
-                      <div className={`inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5 transition-opacity ${locked ? 'opacity-40' : ''}`}>
-                        {WINDOW_ORDER.map(key => (
-                          <button key={key} disabled={locked} onClick={() => setWindowKey(key)}
-                            title={locked ? 'Connect your calendar to filter by time of day' : undefined}
-                            className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 disabled:cursor-not-allowed ${
-                              windowKey === key && !locked ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 enabled:hover:text-zinc-100'
-                            }`}>
-                            {WINDOWS[key].label}
-                          </button>
-                        ))}
-                      </div>
-                    )
-                  })()}
-                  {ownerGuestCalendarEnabled && (
-                    <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
-                  )}
-                </div>
+                <p className="text-[15px] font-semibold text-zinc-100 mb-1">When are we both free?</p>
+                {ownerGuestCalendarEnabled ? (
+                  <>
+                    {guestEvents === null && (
+                      <p className="text-[12px] text-zinc-500 mb-3 max-w-md mx-auto leading-relaxed">
+                        Connect your calendar to highlight the days you&rsquo;re both open. Only your availability is shared — never event titles or details.
+                      </p>
+                    )}
+                    <div className="flex justify-center">
+                      <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[12px] text-zinc-500">Pick a day that works for you.</p>
+                )}
               </div>
 
               <MonthCalendar
@@ -607,6 +599,21 @@ export function BookingPageView() {
                   <p className="text-2xl font-semibold text-zinc-100 tracking-tight">{lastDateHeaderRef.current?.day}</p>
                 </div>
               </div>
+
+              {/* Time-of-day filter lives here — tapping it instantly narrows the times below */}
+              <div className="flex justify-center mb-4">
+                <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">
+                  {WINDOW_ORDER.map(key => (
+                    <button key={key} onClick={() => setWindowKey(key)}
+                      className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                        windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
+                      }`}>
+                      {WINDOWS[key].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <TimeSlotPicker
                 slots={timeSlots.filter(s => slotInWindow(s, WINDOWS[windowKey]))}
                 takenSlots={takenSlots} ownerEvents={ownerEvents} guestEvents={guestEvents}

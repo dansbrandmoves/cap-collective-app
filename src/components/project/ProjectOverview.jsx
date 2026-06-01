@@ -5,6 +5,7 @@ import {
   aggregateProjectDay, projectKnownPeople,
 } from '../../utils/availability'
 import { OWNER_LABEL } from '../../hooks/useProjectPeople'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
@@ -12,9 +13,6 @@ const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // One signal only: green = everyone's free. Partial/conflict/unknown days stay
 // neutral and let the count speak — no traffic-light noise.
-const SIGNAL = {
-  green: { dot: '#22c55e', cell: 'bg-green-500/[0.06] border-green-500/15 hover:bg-green-500/[0.12] hover:border-green-500/35' },
-}
 
 // Time-of-day windows (minutes since midnight). A slot counts toward a window
 // if it overlaps it at all. "Any time" spans the whole day.
@@ -154,30 +152,24 @@ export function ProjectOverview({
   const todayStr = dateToStr(today)
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 sm:py-8">
+    <div className="flex-1 overflow-y-auto px-5 sm:px-8 lg:px-12 py-8 sm:py-12">
       <div className="lg:flex lg:gap-5 lg:items-start">
       <div className="flex-1 min-w-0">
 
-      {/* Schedule a meeting — pick a time of day, see which days work for everyone */}
+      {/* Schedule a meeting — calm, spacious, one question at a time (booking aesthetic) */}
       {includedKnown > 0 ? (
-        <div className="mb-6 bg-surface-800/40 border border-white/[0.06] rounded-xl px-4 py-4">
-          <div className="flex items-baseline justify-between gap-2 mb-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em]">Schedule a meeting</p>
-              <p className="text-[15px] text-zinc-100 font-medium mt-1 tracking-tight">
-                When can everyone meet{windowKey !== 'any' ? ` in the ${win.label.toLowerCase()}` : ''}?
-              </p>
-            </div>
-            <span className="text-[11px] text-zinc-600 flex-shrink-0 whitespace-nowrap">
-              {includedKnown} {includedKnown === 1 ? 'person' : 'people'}
-            </span>
-          </div>
+        <div className="mb-10">
+          <p className="text-[12px] font-semibold text-accent uppercase tracking-[0.12em] mb-2">Schedule a meeting</p>
+          <h2 className="text-[26px] sm:text-[32px] font-semibold text-zinc-50 leading-[1.1] tracking-tight mb-1">
+            When can everyone meet{windowKey !== 'any' ? <> in the <span className="text-accent">{win.label.toLowerCase()}</span></> : ''}?
+          </h2>
+          <p className="text-[14px] text-zinc-500 mb-6">Across {includedKnown} {includedKnown === 1 ? 'person' : 'people'} · next 60 days</p>
 
           {/* Time-of-day filter */}
-          <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5 mb-3.5">
+          <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-xl p-1 mb-6">
             {WINDOW_ORDER.map(key => (
               <button key={key} onClick={() => setWindowKey(key)}
-                className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 ease-ios ${
+                className={`px-3.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ease-ios ${
                   windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
                 }`}>
                 {WINDOWS[key].label}
@@ -185,22 +177,22 @@ export function ProjectOverview({
             ))}
           </div>
 
-          {/* Days that work, ranked */}
+          {/* Days that work, ranked — bigger, airier cards */}
           {bestDays.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2.5">
               {bestDays.map(({ ds, date, freeCount, knownCount }) => {
                 const allFree = freeCount === knownCount
                 return (
                   <button key={ds} onClick={() => setInspected(ds)}
-                    className={`text-left rounded-lg px-3 py-2 border transition-all duration-150 ease-ios ${
+                    className={`text-left rounded-2xl px-4 py-3 border transition-all duration-150 ease-ios active:scale-[0.99] ${
                       allFree
-                        ? 'bg-green-500/[0.06] border-green-500/20 hover:bg-green-500/[0.12] hover:border-green-500/40'
-                        : 'bg-surface-900 border-white/[0.06] hover:bg-surface-800 hover:border-white/[0.14]'
+                        ? 'bg-green-500/[0.08] border-green-500/25 hover:bg-green-500/[0.14] hover:border-green-500/45'
+                        : 'border-white/[0.08] hover:bg-white/[0.03] hover:border-white/[0.16]'
                     }`}>
-                    <p className="text-[13px] font-semibold text-zinc-100 tracking-tight">
+                    <p className="text-[15px] font-semibold text-zinc-50 tracking-tight">
                       {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </p>
-                    <p className={`text-[11px] mt-0.5 ${allFree ? 'text-green-400' : 'text-amber-400'}`}>
+                    <p className={`text-[12px] mt-0.5 ${allFree ? 'text-green-400' : 'text-zinc-500'}`}>
                       {allFree ? 'Everyone free' : `${freeCount} of ${knownCount} free`}
                     </p>
                   </button>
@@ -208,30 +200,24 @@ export function ProjectOverview({
               })}
             </div>
           ) : (
-            <p className="text-[13px] text-zinc-500 leading-relaxed">
+            <p className="text-[14px] text-zinc-500 leading-relaxed">
               No one&rsquo;s free {windowKey === 'any' ? 'on the next 60 days yet' : `in the ${win.label.toLowerCase()}`}.
               {windowKey !== 'any' && ' Try another time of day.'}
             </p>
           )}
         </div>
       ) : totalPeople <= 1 ? (
-        <div className="mb-6 border border-dashed border-white/10 rounded-xl px-5 py-4">
-          <p className="text-sm font-medium text-zinc-200 mb-0.5">No availability yet</p>
-          <p className="text-xs text-zinc-500 leading-relaxed">
-            Add people in the panel on the left and share their links. As they connect a calendar or tap their free days, the best days for everyone appear here.
+        <div className="mb-10 border border-dashed border-white/10 rounded-2xl px-6 py-8 text-center max-w-md">
+          <p className="text-[15px] font-medium text-zinc-200 mb-1">No availability yet</p>
+          <p className="text-[13px] text-zinc-500 leading-relaxed">
+            Add people on the left and share their links. As they connect a calendar or tap their free days, the best days appear here.
           </p>
         </div>
       ) : null}
 
-      {/* Legend — one signal: green means everyone's free. Counts say the rest. */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-2 h-2 rounded-full ring-2 ring-surface-900" style={{ backgroundColor: SIGNAL.green.dot }} />
-        <span className="text-[13px] text-zinc-400">Everyone free</span>
-      </div>
-
-      {/* Month nav */}
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <h3 className="text-[15px] font-semibold text-zinc-100 tracking-tight flex items-center gap-2">
+      {/* Month nav — calmer, more room */}
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <h3 className="text-[18px] font-semibold text-zinc-100 tracking-tight flex items-center gap-2.5">
           {MONTH_NAMES[month]} {year}
           {windowKey !== 'any' && (
             <button onClick={() => setWindowKey('any')}
@@ -242,46 +228,48 @@ export function ProjectOverview({
             </button>
           )}
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button onClick={goToday} className="min-h-[36px] text-[13px] font-medium text-zinc-400 hover:text-zinc-100 px-3 rounded-lg hover:bg-white/5 transition-colors">Today</button>
-          <button onClick={prevMonth} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/5 text-zinc-400 hover:text-zinc-100 transition-colors"><span className="text-lg leading-none">‹</span></button>
-          <button onClick={nextMonth} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/5 text-zinc-400 hover:text-zinc-100 transition-colors"><span className="text-lg leading-none">›</span></button>
+          <button onClick={prevMonth} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 text-zinc-400 hover:text-zinc-100 transition-colors"><ChevronLeft size={18} strokeWidth={1.75} /></button>
+          <button onClick={nextMonth} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 text-zinc-400 hover:text-zinc-100 transition-colors"><ChevronRight size={18} strokeWidth={1.75} /></button>
         </div>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-7 gap-1 mb-1">
+      {/* Grid — bigger, rounder, lighter cells (booking aesthetic) */}
+      <div className="grid grid-cols-7 mb-2">
         {DOW.map(d => (
-          <div key={d} className="text-center text-[11px] font-medium text-zinc-600 py-1">
+          <div key={d} className="text-center text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] py-1.5">
             <span className="hidden sm:inline">{d}</span><span className="sm:hidden">{d[0]}</span>
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1.5">
         {grid.map(({ date, inMonth }, i) => {
           const ds = dateToStr(date)
           const info = dayInfo[ds]
           const isToday = ds === todayStr
           if (!inMonth) {
-            return <div key={i} className="min-h-[52px] sm:min-h-[72px] rounded-lg" />
+            return <div key={i} className="min-h-[56px] sm:min-h-[76px] rounded-2xl" />
           }
-          // Only highlight days where EVERYONE is free. Everything else is a plain
-          // cell — the count speaks for itself, no amber/red noise.
+          // Only highlight days where EVERYONE is free. Everything else is a plain,
+          // borderless cell — the count speaks for itself.
           const hasData = info && info.knownCount > 0
           const allFree = hasData && info.freeCount === info.knownCount
           return (
             <button
               key={i}
               onClick={() => setInspected(ds)}
-              className={`min-h-[52px] sm:min-h-[72px] rounded-lg border p-1.5 sm:p-2 text-left transition-all duration-150 ${
-                allFree ? SIGNAL.green.cell : 'bg-white/[0.02] border-white/[0.05] hover:border-white/12'
+              className={`min-h-[56px] sm:min-h-[76px] rounded-2xl p-2 text-left transition-all duration-150 ${
+                allFree
+                  ? 'bg-green-500/[0.10] hover:bg-green-500/[0.16]'
+                  : 'hover:bg-white/[0.04]'
               } ${loading ? 'opacity-60' : ''}`}
             >
-              <span className={`text-[12px] sm:text-[13px] font-medium ${isToday ? 'text-accent' : 'text-zinc-300'}`}>
+              <span className={`text-[14px] sm:text-[15px] font-medium ${isToday ? 'text-accent' : 'text-zinc-200'}`}>
                 {date.getDate()}
               </span>
               {hasData && (
-                <span className={`block text-[10px] sm:text-[11px] font-semibold mt-1 ${allFree ? 'text-green-400' : 'text-zinc-500'}`}>
+                <span className={`block text-[11px] font-semibold mt-1 ${allFree ? 'text-green-400' : 'text-zinc-600'}`}>
                   {info.freeCount}/{info.knownCount}
                 </span>
               )}
@@ -289,8 +277,6 @@ export function ProjectOverview({
           )
         })}
       </div>
-
-      <p className="text-[11px] text-zinc-600 mt-4">Availability is known for the next 60 days.</p>
       </div>{/* /main column */}
 
       {inspected && inspectorData && (

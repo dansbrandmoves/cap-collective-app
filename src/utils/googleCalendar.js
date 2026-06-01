@@ -13,10 +13,12 @@
 import { supabase } from './supabase'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
-// readonly = read free/busy for availability; events = create meetings in-app.
-// Both are "sensitive" (not restricted) scopes — same verification tier the app
-// already cleared for readonly.
-const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events'
+// GUESTS only share availability → read-only is all they need (and a gentler consent).
+const GUEST_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
+// OWNERS also create meetings in-app → add the events (write) scope. Both are
+// "sensitive" (not restricted) scopes; calendar.readonly is already verified, and
+// calendar.events needs a verification resubmission before public write use.
+const OWNER_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events'
 const CALENDAR_API = 'https://www.googleapis.com/calendar/v3'
 
 /**
@@ -35,7 +37,7 @@ export function startGoogleAuth() {
     client_id: CLIENT_ID,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: SCOPES,
+    scope: OWNER_SCOPES,
     access_type: 'offline',     // This gives us a refresh token
     prompt: 'consent',          // Always show consent to get refresh token
     state: 'google-calendar',   // We check for this on redirect
@@ -219,7 +221,7 @@ export async function connectGuestCalendarOffline({ roomId, guestName }) {
   const code = await new Promise((resolve, reject) => {
     const codeClient = window.google.accounts.oauth2.initCodeClient({
       client_id: CLIENT_ID,
-      scope: SCOPES,
+      scope: GUEST_SCOPES,
       ux_mode: 'popup',
       callback: (resp) => {
         if (resp.error || !resp.code) reject(new Error(resp.error || 'No authorization code'))

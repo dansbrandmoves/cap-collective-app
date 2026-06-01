@@ -457,7 +457,7 @@ function BestDaysStrip({ slots, calendarEvents, connectedCalendars, prefixRules,
  * Single-room by default. Pass `roomIds` (array) to inspect a whole project — the
  * caller combines every group's date-filtered requests/availability and we pull
  * member emails from all of those rooms. `actionLabel` renames the primary button. */
-export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRequests, sharedAvailability, onClose, actionLabel = 'Schedule in Google Calendar' }) {
+export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRequests, sharedAvailability, onClose, actionLabel = 'Schedule meeting' }) {
   const { getMembersForRoom } = useApp()
   const memberRoomIds = useMemo(
     () => (roomIds && roomIds.length ? roomIds : (roomId ? [roomId] : [])),
@@ -835,7 +835,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
         {/* Primary action */}
         <div className="px-6 py-5 border-t border-white/[0.05]">
           <button
-            onClick={handleSchedule}
+            onClick={() => handleSchedule()}
             className="w-full min-h-touch flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent hover:bg-accent-hover text-white text-[15px] font-semibold transition-all duration-200 ease-ios shadow-[0_8px_24px_-8px_rgb(139_92_246/0.55)]"
           >
             <CalendarPlus size={16} strokeWidth={2} />

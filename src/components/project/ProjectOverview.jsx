@@ -217,7 +217,7 @@ export function ProjectOverview({
           slots={slots}
           dateRequests={inspectorData.reqs}
           sharedAvailability={inspectorData.avail}
-          actionLabel="Lock this date"
+          actionLabel="Schedule meeting"
           onClose={() => setInspected(null)}
         />
       )}

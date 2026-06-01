@@ -189,18 +189,18 @@ export function AppProvider({ children }) {
     if (data?.connected_calendars?.length) {
       setConnectedCalendars(data.connected_calendars)
     }
-    // Server owns the sync now. Load the current snapshot from owner_calendar_events,
-    // and kick off a fresh incremental sync (the edge function refreshes the token,
-    // pulls deltas, and writes back — realtime then updates us). No client-side fetch.
+    setProfileLoaded(true)
+    // Load calendar events + trigger sync in background — don't block profile load.
     if (userId) {
-      const { data: rows } = await supabase.from('owner_calendar_events').select('*').eq('owner_id', userId)
-      if (rows) setCalendarEvents(rows.map(mapOwnerEventRow))
-      if (rows?.length) setLastSynced(new Date().toISOString())
+      supabase.from('owner_calendar_events').select('*').eq('owner_id', userId)
+        .then(({ data: rows }) => {
+          if (rows) setCalendarEvents(rows.map(mapOwnerEventRow))
+          if (rows?.length) setLastSynced(new Date().toISOString())
+        })
     }
     if (data?.google_refresh_token && data?.connected_calendars?.length) {
       supabase.functions.invoke('sync-calendar').catch(err => console.warn('sync-calendar invoke:', err))
     }
-    setProfileLoaded(true)
   }
 
   const uploadLogo = useCallback(async (file) => {
@@ -287,9 +287,9 @@ export function AppProvider({ children }) {
 
   const isAdmin = role === 'admin'
 
-  // Supabase-backed
-  const [productions, setProductions] = useState([])
-  const [roomMembers, setRoomMembers] = useState([])
+  // Supabase-backed — seeded from localStorage cache so pages render instantly
+  const [productions, setProductions] = useState(() => stored?.productions ?? [])
+  const [roomMembers, setRoomMembers] = useState(() => stored?.roomMembers ?? [])
   const [bookingPages, setBookingPages] = useState([])
 
   const canAddProject = useCallback(() => {
@@ -308,7 +308,8 @@ export function AppProvider({ children }) {
     if (isProPlan) return true
     return bookingPages.length < FREE_BOOKING_PAGE_LIMIT
   }, [isProPlan, bookingPages])
-  const [loading, setLoading] = useState(true)
+  // false if we have cached productions — pages render immediately, then refresh silently
+  const [loading, setLoading] = useState(() => !stored?.productions)
 
   // localStorage-backed
   const [slots, setSlots] = useState(() => stored?.slots ?? SEED_DATA.slots)
@@ -575,7 +576,9 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (authLoading) return
     const ownerId = user?.id ?? null
-    setLoading(true)
+    // Only block with a loading spinner on the very first load (no cache).
+    // Subsequent refreshes update silently in the background.
+    if (!productions.length) setLoading(true)
 
     console.log('[Coordie] Loading data for:', ownerId || 'guest')
 
@@ -631,12 +634,14 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     saveToStorage({
+      productions, roomMembers,
       slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced,
       theme, slotStateCustomizations, businessHours, guestCalendarEnabled,
       availabilityMode, blockDuration, timezone,
     })
-  }, [slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
+  }, [productions, roomMembers,
+      slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced, theme, slotStateCustomizations,
       businessHours, guestCalendarEnabled, availabilityMode, blockDuration, timezone])
 

@@ -568,6 +568,17 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
     [selectedNames, emailByName]
   )
 
+  // Slot picker expansion state
+  const [showSlotPicker, setShowSlotPicker] = useState(false)
+
+  // Best slots: top 3 by free count (when guests exist), else top 3 slots for quick-schedule
+  const bestSlots = useMemo(() => {
+    if (!slotOverlap.rows.length) return []
+    const sorted = [...slotOverlap.rows].sort((a, b) => b.freeCount - a.freeCount)
+    const withFree = sorted.filter(r => r.freeCount > 0)
+    return (withFree.length > 0 ? withFree : sorted).slice(0, 3)
+  }, [slotOverlap])
+
   // ── Scheduling form state ──
   // Default title from who's selected; user can override.
   const defaultTitle = useMemo(() => {
@@ -687,9 +698,114 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-6">
+
+          {/* ── Best times for everyone ── */}
+          {bestSlots.length > 0 && (
+            <div className="mb-5">
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-3">
+                {guestData.length > 0 ? 'Best times for everyone' : 'Quick schedule'}
+              </p>
+              <div className="space-y-2">
+                {bestSlots.map(({ slot, freeCount, freeNames }, i) => {
+                  const total = guestData.length
+                  const isTop = i === 0
+                  return (
+                    <button
+                      key={slot.id}
+                      onClick={() => handleCreate(slot)}
+                      title={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
+                      className={`group w-full text-left flex items-center gap-3.5 px-4 py-3.5 rounded-xl border transition-all duration-200 ease-ios active:scale-[0.99] ${
+                        isTop
+                          ? 'bg-accent/10 border-accent/35 hover:bg-accent/15 hover:border-accent/55 shadow-[0_0_0_1px_rgb(94_156_140/0.15)]'
+                          : 'bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.06] hover:border-white/[0.14]'
+                      }`}
+                    >
+                      <div className="w-1.5 h-9 rounded-full flex-shrink-0" style={{ backgroundColor: slot.color || '#5e9c8c' }} />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-[14px] font-semibold truncate leading-tight ${isTop ? 'text-zinc-50' : 'text-zinc-200'}`}>
+                          {slot.name}
+                        </p>
+                        <p className="text-[12px] text-zinc-500 mt-0.5">{slot.startTime} – {slot.endTime}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                        {total > 0 && (
+                          <span className={`text-[13px] font-bold tabular-nums ${isTop ? 'text-accent' : 'text-zinc-400'}`}>
+                            {freeCount}/{total}
+                          </span>
+                        )}
+                        {total > 0 && (
+                          <span className="text-[10px] text-zinc-600">free</span>
+                        )}
+                      </div>
+                      <CalendarPlus size={14} strokeWidth={1.75} className={`flex-shrink-0 transition-opacity duration-150 ${isTop ? 'text-accent opacity-60 group-hover:opacity-100' : 'text-zinc-500 opacity-0 group-hover:opacity-60'}`} />
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Pick a different time — expands full slot list with dim effect */}
+              {slotOverlap.rows.length > 0 && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => setShowSlotPicker(s => !s)}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03] transition-all duration-150"
+                  >
+                    <span>Pick a different time</span>
+                    <span className="text-zinc-600 transition-transform duration-200" style={{ display: 'inline-block', transform: showSlotPicker ? 'rotate(180deg)' : 'rotate(0deg)' }}>↓</span>
+                  </button>
+
+                  {showSlotPicker && (
+                    <div className="mt-2 space-y-1.5 animate-fadeIn">
+                      {slotOverlap.rows.map(({ slot, freeCount, freeNames }) => {
+                        const total = guestData.length
+                        const isBusy = total > 0 && freeCount === 0
+                        const isPartial = total > 0 && freeCount > 0 && freeCount < total
+                        const isAll = total > 0 && freeCount === total
+                        return (
+                          <button
+                            key={slot.id}
+                            onClick={() => handleCreate(slot)}
+                            title={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
+                            className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all duration-150 active:scale-[0.99] ${
+                              isBusy
+                                ? 'border-white/[0.05] text-zinc-600 cursor-pointer hover:border-white/10 hover:text-zinc-500'
+                                : 'border-white/10 text-zinc-200 hover:border-accent/40 hover:bg-white/[0.03]'
+                            } ${isBusy ? 'opacity-50 hover:opacity-70' : ''}`}
+                          >
+                            <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: isBusy ? '#52525b' : (slot.color || '#5e9c8c') }} />
+                            <div className="flex-1 min-w-0 text-left">
+                              <p className="text-[13px] font-medium truncate leading-tight">{slot.name}</p>
+                              <p className="text-[11px] text-zinc-600 mt-0.5">{slot.startTime} – {slot.endTime}</p>
+                            </div>
+                            {total > 0 && (
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {isBusy && (
+                                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
+                                    <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                                    busy
+                                  </span>
+                                )}
+                                {(isPartial || isAll) && (
+                                  <span className={`text-[11px] font-semibold tabular-nums ${isAll ? 'text-accent' : 'text-zinc-400'}`}>
+                                    {freeCount}/{total}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── People who are free ── */}
           {guestData.length > 0 && (
             <>
-              <div className="flex items-baseline gap-2 mb-4">
+              <div className="flex items-baseline gap-2 mb-4 mt-1">
                 <span className="inline-flex items-center justify-center rounded-full bg-accent text-white text-[13px] font-bold min-w-[26px] h-[26px] px-1.5">
                   {guestData.length}
                 </span>
@@ -748,12 +864,10 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                   )
                 })}
               </div>
-
             </>
           )}
 
-          {/* Also invite: group members who haven't said they're free. Useful
-              when this is the most convenient day even without a response. */}
+          {/* Also invite: group members who haven't said they're free. */}
           {otherMembers.length > 0 && (
             <div className="mb-6">
               <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-1.5">Also invite</p>
@@ -809,53 +923,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
             </div>
           )}
 
-          {guestData.length > 0 && slotOverlap.anySlotData && slotOverlap.rows.length > 0 && (
-            <div className="mb-2">
-              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-3">By time slot</p>
-              <div className="space-y-1.5">
-                {slotOverlap.rows.map(({ slot, freeCount, freeNames }) => {
-                  const total = guestData.length
-                  const pct = total > 0 ? Math.round((freeCount / total) * 100) : 0
-                  const isBest = freeCount === total && freeCount > 0
-                  const isNone = freeCount === 0
-                  return (
-                    <button
-                      key={slot.id}
-                      onClick={() => handleSchedule(slot)}
-                      className={`group w-full text-left flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all duration-150 active:scale-[0.99] ${
-                        isBest
-                          ? 'bg-accent/10 border-accent/30 hover:bg-accent/15 hover:border-accent/50'
-                          : isNone
-                          ? 'bg-white/[0.02] border-white/[0.04] opacity-60 hover:opacity-80'
-                          : 'bg-white/[0.03] border-white/[0.05] hover:bg-white/[0.06] hover:border-white/10'
-                      }`}
-                      title={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : 'No one free'}
-                    >
-                      <div className="w-1.5 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: slot.color || '#8b5cf6' }} />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-[13px] font-medium truncate leading-tight ${isBest ? 'text-zinc-50' : 'text-zinc-200'}`}>{slot.name}</p>
-                        <p className="text-[11px] text-zinc-500 mt-0.5">{slot.startTime}–{slot.endTime}</p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <div className="w-16 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-300 ${isBest ? 'bg-accent' : 'bg-accent/50'}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className={`text-[12px] font-semibold tabular-nums w-10 text-right ${isBest ? 'text-accent' : isNone ? 'text-zinc-600' : 'text-zinc-300'}`}>
-                          {freeCount}/{total}
-                        </span>
-                        <CalendarPlus size={13} strokeWidth={1.75} className="opacity-0 group-hover:opacity-50 transition-opacity duration-150 text-zinc-400 flex-shrink-0" />
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {guestData.length === 0 && otherMembers.length === 0 && (
+          {bestSlots.length === 0 && guestData.length === 0 && otherMembers.length === 0 && (
             <div className="py-8 text-center">
               <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-center mx-auto mb-4">
                 <CalendarPlus size={18} strokeWidth={1.5} className="text-zinc-500" />

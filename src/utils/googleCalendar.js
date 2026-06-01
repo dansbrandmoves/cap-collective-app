@@ -196,3 +196,60 @@ export function loadGoogleIdentityServices() {
     document.head.appendChild(script)
   })
 }
+
+/**
+ * Guest calendar connect via Google's POPUP code client.
+ *
+ * Unlike the old implicit token client (1-hour access token, no refresh token),
+ * the code client returns an auth CODE we exchange server-side for a refresh
+ * token — so the server can keep the guest's availability in sync on a schedule,
+ * exactly like the owner. Stays a popup (no full-page redirect).
+ *
+ * Returns the guest's first access token (for an immediate client-side read), and
+ * the server stores the refresh token keyed by (roomId, guestName).
+ */
+export async function connectGuestCalendarOffline({ roomId, guestName }) {
+  if (!CLIENT_ID) throw new Error('Google Calendar is not configured.')
+  await loadGoogleIdentityServices()
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+
+  const code = await new Promise((resolve, reject) => {
+    const codeClient = window.google.accounts.oauth2.initCodeClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      ux_mode: 'popup',
+      callback: (resp) => {
+        if (resp.error || !resp.code) reject(new Error(resp.error || 'No authorization code'))
+        else resolve(resp.code)
+      },
+    })
+    codeClient.requestCode()
+  })
+
+  // Exchange happens server-side. For the popup code model, redirect_uri is the
+  // page origin (Google's documented value for ux_mode 'popup').
+  const { data, error } = await supabase.functions.invoke('google-calendar-auth', {
+    body: {
+      action: 'guest_exchange',
+      code,
+      redirectUri: window.location.origin,
+      roomId,
+      guestName,
+      timezone,
+    },
+  })
+  if (error || data?.error) throw new Error(data?.error || error?.message || 'Calendar connect failed')
+  return data // { access_token, expires_at, hasRefreshToken }
+}
+
+/** Trigger an immediate server-side sync for one guest (don't wait on the cron). */
+export async function triggerGuestSync({ roomId, guestName }) {
+  return supabase.functions.invoke('sync-guest-calendars', { body: { roomId, guestName } })
+}
+
+/** Disconnect a guest's calendar server-side (clears token + availability). */
+export async function disconnectGuestCalendar({ roomId, guestName }) {
+  return supabase.functions.invoke('google-calendar-auth', {
+    body: { action: 'guest_disconnect', roomId, guestName },
+  })
+}

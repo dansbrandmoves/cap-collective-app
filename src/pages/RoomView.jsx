@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { supabase } from '../utils/supabase'
-import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
+import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured, connectGuestCalendarOffline, triggerGuestSync, disconnectGuestCalendar as disconnectGuestCalendarServer } from '../utils/googleCalendar'
 import { eventOverlapsSlot, dateToStr } from '../utils/availability'
 import { CalendarDays, CheckCircle2 } from 'lucide-react'
 import { startRun, logEvent, STATUS } from '../utils/diag'
@@ -52,40 +52,39 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
 }
 
 // Guest calendar panel — connects guest's Google Calendar so they can see their busy/free overlay in the views
-function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect, ownerName }) {
+function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect, ownerName, roomId, guestName }) {
   const who = ownerName ? ownerName.split(' ')[0] : 'the team'
   const [gisReady, setGisReady] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const tokenClientRef = useRef(null)
   const configured = isConfigured()
 
   useEffect(() => {
     if (!configured) return
     loadGoogleIdentityServices()
-      .then(() => {
-        tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: 'https://www.googleapis.com/auth/calendar.readonly',
-          callback: handleTokenResponse,
-        })
-        setGisReady(true)
-      })
+      .then(() => setGisReady(true))
       .catch(() => setError('Could not load Google Calendar.'))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleTokenResponse(tokenResponse) {
-    if (tokenResponse.error) { setError('Sign-in failed.'); return }
+  // Offline (refresh-token) connect via the popup code client. The server stores
+  // the refresh token and owns ongoing sync; here we also do an immediate read
+  // for the guest's local busy overlay.
+  async function handleConnect() {
     setLoading(true)
     setError(null)
     try {
-      const timeMin = new Date()
-      const timeMax = new Date()
-      timeMax.setDate(timeMax.getDate() + 60)
-      const events = await fetchCalendarEvents(tokenResponse.access_token, 'primary', timeMin, timeMax)
-      onConnect(events)
+      const { access_token } = await connectGuestCalendarOffline({ roomId, guestName })
+      // Immediate local overlay (server will keep shared_availability fresh on its own).
+      let events = []
+      try {
+        const timeMin = new Date()
+        const timeMax = new Date()
+        timeMax.setDate(timeMax.getDate() + 60)
+        events = await fetchCalendarEvents(access_token, 'primary', timeMin, timeMax)
+      } catch { /* overlay is best-effort; sync still runs server-side */ }
+      await onConnect(events)
     } catch (e) {
-      setError('Could not fetch calendar events.')
+      setError(e?.message || 'Could not connect your calendar.')
     }
     setLoading(false)
   }
@@ -106,8 +105,8 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect, ownerName })
           Only free/busy is read — never your event titles or details.
         </p>
         <Button
-          onClick={() => tokenClientRef.current?.requestAccessToken()}
-          disabled={!gisReady || loading}
+          onClick={handleConnect}
+          disabled={!gisReady || loading || !guestName}
           className="w-full sm:w-auto justify-center px-6"
         >
           <CalendarDays size={15} strokeWidth={1.75} className="mr-2" />
@@ -159,73 +158,41 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
   const [guestEvents, setGuestEvents] = useState(() => {
     try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
   })
+  // Calendar connect now goes through the offline (refresh-token) flow: the popup
+  // code client stores a refresh token server-side, and the sync-guest-calendars
+  // edge function owns writing shared_availability (and keeps it fresh on a 15-min
+  // cron). Here we just hold the events for the guest's local busy overlay and
+  // kick off an immediate first sync so they don't wait for the cron.
   async function connectGuestCalendar(events) {
     setGuestEvents(events)
     try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch (e) { /* */ }
 
     const run = startRun('guest_connect_calendar', { actor: guestName || 'unknown guest', roomId })
-    run.step('received calendar events', STATUS.OK, { eventCount: events?.length ?? 0, slotCount: slots?.length ?? 0 })
+    run.step('connected via offline code client', STATUS.OK, { eventCount: events?.length ?? 0 })
 
-    // Persist free/busy to shared_availability so the owner sees it without the
-    // guest tapping anything. This IS the connect-calendar value — surface any
-    // failure loudly so it never silently no-ops.
     if (!roomId || !guestName) {
-      console.warn('[coordie] guest calendar not shared — missing roomId or guestName', { roomId, guestName })
       run.step('aborted: missing identity', STATUS.SKIP, { roomId, guestName })
       run.finish(STATUS.SKIP, 'Skipped — missing roomId or guestName (guest may be viewing as owner)')
       return
     }
-    if (!slots?.length) {
-      console.warn('[coordie] guest calendar not shared — no slots resolved for this project')
-      run.step('aborted: no slots', STATUS.SKIP)
-      run.finish(STATUS.SKIP, 'Skipped — no availability slots resolved for this project')
-      return
-    }
-    const today = new Date()
-    const freeDays = []
-    for (let i = 0; i < 60; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
-      const ds = dateToStr(date)
-      const isFree = slots.some(s =>
-        !events.some(ev => eventOverlapsSlot(date, s, { ...ev, calendarId: 'primary' }))
-      )
-      if (isFree) freeDays.push({ room_id: roomId, guest_name: guestName, date: ds, is_available: true })
-    }
-    run.step('computed free days (next 60d)', STATUS.OK, { freeDays: freeDays.length })
 
-    const { error: delErr } = await supabase.from('shared_availability').delete().eq('room_id', roomId).eq('guest_name', guestName)
-    if (delErr) {
-      console.error('[coordie] failed clearing previous shared availability:', delErr.message)
-      run.step('clear previous rows', STATUS.ERROR, { error: delErr.message })
-    }
-    let insErr = null
-    if (freeDays.length) {
-      const r = await supabase.from('shared_availability').insert(freeDays)
-      insErr = r.error
-      if (insErr) {
-        console.error('[coordie] failed sharing calendar availability:', insErr.message)
-        run.step('insert free days', STATUS.ERROR, { error: insErr.message })
-      } else {
-        console.info(`[coordie] shared ${freeDays.length} free days for ${guestName}`)
-        run.step('insert free days', STATUS.OK, { rows: freeDays.length })
-      }
+    // Trigger the server-side sync immediately; it derives free days in the
+    // guest's timezone and writes shared_availability. Realtime updates the owner.
+    const { error } = await triggerGuestSync({ roomId, guestName })
+    if (error) {
+      run.step('trigger server sync', STATUS.ERROR, { error: error.message })
+      run.finish(STATUS.ERROR, 'Connected, but the first server sync failed (cron will retry)')
     } else {
-      console.info('[coordie] calendar connected but no free days found in the next 60 days')
-      run.step('no free days to write', STATUS.SKIP)
+      run.step('trigger server sync', STATUS.OK)
+      run.finish(STATUS.OK, `Connected ${guestName} — server sync running`)
     }
-    const failed = !!(delErr || insErr)
-    run.finish(
-      failed ? STATUS.ERROR : STATUS.OK,
-      failed ? 'Calendar connected but writing availability failed' : `Shared ${freeDays.length} free days for ${guestName}`,
-    )
   }
   async function disconnectGuestCalendar() {
     setGuestEvents(null)
     try { sessionStorage.removeItem('coordie-gcal') } catch (e) { /* */ }
     if (roomId && guestName) {
-      const { error } = await supabase.from('shared_availability').delete().eq('room_id', roomId).eq('guest_name', guestName)
-      if (error) console.error('[coordie] failed clearing shared availability on disconnect:', error.message)
+      const { error } = await disconnectGuestCalendarServer({ roomId, guestName })
+      if (error) console.error('[coordie] guest disconnect failed:', error.message)
     }
   }
 
@@ -260,6 +227,8 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
               onConnect={connectGuestCalendar}
               onDisconnect={disconnectGuestCalendar}
               ownerName={ownerName}
+              roomId={roomId}
+              guestName={guestName}
             />
           )}
           <p className="text-sm text-zinc-400 mb-4">

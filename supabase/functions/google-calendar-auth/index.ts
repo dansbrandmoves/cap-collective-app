@@ -26,6 +26,24 @@ async function getUser(req: Request) {
   return user;
 }
 
+// Exchange an authorization code for tokens. redirectUri must match what the
+// client used: for the owner redirect flow it's the page origin; for the guest
+// popup code-client it's also the page origin (Google's popup code model).
+async function exchangeCode(code: string, redirectUri: string) {
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    }),
+  });
+  return res.json();
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -43,33 +61,19 @@ Deno.serve(async (req: Request) => {
       const { code, redirectUri } = body;
       if (!code || !redirectUri) return jsonRes({ error: "Missing code or redirectUri" }, 400);
 
-      let tokenRes: Response;
+      let tokens: any;
       try {
-        tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            code,
-            client_id: GOOGLE_CLIENT_ID,
-            client_secret: GOOGLE_CLIENT_SECRET,
-            redirect_uri: redirectUri,
-            grant_type: "authorization_code",
-          }),
-        });
+        tokens = await exchangeCode(code, redirectUri);
       } catch (fetchErr) {
         console.error("Network error reaching Google (exchange):", fetchErr);
         return jsonRes({ error: "Network error reaching Google. Please try again.", transient: true }, 503);
       }
 
-      const tokens = await tokenRes.json();
       if (tokens.error) {
         console.error("Google token exchange error:", tokens);
         return jsonRes({ error: tokens.error_description || tokens.error }, 400);
       }
 
-      // Google only returns refresh_token on first consent (or when prompt=consent forces it).
-      // If it's missing, silent storage of null will work for ~1 hour then break with no
-      // recovery path — fail loudly here so the user can resolve it immediately.
       if (!tokens.refresh_token) {
         console.error("Exchange returned no refresh_token for user:", userId);
         return jsonRes({
@@ -86,6 +90,59 @@ Deno.serve(async (req: Request) => {
       }).eq("id", userId);
 
       return jsonRes({ access_token: tokens.access_token, expires_at: expiresAt });
+    }
+
+    // Guest popup code-client exchange. No auth user — identity is (roomId, guestName).
+    // Stores the refresh token in guest_calendar_tokens so the server can sync the
+    // guest's calendar on a schedule, exactly like owners.
+    if (action === "guest_exchange") {
+      const { code, redirectUri, roomId, guestName, timezone } = body;
+      if (!code || !redirectUri) return jsonRes({ error: "Missing code or redirectUri" }, 400);
+      if (!roomId || !guestName) return jsonRes({ error: "Missing roomId or guestName" }, 400);
+
+      let tokens: any;
+      try {
+        tokens = await exchangeCode(code, redirectUri);
+      } catch (fetchErr) {
+        console.error("Network error reaching Google (guest_exchange):", fetchErr);
+        return jsonRes({ error: "Network error reaching Google. Please try again.", transient: true }, 503);
+      }
+
+      if (tokens.error) {
+        console.error("Google guest token exchange error:", tokens);
+        return jsonRes({ error: tokens.error_description || tokens.error }, 400);
+      }
+
+      const expiresAt = Date.now() + ((tokens.expires_in || 3600) * 1000);
+      // refresh_token may be absent if the guest previously consented; in that case
+      // keep any existing stored token so background sync still works.
+      const update: Record<string, unknown> = {
+        room_id: roomId,
+        guest_name: guestName,
+        google_access_token: tokens.access_token,
+        google_token_expires_at: expiresAt,
+        google_calendar_id: "primary",
+        timezone: timezone || "UTC",
+        updated_at: new Date().toISOString(),
+      };
+      if (tokens.refresh_token) update.google_refresh_token = tokens.refresh_token;
+
+      // Upsert by (room_id, guest_name). If no refresh token came back and none is
+      // stored, sync can't run later — report it so the client can force consent.
+      const { error: upErr } = await supabase
+        .from("guest_calendar_tokens")
+        .upsert(update, { onConflict: "room_id,guest_name" });
+      if (upErr) {
+        console.error("guest token upsert error:", upErr);
+        return jsonRes({ error: upErr.message }, 500);
+      }
+
+      // Reset sync state so the next sync re-baselines this guest's window.
+      await supabase.from("guest_calendar_sync_state")
+        .upsert({ room_id: roomId, guest_name: guestName, google_calendar_id: "primary", sync_token: null, baseline_at: null, updated_at: new Date().toISOString() },
+          { onConflict: "room_id,guest_name,google_calendar_id" });
+
+      return jsonRes({ access_token: tokens.access_token, expires_at: expiresAt, hasRefreshToken: !!tokens.refresh_token });
     }
 
     if (action === "refresh") {
@@ -114,7 +171,6 @@ Deno.serve(async (req: Request) => {
           }),
         });
       } catch (fetchErr) {
-        // Network error — transient. Keep the refresh token so next call can retry.
         console.warn("Network error refreshing Google token (keeping refresh token for retry):", fetchErr);
         return jsonRes({ error: "Network error. Please try again shortly.", transient: true }, 503);
       }
@@ -122,12 +178,7 @@ Deno.serve(async (req: Request) => {
       const tokens = await tokenRes.json();
 
       if (tokens.error) {
-        // invalid_grant = the refresh token is permanently dead (user revoked in Google,
-        // password changed on certain account types, or 6+ months of disuse). Wipe it.
-        // Everything else (invalid_client, 5xx, rate limits) is transient — keep the token
-        // so we can retry next time instead of forcing a reconnect on every blip.
         const permanentlyDead = tokens.error === "invalid_grant";
-
         if (permanentlyDead) {
           console.warn(`Refresh token permanently dead (${tokens.error}) for user ${user.id} — wiping`);
           await supabase.from("profiles").update({
@@ -140,7 +191,6 @@ Deno.serve(async (req: Request) => {
             permanentlyDead: true,
           }, 401);
         }
-
         console.warn(`Transient refresh error (${tokens.error}) for user ${user.id} — keeping refresh token`);
         return jsonRes({
           error: tokens.error_description || tokens.error,
@@ -164,6 +214,16 @@ Deno.serve(async (req: Request) => {
         google_refresh_token: null,
         google_token_expires_at: null,
       }).eq("id", user.id);
+      return jsonRes({ success: true });
+    }
+
+    // Guest disconnect — clear stored token + sync state + their availability rows.
+    if (action === "guest_disconnect") {
+      const { roomId, guestName } = body;
+      if (!roomId || !guestName) return jsonRes({ error: "Missing roomId or guestName" }, 400);
+      await supabase.from("guest_calendar_tokens").delete().eq("room_id", roomId).eq("guest_name", guestName);
+      await supabase.from("guest_calendar_sync_state").delete().eq("room_id", roomId).eq("guest_name", guestName);
+      await supabase.from("shared_availability").delete().eq("room_id", roomId).eq("guest_name", guestName);
       return jsonRes({ success: true });
     }
 

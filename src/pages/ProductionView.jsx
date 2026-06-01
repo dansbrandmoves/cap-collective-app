@@ -8,8 +8,10 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { ProjectOverview } from '../components/project/ProjectOverview'
 import { PeopleRoster } from '../components/project/PeopleRoster'
+import { TasksBoard } from '../components/project/TasksBoard'
 import { useProjectAvailability } from '../hooks/useProjectAvailability'
 import { useProjectPeople } from '../hooks/useProjectPeople'
+import { useProjectTasks } from '../hooks/useProjectTasks'
 import { useResizablePanel, ResizeHandle } from '../hooks/useResizablePanel'
 import { projectSlotsFromConfig } from '../utils/availability'
 import { PageLoader } from '../components/ui/PageLoader'
@@ -31,6 +33,7 @@ export function ProductionView() {
   const production = getProduction(id)
   const [activeRoomId, setActiveRoomId] = useState(null)
   const [activeView, setActiveView] = useState('overview') // 'overview' | 'room'
+  const [mainTab, setMainTab] = useState('schedule') // 'schedule' | 'tasks'
   const [mobileShowSidebar, setMobileShowSidebar] = useState(false)
   const [showNewRoom, setShowNewRoom] = useState(false)
   const [newRoomName, setNewRoomName] = useState('')
@@ -68,6 +71,7 @@ export function ProductionView() {
   })
   const sidePanel = useResizablePanel('coordie-project-panel', { defaultWidth: 288, min: 240, max: 420, side: 'right' })
   const PANEL_RAIL = 48
+  const projectTasks = useProjectTasks(id)
 
   // Early return AFTER all hooks. Distinguish "still loading" from "truly missing":
   // during initial load productions is empty, so show a spinner, not "not found".
@@ -251,20 +255,50 @@ export function ProductionView() {
           </button>
         </div>
 
-        <ProjectOverview
-          production={production}
-          slots={projectSlots}
-          calendarEvents={calendarEvents}
-          connectedCalendars={connectedCalendars}
-          prefixRules={prefixRules}
-          businessHours={projectConfig?.businessHours || businessHours}
-          loading={availability.loading}
-          dateRequestsByRoom={availability.dateRequestsByRoom}
-          sharedAvailByRoom={availability.sharedAvailByRoom}
-          excluded={peopleState.excluded}
-          includedOwner={peopleState.includedOwner}
-          totalPeople={peopleState.totalPeople}
-        />
+        {/* Schedule | Tasks toggle — Schedule (the calendar) is the default focus */}
+        <div className="px-5 sm:px-8 lg:px-12 pt-6 sm:pt-8 flex-shrink-0">
+          <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-xl p-1">
+            {[['schedule', 'Schedule'], ['tasks', 'Tasks']].map(([key, label]) => (
+              <button key={key} onClick={() => setMainTab(key)}
+                className={`px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ease-ios ${
+                  mainTab === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
+                }`}>
+                {label}
+                {key === 'tasks' && projectTasks.tasks.length > 0 && (
+                  <span className="ml-1.5 text-[11px] text-zinc-500 tabular-nums">{projectTasks.tasks.length}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {mainTab === 'schedule' ? (
+          <ProjectOverview
+            production={production}
+            slots={projectSlots}
+            calendarEvents={calendarEvents}
+            connectedCalendars={connectedCalendars}
+            prefixRules={prefixRules}
+            businessHours={projectConfig?.businessHours || businessHours}
+            loading={availability.loading}
+            dateRequestsByRoom={availability.dateRequestsByRoom}
+            sharedAvailByRoom={availability.sharedAvailByRoom}
+            excluded={peopleState.excluded}
+            includedOwner={peopleState.includedOwner}
+            totalPeople={peopleState.totalPeople}
+          />
+        ) : (
+          <div className="flex-1 overflow-y-auto no-scrollbar px-5 sm:px-8 lg:px-12 py-6 sm:py-8">
+            <TasksBoard
+              byColumn={projectTasks.byColumn}
+              people={peopleState.people}
+              addTask={projectTasks.addTask}
+              updateTask={projectTasks.updateTask}
+              moveTask={projectTasks.moveTask}
+              deleteTask={projectTasks.deleteTask}
+            />
+          </div>
+        )}
       </div>
 
       {/* Share Modal */}

@@ -106,20 +106,17 @@ function formatTime(t) {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
 }
 
-export function CalendarSettings() {
+export function CalendarSettings({ embedded = false } = {}) {
   const {
     connectedCalendars, addConnectedCalendar, updateCalendarRole, updateCalendarDefaultState, removeConnectedCalendar,
     googleAccessToken, setGoogleAccessToken,
     googleTokenExpiresAt, setGoogleTokenExpiresAt,
     calendarSyncing, setCalendarSyncing,
     lastSynced, syncNow,
-    prefixRules, createPrefixRule, updatePrefixRule, deletePrefixRule,
-    slotStates, updateSlotStateCustomization, resetSlotStateCustomizations,
+    slotStates,
     businessHours, setBusinessHours,
-    guestCalendarEnabled, setGuestCalendarEnabled,
     theme, toggleTheme,
     timezone, setTimezone,
-    availabilityMode, setAvailabilityMode, blockDuration, setBlockDuration,
     logoUrl, logoIsDark, setLogoIsDark, uploadLogo, removeLogo, user,
     resetAllSettings,
   } = useApp()
@@ -130,10 +127,6 @@ export function CalendarSettings() {
   const [pendingCals, setPendingCals] = useState([])
   const [assigningRoles, setAssigningRoles] = useState({})
   const pendingSyncRef = useRef(false)
-  const [showAddRule, setShowAddRule] = useState(false)
-  const [newPrefix, setNewPrefix] = useState('')
-  const [newState, setNewState] = useState('blocked')
-  const [editingHours, setEditingHours] = useState(false)
   const [themeOpen, setThemeOpen] = useState(false)
   const [tzOpen, setTzOpen] = useState(false)
 
@@ -241,11 +234,13 @@ export function CalendarSettings() {
   }
 
   return (
-    <div className="px-5 sm:px-8 lg:px-14 py-8 sm:py-12">
-      <div className="mb-10 sm:mb-12">
-        <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15] mb-2">Settings</h1>
-        <p className="text-[15px] text-zinc-400 leading-relaxed">Calendar, availability, and preferences.</p>
-      </div>
+    <div className={embedded ? '' : 'px-5 sm:px-8 lg:px-14 py-8 sm:py-12'}>
+      {!embedded && (
+        <div className="mb-10 sm:mb-12">
+          <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15] mb-2">Settings</h1>
+          <p className="text-[15px] text-zinc-400 leading-relaxed">Calendar, availability, and preferences.</p>
+        </div>
+      )}
 
       {!configured && (
         <div className="bg-amber-900/30 border border-amber-700/50 rounded-xl px-4 py-3 mb-6">
@@ -458,23 +453,7 @@ export function CalendarSettings() {
 
       {/* ── Availability ── */}
       <div className="py-5 border-b border-surface-800">
-        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Availability</p>
-
-        {/* Mode + duration */}
-        <div className="flex items-center gap-3 mb-4">
-          <select value={availabilityMode} onChange={e => setAvailabilityMode(e.target.value)}
-            className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-400 focus:outline-none focus:border-accent">
-            <option value="blocks">Time blocks</option>
-            <option value="slots">Named slots</option>
-          </select>
-          {availabilityMode === 'blocks' && (
-            <select value={blockDuration} onChange={e => setBlockDuration(Number(e.target.value))}
-              className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-400 focus:outline-none focus:border-accent">
-              <option value={30}>30 min blocks</option>
-              <option value={60}>60 min blocks</option>
-            </select>
-          )}
-        </div>
+        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Working hours</p>
 
         {/* Business hours per day */}
         <div className="space-y-0 mb-3">
@@ -511,99 +490,7 @@ export function CalendarSettings() {
             )
           })}
         </div>
-        <p className="text-xs text-zinc-600">
-          {availabilityMode === 'blocks'
-            ? `Generates ${blockDuration}-minute blocks within these hours. Manage custom slots on the Availability page.`
-            : 'These hours define your working days. Custom slots are managed on the Availability page.'}
-        </p>
-      </div>
-
-      {/* ── Guest Calendar Access ── */}
-      <div className="py-5 border-b border-surface-800">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Guest Calendar Access</p>
-            <p className="text-xs text-zinc-600 mt-1">
-              {guestCalendarEnabled
-                ? 'Guests can connect their Google Calendar on booking and room pages.'
-                : 'Off — requires Google OAuth verification to enable.'}
-            </p>
-          </div>
-          <button onClick={() => setGuestCalendarEnabled(!guestCalendarEnabled)}
-            className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
-              guestCalendarEnabled ? 'bg-accent' : 'bg-surface-600'
-            }`}>
-            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-              guestCalendarEnabled ? 'translate-x-4' : 'translate-x-0'
-            }`} />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Prefix Rules ── */}
-      <div className="py-5 border-b border-surface-800">
-        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-1">Prefix Rules</p>
-        <p className="text-xs text-zinc-600 mb-3">Event title prefixes that override the default calendar state.</p>
-        {prefixRules.length > 0 && (
-          <div className="space-y-1.5 mb-3">
-            {prefixRules.map(rule => (
-              <div key={rule.id} className="flex items-center gap-3 py-1">
-                <code className="text-sm font-bold text-accent bg-surface-800 px-2 py-0.5 rounded flex-shrink-0">{rule.prefix}</code>
-                <span className="text-zinc-600 text-xs">→</span>
-                <span className="text-xs text-zinc-400">{slotStates[rule.state]?.label || rule.state}</span>
-                <div className="flex-1" />
-                <button onClick={() => deletePrefixRule(rule.id)}
-                  className="p-1 rounded text-zinc-600 hover:text-red-400 transition-colors">
-                  <Trash2 size={12} strokeWidth={1.75} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        {showAddRule ? (
-          <div className="flex flex-wrap items-end gap-2 mt-2">
-            <input value={newPrefix} onChange={e => setNewPrefix(e.target.value.slice(0, 3))} maxLength={3} placeholder="*"
-              className="w-14 bg-surface-800 border border-surface-700 rounded-md px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-accent font-mono" />
-            <select value={newState} onChange={e => setNewState(e.target.value)}
-              className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1.5 text-zinc-300 focus:outline-none focus:border-accent">
-              {Object.entries(slotStates).map(([key, val]) => (
-                <option key={key} value={key}>{val.label}</option>
-              ))}
-            </select>
-            <Button size="sm" onClick={() => {
-              if (!newPrefix.trim()) return
-              createPrefixRule({ prefix: newPrefix.trim(), state: newState })
-              setNewPrefix(''); setNewState('blocked'); setShowAddRule(false)
-            }}>Add</Button>
-            <button onClick={() => setShowAddRule(false)} className="text-xs text-zinc-600 hover:text-zinc-400 px-2 py-1">Cancel</button>
-          </div>
-        ) : (
-          <button onClick={() => setShowAddRule(true)} className="text-xs text-zinc-500 hover:text-accent transition-colors">+ Add rule</button>
-        )}
-      </div>
-
-      {/* ── Status Labels ── */}
-      <div className="py-5 border-b border-surface-800">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Status Labels</p>
-          <button onClick={resetSlotStateCustomizations} className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors">Reset</button>
-        </div>
-        <div className="space-y-1.5">
-          {Object.entries(slotStates).map(([key, val]) => {
-            const meaning = { available: 'Open', hold: 'Tentative', booked: 'Calendar event', blocked: 'Hard block' }[key]
-            return (
-              <div key={key} className="flex items-center gap-2.5 py-1">
-                <input type="color" value={val.color}
-                  onChange={e => updateSlotStateCustomization(key, { color: e.target.value })}
-                  className="w-5 h-5 rounded cursor-pointer bg-[#1a1a1e] border-0 flex-shrink-0" />
-                <input type="text" value={val.label}
-                  onChange={e => updateSlotStateCustomization(key, { label: e.target.value })}
-                  className="flex-1 bg-[#1a1a1e] text-sm text-zinc-300 focus:outline-none focus:text-zinc-100 min-w-0 border-b border-transparent focus:border-surface-600 py-0.5" />
-                <span className="text-[10px] text-zinc-600 flex-shrink-0">{meaning}</span>
-              </div>
-            )
-          })}
-        </div>
+        <p className="text-xs text-zinc-600">These hours define when you’re bookable. Days left off are unavailable.</p>
       </div>
 
       {/* ── Reset ── */}

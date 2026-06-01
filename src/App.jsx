@@ -16,6 +16,7 @@ import { BookingPages } from './pages/BookingPages'
 import { BookingPageView } from './pages/BookingPageView'
 import { AdminDashboard } from './pages/AdminDashboard'
 import { AdminDiagnostics } from './pages/AdminDiagnostics'
+import { AccountPage } from './pages/AccountPage'
 import { PageLoader } from './components/ui/PageLoader'
 
 function LoadingScreen() {
@@ -61,10 +62,12 @@ function AppRoutes() {
       <Route element={<AuthGate />}>
         <Route path="/project/:id" element={<ProductionView />} />
         <Route path="/inbox" element={<Inbox />} />
-        <Route path="/availability" element={<AvailabilityRules />} />
-        <Route path="/calendars" element={<CalendarSettings />} />
+        <Route path="/account" element={<AccountPage />} />
+        {/* Old standalone settings routes now live as Account tabs */}
+        <Route path="/availability" element={<Navigate to="/account?tab=availability" replace />} />
+        <Route path="/calendars" element={<Navigate to="/account?tab=calendars" replace />} />
+        <Route path="/billing" element={<Navigate to="/account?tab=billing" replace />} />
         <Route path="/booking-pages" element={<BookingPages />} />
-        <Route path="/billing" element={<BillingPage />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/diagnostics" element={<AdminDiagnostics />} />
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -4,7 +4,7 @@ import { Zap, Check, Crown, CreditCard, AlertCircle, Settings } from 'lucide-rea
 import { useApp } from '../contexts/AppContext'
 import { supabase } from '../utils/supabase'
 
-export function BillingPage() {
+export function BillingPage({ embedded = false } = {}) {
   const { plan, isProPlan, user, FREE_PROJECT_LIMIT, FREE_ROOM_LIMIT } = useApp()
   const [loading, setLoading] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
@@ -96,11 +96,13 @@ export function BillingPage() {
   }
 
   return (
-    <div className="px-5 sm:px-8 lg:px-14 py-8 sm:py-12">
-      <div className="mb-10 sm:mb-12">
-        <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15] mb-2">Billing</h1>
-        <p className="text-[15px] text-zinc-400 leading-relaxed">Manage your plan and subscription.</p>
-      </div>
+    <div className={embedded ? '' : 'px-5 sm:px-8 lg:px-14 py-8 sm:py-12'}>
+      {!embedded && (
+        <div className="mb-10 sm:mb-12">
+          <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15] mb-2">Billing</h1>
+          <p className="text-[15px] text-zinc-400 leading-relaxed">Manage your plan and subscription.</p>
+        </div>
+      )}
 
       {verifying && (
         <div className="flex items-center gap-3 bg-surface-900 border border-white/[0.06] rounded-xl px-4 py-3 mb-6">

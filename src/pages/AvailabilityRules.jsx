@@ -2,22 +2,19 @@ import { useApp } from '../contexts/AppContext'
 import { SlotEditor } from '../components/availability/SlotEditor'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 
-export function AvailabilityRules() {
+export function AvailabilityRules({ embedded = false } = {}) {
   const { availabilityRules, effectiveSlots, calendarEvents, connectedCalendars, prefixRules, slotStates, availabilityMode, businessHours } = useApp()
 
   return (
-    <div className="px-5 sm:px-8 lg:px-14 py-8 sm:py-12">
-      <div className="mb-10 sm:mb-12">
-        <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15] mb-2">Default Availability</h1>
-        <p className="text-[15px] text-zinc-400 leading-relaxed">
-          The baseline every project starts from — any project can override it in its own Settings.
-          {' '}
-          {availabilityMode === 'blocks'
-            ? `Showing ${effectiveSlots.length} time blocks based on your business hours.`
-            : 'Your calendar with custom time slots.'}
-          {' '}Adjust hours in Settings.
-        </p>
-      </div>
+    <div className={embedded ? '' : 'px-5 sm:px-8 lg:px-14 py-8 sm:py-12'}>
+      {!embedded && (
+        <div className="mb-10 sm:mb-12">
+          <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15] mb-2">Default Availability</h1>
+          <p className="text-[15px] text-zinc-400 leading-relaxed">
+            The baseline every project starts from — any project can override it in its own Settings. Adjust working hours in the Calendars tab.
+          </p>
+        </div>
+      )}
 
       {/* Calendar */}
       <div className={availabilityMode === 'slots' ? 'mb-10' : ''}>

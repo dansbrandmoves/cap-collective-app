@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { useResizablePanel, ResizeHandle } from '../../hooks/useResizablePanel'
-import { LayoutGrid, CalendarCheck, CalendarDays, Settings, LogOut, CreditCard, Shield, Activity, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { LayoutGrid, CalendarCheck, LogOut, Shield, Activity, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 // Primary destinations live at the top ("what you do"); configuration/utility is
 // pinned to the bottom ("settings"). Keeps the nav uncluttered and scannable.
@@ -10,14 +10,12 @@ const PRIMARY_NAV = [
 ]
 const UTILITY_NAV = [
   { to: '/booking-pages', label: 'Booking', icon: CalendarCheck },
-  { to: '/availability', label: 'Availability', icon: CalendarDays },
-  { to: '/calendars', label: 'Settings', icon: Settings },
 ]
 
 const RAIL = 60 // collapsed icon-rail width
 
 export function Sidebar({ mobileOpen = false, onMobileClose }) {
-  const { productions, user, signOut, theme, isProPlan, isAdmin } = useApp()
+  const { productions, user, signOut, theme, isAdmin } = useApp()
   const panel = useResizablePanel('coordie-nav', { defaultWidth: 224, min: 200, max: 340, side: 'right' })
   const railed = panel.collapsed
 
@@ -108,26 +106,6 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
             </div>
 
             <div className="pt-2 mt-2 border-t border-surface-800 space-y-0.5">
-              {/* Calm Billing link for everyone — the upgrade pitch surfaces
-                  contextually via UpgradeModal when a free limit is actually hit,
-                  not as a persistent nag in the nav. */}
-              <NavLink
-                to="/billing"
-                onClick={onMobileClose}
-                title={railed ? 'Billing' : undefined}
-                className={({ isActive }) =>
-                  `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${railed ? 'justify-center' : ''} ${
-                    isActive ? 'bg-surface-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-surface-800'
-                  }`
-                }
-              >
-                <CreditCard size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
-                {!railed && <span className="flex-1">Billing</span>}
-                {!railed && !isProPlan && (
-                  <span className="text-[10px] font-medium text-zinc-600">Free</span>
-                )}
-              </NavLink>
-
               {isAdmin && (
                 <NavLink
                   to="/admin"
@@ -174,9 +152,18 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
           </div>
         </nav>
 
-        {/* Footer: user info */}
+        {/* Footer: account entry — click to open the Account hub (settings, calendars, billing) */}
         {user && (
-          <div className={`py-3 border-t border-surface-700 flex-shrink-0 flex items-center gap-2 safe-bottom-sm ${railed ? 'px-0 justify-center' : 'px-5'}`}>
+          <NavLink
+            to="/account"
+            onClick={onMobileClose}
+            title={railed ? 'Account' : undefined}
+            className={({ isActive }) =>
+              `border-t border-surface-700 flex-shrink-0 flex items-center gap-2 safe-bottom-sm py-3 transition-colors ${railed ? 'px-0 justify-center' : 'px-5'} ${
+                isActive ? 'bg-surface-800' : 'hover:bg-surface-800'
+              }`
+            }
+          >
             {user.user_metadata?.avatar_url ? (
               <img src={user.user_metadata.avatar_url} alt="" className="w-6 h-6 rounded-full flex-shrink-0" />
             ) : (
@@ -184,8 +171,13 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 {(user.user_metadata?.full_name || user.email)?.[0]?.toUpperCase() ?? '?'}
               </div>
             )}
-            {!railed && <span className="text-xs text-zinc-400 truncate">{user.user_metadata?.full_name || user.email}</span>}
-          </div>
+            {!railed && (
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-zinc-300 truncate leading-tight">{user.user_metadata?.full_name || user.email}</p>
+                <p className="text-[10px] text-zinc-600 leading-tight">Account & settings</p>
+              </div>
+            )}
+          </NavLink>
         )}
       </aside>
     </>

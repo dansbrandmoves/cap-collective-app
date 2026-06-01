@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
@@ -27,7 +28,9 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
 
   const maxWidths = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg' }
 
-  return (
+  // Portal to <body> so the overlay escapes any transformed/resizable ancestor
+  // (e.g. the project side panel) and always covers the full viewport.
+  return createPortal(
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
@@ -70,6 +73,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
           <div className="px-5 py-5 overflow-y-auto flex-1">{children}</div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

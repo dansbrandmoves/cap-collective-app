@@ -612,6 +612,20 @@ export function BookingPageView() {
                 </div>
               </div>
 
+              {/* Time-of-day filter — narrows a long list of times right here */}
+              <div className="flex justify-center mb-4">
+                <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">
+                  {WINDOW_ORDER.map(key => (
+                    <button key={key} onClick={() => setWindowKey(key)}
+                      className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                        windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
+                      }`}>
+                      {WINDOWS[key].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <TimeSlotPicker
                 slots={timeSlots.filter(s => slotInWindow(s, WINDOWS[windowKey]))}
                 takenSlots={takenSlots} ownerEvents={ownerEvents} guestEvents={guestEvents}

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { getMonthGrid, dateToStr, eventOverlapsSlot } from '../utils/availability'
+import { SlotRow } from '../components/availability/SlotRow'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
 import { ChevronLeft, ChevronRight, CheckCircle2, Clock, CalendarDays, X } from 'lucide-react'
@@ -139,32 +140,24 @@ function TimeSlotPicker({ slots, takenSlots, ownerEvents, guestEvents, selectedD
 
   return (
     <div className="space-y-2">
-      {available.map((slot, i) => {
+      {available.map((slot) => {
         const isSelected = selectedSlot?.startTime === slot.startTime
         const isGuestBusy = guestEvents !== null && date &&
           guestEvents.some(ev => eventOverlapsSlot(date, slot, { ...ev, calendarId: 'primary' }))
         return (
-          <motion.button
+          <SlotRow
             key={slot.startTime}
+            center
+            name={slot.label}
+            state={isSelected ? 'selected' : isGuestBusy ? 'busy' : 'available'}
             onClick={() => onSelect(slot)}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.015, duration: 0.2, ease: IOS_EASE }}
-            className={`w-full min-h-touch flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 ease-ios ${
-              isSelected
-                ? 'bg-accent text-white shadow-[0_8px_24px_-8px_rgb(94_156_140/0.5)]'
-                : isGuestBusy
-                ? 'border border-white/[0.05] text-zinc-600'
-                : 'border border-white/10 text-zinc-200 hover:border-accent/40 hover:bg-white/[0.03]'
-            }`}>
-            {slot.label}
-            {isGuestBusy && !isSelected && (
+            trailing={isGuestBusy && !isSelected ? (
               <span className="flex items-center gap-1 text-[10px] font-normal text-zinc-700">
                 <span className="w-1 h-1 rounded-full bg-zinc-700" />
                 busy
               </span>
-            )}
-          </motion.button>
+            ) : null}
+          />
         )
       })}
     </div>

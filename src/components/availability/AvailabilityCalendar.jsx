@@ -6,6 +6,7 @@ import { DateRequestModal } from './DateRequestModal'
 import { useApp } from '../../contexts/AppContext'
 import { getWeekStart, dateToStr, deriveSlotState, eventOverlapsSlot } from '../../utils/availability'
 import { OWNER_LABEL } from '../../hooks/useProjectPeople'
+import { SlotRow } from './SlotRow'
 import { Button } from '../ui/Button'
 import { CalendarPlus, X, Check } from 'lucide-react'
 
@@ -719,39 +720,29 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                   const total = guestData.length
                   const isSelected = selectedSlotId === slot.id
                   return (
-                    <button
+                    <SlotRow
                       key={slot.id}
+                      state={isSelected ? 'selected' : 'available'}
+                      barColor={slot.color || '#5e9c8c'}
+                      name={slot.name}
+                      time={`${slot.startTime} – ${slot.endTime}`}
                       onClick={() => selectSlot(slot)}
-                      title={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
-                      className={`group w-full text-left flex items-center gap-3.5 px-4 py-3.5 rounded-xl border transition-all duration-200 ease-ios active:scale-[0.99] ${
-                        isSelected
-                          ? 'bg-accent/10 border-accent/45 hover:bg-accent/15 shadow-[0_0_0_1px_rgb(94_156_140/0.25)]'
-                          : 'bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.06] hover:border-white/[0.14]'
-                      }`}
-                    >
-                      <div className="w-1.5 h-9 rounded-full flex-shrink-0" style={{ backgroundColor: slot.color || '#5e9c8c' }} />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-[14px] font-semibold truncate leading-tight ${isSelected ? 'text-zinc-50' : 'text-zinc-200'}`}>
-                          {slot.name}
-                        </p>
-                        <p className="text-[12px] text-zinc-500 mt-0.5">{slot.startTime} – {slot.endTime}</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                        {total > 0 && (
-                          <span className={`text-[13px] font-bold tabular-nums ${isSelected ? 'text-accent' : 'text-zinc-400'}`}>
-                            {freeCount}/{total}
-                          </span>
-                        )}
-                        {total > 0 && (
-                          <span className="text-[10px] text-zinc-600">free</span>
-                        )}
-                      </div>
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
-                        isSelected ? 'bg-accent text-white' : 'border border-white/20'
-                      }`}>
-                        {isSelected && <Check size={12} strokeWidth={2.5} />}
-                      </div>
-                    </button>
+                      hint={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
+                      trailing={
+                        <div className="flex items-center gap-2.5 flex-shrink-0">
+                          {total > 0 && (
+                            <span className={`text-[13px] font-bold tabular-nums ${isSelected ? 'text-accent' : 'text-zinc-400'}`}>
+                              {freeCount}/{total}
+                            </span>
+                          )}
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all duration-150 ${
+                            isSelected ? 'bg-accent text-white' : 'border border-white/20'
+                          }`}>
+                            {isSelected && <Check size={12} strokeWidth={2.5} />}
+                          </div>
+                        </div>
+                      }
+                    />
                   )
                 })}
               </div>
@@ -772,43 +763,29 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                       {slotOverlap.rows.map(({ slot, freeCount, freeNames }) => {
                         const total = guestData.length
                         const isBusy = total > 0 && freeCount === 0
-                        const isPartial = total > 0 && freeCount > 0 && freeCount < total
                         const isAll = total > 0 && freeCount === total
                         const isSelected = selectedSlotId === slot.id
                         return (
-                          <button
+                          <SlotRow
                             key={slot.id}
+                            state={isSelected ? 'selected' : isBusy ? 'busy' : 'available'}
+                            barColor={isBusy ? '#52525b' : (slot.color || '#5e9c8c')}
+                            name={slot.name}
+                            time={`${slot.startTime} – ${slot.endTime}`}
                             onClick={() => selectSlot(slot)}
-                            title={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
-                            className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all duration-150 active:scale-[0.99] ${
-                              isSelected
-                                ? 'border-accent/45 bg-accent/10 text-zinc-100'
-                                : isBusy
-                                ? 'border-white/[0.05] text-zinc-600 cursor-pointer hover:border-white/10 hover:text-zinc-500'
-                                : 'border-white/10 text-zinc-200 hover:border-accent/40 hover:bg-white/[0.03]'
-                            } ${isBusy && !isSelected ? 'opacity-50 hover:opacity-70' : ''}`}
-                          >
-                            <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: isBusy ? '#52525b' : (slot.color || '#5e9c8c') }} />
-                            <div className="flex-1 min-w-0 text-left">
-                              <p className="text-[13px] font-medium truncate leading-tight">{slot.name}</p>
-                              <p className="text-[11px] text-zinc-600 mt-0.5">{slot.startTime} – {slot.endTime}</p>
-                            </div>
-                            {total > 0 && (
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                {isBusy && (
-                                  <span className="flex items-center gap-1 text-[10px] text-zinc-700">
-                                    <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                                    busy
-                                  </span>
-                                )}
-                                {(isPartial || isAll) && (
-                                  <span className={`text-[11px] font-semibold tabular-nums ${isAll ? 'text-accent' : 'text-zinc-400'}`}>
-                                    {freeCount}/{total}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </button>
+                            hint={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
+                            trailing={total > 0 ? (
+                              isBusy ? (
+                                <span className="flex items-center gap-1 text-[10px] text-zinc-700 flex-shrink-0">
+                                  <span className="w-1 h-1 rounded-full bg-zinc-700" /> busy
+                                </span>
+                              ) : (
+                                <span className={`text-[11px] font-semibold tabular-nums flex-shrink-0 ${isAll ? 'text-accent' : 'text-zinc-400'}`}>
+                                  {freeCount}/{total}
+                                </span>
+                              )
+                            ) : null}
+                          />
                         )
                       })}
                     </div>

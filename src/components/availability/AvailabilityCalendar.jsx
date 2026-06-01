@@ -611,9 +611,18 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
   }, [slotOverlap])
   const [startTime, setStartTime] = useState(bestSlot?.startTime || '14:00')
   const [endTime, setEndTime] = useState(bestSlot?.endTime || '15:00')
+  // Two-click flow: tapping a slot SELECTS it (sets the time); the Schedule
+  // button below is what actually opens Google Calendar.
+  const [selectedSlotId, setSelectedSlotId] = useState(bestSlot?.id || null)
   useEffect(() => {
-    if (bestSlot) { setStartTime(bestSlot.startTime); setEndTime(bestSlot.endTime) }
-  }, [bestSlot?.startTime, bestSlot?.endTime]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (bestSlot) { setStartTime(bestSlot.startTime); setEndTime(bestSlot.endTime); setSelectedSlotId(bestSlot.id) }
+  }, [bestSlot?.startTime, bestSlot?.endTime, bestSlot?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function selectSlot(slot) {
+    setSelectedSlotId(slot.id)
+    setStartTime(slot.startTime)
+    setEndTime(slot.endTime)
+  }
 
   function buildDescription() {
     const detailsLines = ['Scheduled via Coordie.']
@@ -655,11 +664,6 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
     })
     if (selectedEmails.length > 0) params.set('add', selectedEmails.join(','))
     window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, '_blank', 'noopener,noreferrer')
-  }
-
-  // Per-slot quick buttons in the overlap list create the event for that slot directly.
-  function handleSchedule(slot = null) {
-    handleCreate(slot)
   }
 
   return (
@@ -711,30 +715,30 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                 {guestData.length > 0 ? 'Best times for everyone' : 'Quick schedule'}
               </p>
               <div className="space-y-2">
-                {bestSlots.map(({ slot, freeCount, freeNames }, i) => {
+                {bestSlots.map(({ slot, freeCount, freeNames }) => {
                   const total = guestData.length
-                  const isTop = i === 0
+                  const isSelected = selectedSlotId === slot.id
                   return (
                     <button
                       key={slot.id}
-                      onClick={() => handleCreate(slot)}
+                      onClick={() => selectSlot(slot)}
                       title={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
                       className={`group w-full text-left flex items-center gap-3.5 px-4 py-3.5 rounded-xl border transition-all duration-200 ease-ios active:scale-[0.99] ${
-                        isTop
-                          ? 'bg-accent/10 border-accent/35 hover:bg-accent/15 hover:border-accent/55 shadow-[0_0_0_1px_rgb(94_156_140/0.15)]'
+                        isSelected
+                          ? 'bg-accent/10 border-accent/45 hover:bg-accent/15 shadow-[0_0_0_1px_rgb(94_156_140/0.25)]'
                           : 'bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.06] hover:border-white/[0.14]'
                       }`}
                     >
                       <div className="w-1.5 h-9 rounded-full flex-shrink-0" style={{ backgroundColor: slot.color || '#5e9c8c' }} />
                       <div className="flex-1 min-w-0">
-                        <p className={`text-[14px] font-semibold truncate leading-tight ${isTop ? 'text-zinc-50' : 'text-zinc-200'}`}>
+                        <p className={`text-[14px] font-semibold truncate leading-tight ${isSelected ? 'text-zinc-50' : 'text-zinc-200'}`}>
                           {slot.name}
                         </p>
                         <p className="text-[12px] text-zinc-500 mt-0.5">{slot.startTime} – {slot.endTime}</p>
                       </div>
                       <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                         {total > 0 && (
-                          <span className={`text-[13px] font-bold tabular-nums ${isTop ? 'text-accent' : 'text-zinc-400'}`}>
+                          <span className={`text-[13px] font-bold tabular-nums ${isSelected ? 'text-accent' : 'text-zinc-400'}`}>
                             {freeCount}/{total}
                           </span>
                         )}
@@ -742,7 +746,11 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                           <span className="text-[10px] text-zinc-600">free</span>
                         )}
                       </div>
-                      <CalendarPlus size={14} strokeWidth={1.75} className={`flex-shrink-0 transition-opacity duration-150 ${isTop ? 'text-accent opacity-60 group-hover:opacity-100' : 'text-zinc-500 opacity-0 group-hover:opacity-60'}`} />
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
+                        isSelected ? 'bg-accent text-white' : 'border border-white/20'
+                      }`}>
+                        {isSelected && <Check size={12} strokeWidth={2.5} />}
+                      </div>
                     </button>
                   )
                 })}
@@ -766,16 +774,19 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                         const isBusy = total > 0 && freeCount === 0
                         const isPartial = total > 0 && freeCount > 0 && freeCount < total
                         const isAll = total > 0 && freeCount === total
+                        const isSelected = selectedSlotId === slot.id
                         return (
                           <button
                             key={slot.id}
-                            onClick={() => handleCreate(slot)}
+                            onClick={() => selectSlot(slot)}
                             title={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
                             className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all duration-150 active:scale-[0.99] ${
-                              isBusy
+                              isSelected
+                                ? 'border-accent/45 bg-accent/10 text-zinc-100'
+                                : isBusy
                                 ? 'border-white/[0.05] text-zinc-600 cursor-pointer hover:border-white/10 hover:text-zinc-500'
                                 : 'border-white/10 text-zinc-200 hover:border-accent/40 hover:bg-white/[0.03]'
-                            } ${isBusy ? 'opacity-50 hover:opacity-70' : ''}`}
+                            } ${isBusy && !isSelected ? 'opacity-50 hover:opacity-70' : ''}`}
                           >
                             <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: isBusy ? '#52525b' : (slot.color || '#5e9c8c') }} />
                             <div className="flex-1 min-w-0 text-left">

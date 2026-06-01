@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -285,7 +285,11 @@ export function RoomView() {
   }, [token, loading, resolveToken])
 
   const production = resolved ? getProduction(resolved.productionId) : null
-  const isOwner = !!user && production?.ownerId === user.id
+  // "Preview as guest" (?preview=guest) lets the signed-in owner see the exact
+  // guest experience — force guest mode even though they own the project.
+  const [searchParams] = useSearchParams()
+  const previewAsGuest = searchParams.get('preview') === 'guest'
+  const isOwner = !previewAsGuest && !!user && production?.ownerId === user.id
 
   // Use project-specific slots if configured, otherwise global
   const slots = useMemo(() => {

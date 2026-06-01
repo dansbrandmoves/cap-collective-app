@@ -736,10 +736,10 @@ function ShareModal({ isOpen, onClose, room, pendingCount }) {
           </button>
         </div>
 
-        {/* Preview as guest */}
+        {/* Preview as guest — force guest mode so the owner sees the real thing */}
         {openToken && (
           <a
-            href={getRoomLink(openToken)}
+            href={`${getRoomLink(openToken)}?preview=guest`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-1.5 w-full bg-surface-800 hover:bg-surface-700 border border-white/[0.06] text-zinc-300 hover:text-zinc-100 text-[13px] font-medium px-3.5 py-2.5 rounded-lg transition-colors"

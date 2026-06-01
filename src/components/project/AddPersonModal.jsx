@@ -73,16 +73,13 @@ export function AddPersonModal({ isOpen, onClose, addPerson, sendRoomInvite, sha
           <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] mb-1.5">
             Email <span className="text-zinc-600 normal-case tracking-normal font-normal">— optional, to send an invite</span>
           </label>
-          <div className="relative">
-            <Mail size={15} strokeWidth={1.75} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none" />
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="daniel@example.com"
-              className="w-full bg-surface-800 border border-white/[0.08] rounded-xl pl-9 pr-3.5 py-2.5 text-[14px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all"
-            />
-          </div>
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="daniel@example.com"
+            className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-[14px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all"
+          />
         </div>
 
         <button
@@ -114,7 +111,8 @@ export function AddPersonModal({ isOpen, onClose, addPerson, sendRoomInvite, sha
             {copied ? 'Copied!' : 'Copy shareable link'}
           </button>
           <a
-            href={shareLink} target="_blank" rel="noopener noreferrer"
+            href={`${shareLink}${shareLink.includes('?') ? '&' : '?'}preview=guest`}
+            target="_blank" rel="noopener noreferrer"
             className="w-full flex items-center gap-2.5 px-3.5 py-2 mt-1 rounded-xl text-[12px] text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] transition-colors"
           >
             <ExternalLink size={14} strokeWidth={1.75} className="opacity-70" />

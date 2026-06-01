@@ -14,9 +14,10 @@ const TABS = [
 ]
 
 export function AccountPage() {
-  const { user } = useApp()
+  const { user, authLoading } = useApp()
   const [params, setParams] = useSearchParams()
-  if (!user) return <Navigate to="/signin" replace />
+  // Don't redirect while auth is still resolving (returning user refreshing the page).
+  if (!user) return authLoading ? null : <Navigate to="/signin" replace />
 
   const tab = TABS.some(t => t.key === params.get('tab')) ? params.get('tab') : 'calendars'
   const setTab = (key) => setParams(key === 'calendars' ? {} : { tab: key }, { replace: true })

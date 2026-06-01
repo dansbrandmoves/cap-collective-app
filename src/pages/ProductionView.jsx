@@ -12,6 +12,7 @@ import { useProjectAvailability } from '../hooks/useProjectAvailability'
 import { useProjectPeople } from '../hooks/useProjectPeople'
 import { useResizablePanel, ResizeHandle } from '../hooks/useResizablePanel'
 import { projectSlotsFromConfig } from '../utils/availability'
+import { PageLoader } from '../components/ui/PageLoader'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { supabase } from '../utils/supabase'
 import { Menu, X, Share2, ExternalLink, Check, Archive, XCircle, Eye, EyeOff } from 'lucide-react'
@@ -24,7 +25,7 @@ export function ProductionView() {
     createRoom, updateRoomName, deleteRoom, getRoomLink,
     effectiveSlots, calendarEvents, connectedCalendars, availabilityRules,
     prefixRules, slotStates, canAddRoom, FREE_ROOM_LIMIT, pendingRequestCounts,
-    availabilityMode, blockDuration, businessHours,
+    availabilityMode, blockDuration, businessHours, loading,
   } = useApp()
 
   const production = getProduction(id)
@@ -56,21 +57,12 @@ export function ProductionView() {
     setActiveRoomId((roomWithPending || production.rooms[0]).id)
   }, [production, pendingRequestCounts]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!production) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-surface-950">
-        <div className="text-center">
-          <p className="text-zinc-400 mb-2">Project not found</p>
-          <Link to="/" className="text-sm text-accent hover:underline">Back to projects</Link>
-        </div>
-      </div>
-    )
-  }
-
-  const activeRoom = production.rooms.find(r => r.id === activeRoomId) || null
-  const renamingRoom = production.rooms.find(r => r.id === renamingRoomId) || null
-  const primaryRoom = production.rooms[0] || null
-  const projectConfig = production.availabilityConfig || production.availability_config
+  // All hooks must run on every render — derive safely with optional chaining so
+  // an undefined `production` (data still loading) doesn't change the hook count.
+  const activeRoom = production?.rooms.find(r => r.id === activeRoomId) || null
+  const renamingRoom = production?.rooms.find(r => r.id === renamingRoomId) || null
+  const primaryRoom = production?.rooms[0] || null
+  const projectConfig = production?.availabilityConfig || production?.availability_config
   const projectSlots = projectSlotsFromConfig(projectConfig, effectiveSlots)
 
   // Shared availability data + people roster — one source of truth for both the
@@ -82,6 +74,26 @@ export function ProductionView() {
   })
   const sidePanel = useResizablePanel('coordie-project-panel', { defaultWidth: 288, min: 240, max: 420, side: 'right' })
   const PANEL_RAIL = 48
+
+  // Early return AFTER all hooks. Distinguish "still loading" from "truly missing":
+  // during initial load productions is empty, so show a spinner, not "not found".
+  if (!production) {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-screen bg-surface-950">
+          <PageLoader />
+        </div>
+      )
+    }
+    return (
+      <div className="flex items-center justify-center h-screen bg-surface-950">
+        <div className="text-center">
+          <p className="text-zinc-400 mb-2">Project not found</p>
+          <Link to="/" className="text-sm text-accent hover:underline">Back to projects</Link>
+        </div>
+      </div>
+    )
+  }
 
   function openAddRoom() {
     if (!canAddRoom(id)) { setShowUpgrade(true); return }

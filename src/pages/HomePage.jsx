@@ -112,34 +112,38 @@ function HeroProjectMockup() {
                 <ChevronRight size={14} strokeWidth={1.75} />
               </div>
             </div>
-            <div className="grid grid-cols-7 mb-2">
-              {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
-                <div key={d} className="text-center text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em] py-1">{d}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-0.5">
-              {Array.from({ length: 35 }, (_, i) => {
-                const day = i - 2
-                const inMonth = day >= 1 && day <= 30
-                const fc = inMonth ? freeCount(day) : 0
-                const allFree = joined > 0 && fc === joined
-                const isHero = day === HERO_DAY && showAnswer && allFree
-                return (
-                  <div
-                    key={i}
-                    className={`relative aspect-square flex items-center justify-center text-[12px] rounded-full font-medium transition-all duration-500 ease-ios
-                      ${!inMonth ? 'text-transparent' :
-                        isHero ? 'bg-green-500/90 text-white shadow-[0_3px_12px_-3px_rgb(34_197_94/0.5)]' :
-                        allFree ? 'bg-green-500/[0.14] text-green-300' :
-                        'text-zinc-300'}`}
-                  >
-                    {inMonth && <span>{day}</span>}
-                    {inMonth && !allFree && fc > 0 && (
-                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-green-400/60" />
-                    )}
-                  </div>
-                )
-              })}
+            {/* Same lined grid + green circles as the product */}
+            <div className="rounded-xl border border-white/[0.07] overflow-hidden">
+              <div className="grid grid-cols-7 border-b border-white/[0.07]">
+                {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+                  <div key={d} className="text-center text-[9px] font-semibold text-zinc-500 uppercase tracking-[0.1em] py-1.5 border-r border-white/[0.04] last:border-r-0">{d}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7">
+                {Array.from({ length: 35 }, (_, i) => {
+                  const day = i - 2
+                  const inMonth = day >= 1 && day <= 30
+                  const fc = inMonth ? freeCount(day) : 0
+                  const allFree = joined > 0 && fc === joined
+                  return (
+                    <div
+                      key={i}
+                      className={`relative min-h-[40px] sm:min-h-[48px] border-r border-b border-white/[0.04] flex items-start justify-start p-1.5 transition-colors duration-500 ${allFree ? 'bg-green-500/[0.09]' : ''}`}
+                    >
+                      {inMonth && (
+                        allFree ? (
+                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-green-600 text-white font-bold text-[11px]">{day}</span>
+                        ) : (
+                          <span className="text-[12px] font-medium text-zinc-300">{day}</span>
+                        )
+                      )}
+                      {inMonth && !allFree && fc > 0 && (
+                        <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-green-400/60" />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
 

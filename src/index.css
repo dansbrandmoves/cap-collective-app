@@ -199,6 +199,7 @@ html:not(.light) .placeholder-zinc-700::placeholder { color: #71717a !important;
 
 /* Light mode inversions */
 html.light { color: #18181b; }
+html.light .text-zinc-50  { color: #09090b !important; }  /* headings — darkest */
 html.light .text-zinc-100 { color: #18181b !important; }
 html.light .text-zinc-200 { color: #27272a !important; }
 html.light .text-zinc-300 { color: #3f3f46 !important; }

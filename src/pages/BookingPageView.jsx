@@ -88,8 +88,8 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate, guestFreeDat
         </div>
       </div>
 
-      {/* Same lined-grid calendar as the project view — unified look. Green circle
-          = you're free that day, accent ring = selected. */}
+      {/* Same lined-grid calendar as the project view — unified look. Green dot
+          = you're both free that day, accent ring = selected. */}
       <div className="rounded-2xl border border-white/[0.07] overflow-hidden">
         <div className="grid grid-cols-7 border-b border-white/[0.07]">
           {dayHeaders.map(d => (
@@ -112,13 +112,13 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate, guestFreeDat
                   'hover:bg-white/[0.03] cursor-pointer'
                 } ${isSelected ? 'ring-2 ring-inset ring-accent bg-accent/[0.04]' : ''}`}>
                 {inMonth && (
-                  isGuestFree ? (
-                    <span className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-green-600 text-white font-bold text-[13px] sm:text-[15px]">{date.getDate()}</span>
-                  ) : (
-                    <span className={`text-[13px] sm:text-[15px] font-medium ${
-                      !isAvailable ? 'text-zinc-700' : isToday ? 'text-accent' : 'text-zinc-200'
-                    }`}>{date.getDate()}</span>
-                  )
+                  <span className={`text-[13px] sm:text-[15px] font-medium ${
+                    !isAvailable ? 'text-zinc-700' : isToday ? 'text-accent' : 'text-zinc-200'
+                  }`}>{date.getDate()}</span>
+                )}
+                {/* Subtle dot when you're both free that day */}
+                {inMonth && isGuestFree && (
+                  <span className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-green-500" />
                 )}
               </button>
             )
@@ -128,11 +128,9 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate, guestFreeDat
 
       {/* Labeled key so availability isn't conveyed by colour alone */}
       {guestFreeDates && guestFreeDates.size > 0 && (
-        <p className="flex items-center gap-2 text-[12px] text-zinc-500 mt-3">
-          <span className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 size={11} strokeWidth={2.5} className="text-white" />
-          </span>
-          Circled = you&rsquo;re free
+        <p className="flex items-center justify-center gap-2 text-[12px] text-zinc-500 mt-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+          Green dot = you&rsquo;re both free
         </p>
       )}
     </div>
@@ -570,6 +568,22 @@ export function BookingPageView() {
                   <div className="flex justify-center">
                     <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
                   </div>
+
+                  {/* Connected → filter the recommended days by time of day (dots react) */}
+                  {guestEvents !== null && (
+                    <div className="flex justify-center mt-3">
+                      <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">
+                        {WINDOW_ORDER.map(key => (
+                          <button key={key} onClick={() => setWindowKey(key)}
+                            className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                              windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
+                            }`}>
+                            {WINDOWS[key].label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

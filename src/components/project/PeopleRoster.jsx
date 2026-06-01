@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Users, CalendarDays, Check, UserPlus, Copy, X } from 'lucide-react'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 
 // The roster UI — lives in the project left panel. Add people (opens the Add
 // People modal), tap to include/exclude (which drives the calendar), copy each
@@ -9,6 +10,7 @@ export function PeopleRoster({
   togglePerson, removePerson, inviteLink, canAdd, onAdd,
 }) {
   const [copiedToken, setCopiedToken] = useState(null)
+  const [confirmPerson, setConfirmPerson] = useState(null)
 
   function copy(token) {
     const link = inviteLink(token)
@@ -38,6 +40,7 @@ export function PeopleRoster({
 
       <div className="space-y-0.5">
         {people.map(({ name, sources, memberId, inviteToken, isOwner }) => {
+          const person = { name, memberId }
           const inc = !excluded.has(name)
           const viaCalendar = sources.includes('calendar')
           const responded = sources.length > 0
@@ -70,8 +73,8 @@ export function PeopleRoster({
                   {copiedToken === inviteToken ? <Check size={12} strokeWidth={3} className="text-green-400" /> : <Copy size={12} strokeWidth={2} />}
                 </button>
               )}
-              {memberId && (
-                <button onClick={() => removePerson(memberId)} title="Remove person"
+              {!isOwner && (
+                <button onClick={() => setConfirmPerson(person)} title="Remove person"
                   className="text-zinc-600 hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100">
                   <X size={12} strokeWidth={2.5} />
                 </button>
@@ -88,6 +91,16 @@ export function PeopleRoster({
       >
         <UserPlus size={14} strokeWidth={2} /> Add person
       </button>
+
+      <ConfirmDialog
+        isOpen={!!confirmPerson}
+        onClose={() => setConfirmPerson(null)}
+        onConfirm={() => { removePerson(confirmPerson); setConfirmPerson(null) }}
+        title="Remove person"
+        body={<>Remove <span className="font-semibold text-zinc-100">{confirmPerson?.name}</span> from this project? Their shared availability will be deleted too.</>}
+        warning="This can't be undone — they'd need to share their availability again."
+        confirmLabel="Remove"
+      />
     </div>
   )
 }

@@ -10,7 +10,7 @@ export const OWNER_LABEL = 'You'
 const isActiveReq = r => r.status !== 'declined' && r.status !== 'archived'
 
 export function useProjectPeople(production, { dateRequestsByRoom = {}, sharedAvailByRoom = {} } = {}) {
-  const { roomMembers, addRoomMember, removeRoomMember, getRoomLink } = useApp()
+  const { roomMembers, addRoomMember, removePersonEverywhere, getRoomLink } = useApp()
   const rooms = production?.rooms || []
   const primaryRoom = rooms[0] || null
 
@@ -65,9 +65,12 @@ export function useProjectPeople(production, { dateRequestsByRoom = {}, sharedAv
     return addRoomMember(primaryRoom.id, { name: trimmed, email: (email || '').trim() })
   }, [primaryRoom, addRoomMember])
 
-  const removePerson = useCallback((memberId) => {
-    if (memberId) removeRoomMember(memberId)
-  }, [removeRoomMember])
+  // Fully remove a person — their member row + all their shared availability /
+  // date requests across the project's rooms, so they actually disappear.
+  const removePerson = useCallback((person) => {
+    const roomIds = (production?.rooms || []).map(r => r.id)
+    return removePersonEverywhere({ roomIds, name: person?.name, memberId: person?.memberId })
+  }, [production, removePersonEverywhere])
 
   const inviteLink = useCallback((token) => (token ? getRoomLink(token) : null), [getRoomLink])
 

@@ -5,7 +5,8 @@ import { supabase } from '../utils/supabase'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { PageLoader } from '../components/ui/PageLoader'
-import { Shield, Search } from 'lucide-react'
+import { Shield, Search, Users as UsersIcon, Activity } from 'lucide-react'
+import { AdminDiagnostics } from './AdminDiagnostics'
 
 export function AdminDashboard() {
   const { user, authLoading, isAdmin } = useApp()
@@ -14,6 +15,7 @@ export function AdminDashboard() {
   const [error, setError] = useState(null)
   const [query, setQuery] = useState('')
   const [busyIds, setBusyIds] = useState(new Set())
+  const [tab, setTab] = useState('users') // 'users' | 'diagnostics'
 
   const loadUsers = useCallback(async () => {
     setLoading(true)
@@ -76,10 +78,26 @@ export function AdminDashboard() {
             <Shield size={20} strokeWidth={1.75} className="text-accent" />
             <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15]">Admin</h1>
           </div>
-          <p className="text-[15px] text-zinc-400 leading-relaxed">Manage users, plans, and roles.</p>
+          <p className="text-[15px] text-zinc-400 leading-relaxed">Manage users and review system activity.</p>
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-surface-800 mb-6 -mx-1 px-1">
+        {[['users', 'Users', UsersIcon], ['diagnostics', 'Diagnostics', Activity]].map(([key, label, Icon]) => (
+          <button key={key} onClick={() => setTab(key)}
+            className={`flex items-center gap-2 px-3.5 py-2.5 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
+              tab === key ? 'border-accent text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-300'
+            }`}>
+            <Icon size={15} strokeWidth={1.75} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'diagnostics' ? (
+        <AdminDiagnostics embedded />
+      ) : (
+      <>
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
         <StatCard label="Users" value={stats.total} />
@@ -155,6 +173,8 @@ export function AdminDashboard() {
             )
           })}
         </div>
+      )}
+      </>
       )}
     </div>
   )

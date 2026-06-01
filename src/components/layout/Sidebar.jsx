@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { useResizablePanel, ResizeHandle } from '../../hooks/useResizablePanel'
-import { LayoutGrid, CalendarCheck, LogOut, Shield, Activity, PanelLeft } from 'lucide-react'
+import { LayoutGrid, CalendarCheck, LogOut, Shield, PanelLeft } from 'lucide-react'
 
 // Primary destinations live at the top ("what you do"); configuration/utility is
 // pinned to the bottom ("settings"). Keeps the nav uncluttered and scannable.
@@ -119,22 +119,6 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                 >
                   <Shield size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
                   {!railed && <span>Admin</span>}
-                </NavLink>
-              )}
-
-              {isAdmin && (
-                <NavLink
-                  to="/admin/diagnostics"
-                  onClick={onMobileClose}
-                  title={railed ? 'Diagnostics' : undefined}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${railed ? 'justify-center' : ''} ${
-                      isActive ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-zinc-400 hover:text-amber-400 hover:bg-amber-500/5 border border-transparent'
-                    }`
-                  }
-                >
-                  <Activity size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
-                  {!railed && <span>Diagnostics</span>}
                 </NavLink>
               )}
 

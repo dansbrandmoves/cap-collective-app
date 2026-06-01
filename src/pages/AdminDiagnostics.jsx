@@ -120,7 +120,7 @@ function Meta({ label, value, mono }) {
   )
 }
 
-export function AdminDiagnostics() {
+export function AdminDiagnostics({ embedded = false }) {
   const { isAdmin } = useApp()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -168,16 +168,15 @@ export function AdminDiagnostics() {
     })
   }, [rows, flowFilter, statusFilter, search])
 
-  if (!isAdmin) return <Navigate to="/" replace />
+  if (!embedded && !isAdmin) return <Navigate to="/" replace />
 
-  return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
+  const body = (
+    <>
         {/* Header */}
         <div className="flex items-center justify-between gap-3 mb-1">
           <div className="flex items-center gap-2.5">
-            <Activity size={20} strokeWidth={1.75} className="text-accent" />
-            <h1 className="text-[20px] font-semibold text-zinc-50 tracking-tight">Diagnostics</h1>
+            {!embedded && <Activity size={20} strokeWidth={1.75} className="text-accent" />}
+            <h1 className="text-[20px] font-semibold text-zinc-50 tracking-tight">{embedded ? 'Execution log' : 'Diagnostics'}</h1>
           </div>
           <button
             onClick={load}
@@ -224,6 +223,15 @@ export function AdminDiagnostics() {
             filtered.map(r => <Row key={r.id} row={r} />)
           )}
         </div>
+    </>
+  )
+
+  if (embedded) return body
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
+        {body}
       </div>
     </div>
   )

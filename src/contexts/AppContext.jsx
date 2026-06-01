@@ -284,15 +284,19 @@ export function AppProvider({ children }) {
     setUser(null) // clear immediately so UI redirects right away
     setPlan('free')
     setRole('user')
+    // Drop the cached owner data so it doesn't linger for the next person.
+    setProductions([]); setRoomMembers([]); setBookingPages([])
     supabase.auth.signOut().catch(err => console.error('signOut error:', err))
   }, [])
 
   const isAdmin = role === 'admin'
 
-  // Supabase-backed
-  const [productions, setProductions] = useState([])
-  const [roomMembers, setRoomMembers] = useState([])
-  const [bookingPages, setBookingPages] = useState([])
+  // Supabase-backed — seeded from a localStorage snapshot so a reload paints the
+  // last-known data instantly, then revalidates in the background (stale-while-
+  // revalidate). Safe now that all pages run their hooks before any early return.
+  const [productions, setProductions] = useState(() => stored?.productions ?? [])
+  const [roomMembers, setRoomMembers] = useState(() => stored?.roomMembers ?? [])
+  const [bookingPages, setBookingPages] = useState(() => stored?.bookingPages ?? [])
 
   const canAddProject = useCallback(() => {
     if (isProPlan) return true
@@ -310,7 +314,8 @@ export function AppProvider({ children }) {
     if (isProPlan) return true
     return bookingPages.length < FREE_BOOKING_PAGE_LIMIT
   }, [isProPlan, bookingPages])
-  const [loading, setLoading] = useState(true)
+  // Only block the UI with a spinner on a true cold start (no cached productions).
+  const [loading, setLoading] = useState(() => !(stored?.productions?.length))
 
   // localStorage-backed
   const [slots, setSlots] = useState(() => stored?.slots ?? SEED_DATA.slots)
@@ -577,7 +582,8 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (authLoading) return
     const ownerId = user?.id ?? null
-    setLoading(true)
+    // Spinner only when we have nothing cached to show; otherwise revalidate silently.
+    if (!productions.length) setLoading(true)
 
     console.log('[Coordie] Loading data for:', ownerId || 'guest')
 
@@ -633,12 +639,14 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     saveToStorage({
+      productions, roomMembers, bookingPages,
       slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced,
       theme, slotStateCustomizations, businessHours, guestCalendarEnabled,
       availabilityMode, blockDuration, timezone,
     })
-  }, [slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
+  }, [productions, roomMembers, bookingPages,
+      slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced, theme, slotStateCustomizations,
       businessHours, guestCalendarEnabled, availabilityMode, blockDuration, timezone])
 

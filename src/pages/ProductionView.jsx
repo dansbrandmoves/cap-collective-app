@@ -246,31 +246,6 @@ export function ProductionView() {
           )}
           </div>
         </div>
-
-        {/* Private notes */}
-        <div className="border-t border-white/[0.05] bg-surface-950 px-5 py-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Lock size={12} strokeWidth={1.75} className="text-zinc-600" />
-            <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest">Private Notes</p>
-          </div>
-          {editingNotes ? (
-            <textarea
-              value={notesValue}
-              onChange={e => setNotesValue(e.target.value)}
-              onBlur={handleNotesBlur}
-              autoFocus
-              rows={5}
-              className="w-full bg-surface-800 border border-accent/30 rounded-lg px-3 py-2 text-xs text-zinc-300 resize-none focus:outline-none focus:border-accent/60"
-            />
-          ) : (
-            <div
-              onClick={() => { setNotesValue(production.ownerNotes); setEditingNotes(true) }}
-              className="cursor-text rounded-lg px-3 py-2 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors min-h-[52px] leading-relaxed"
-            >
-              {production.ownerNotes || <span className="text-zinc-700">Click to add private notes...</span>}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Main area */}

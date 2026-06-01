@@ -13,7 +13,10 @@
 import { supabase } from './supabase'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
-const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
+// readonly = read free/busy for availability; events = create meetings in-app.
+// Both are "sensitive" (not restricted) scopes — same verification tier the app
+// already cleared for readonly.
+const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events'
 const CALENDAR_API = 'https://www.googleapis.com/calendar/v3'
 
 /**
@@ -245,6 +248,20 @@ export async function connectGuestCalendarOffline({ roomId, guestName }) {
 /** Trigger an immediate server-side sync for one guest (don't wait on the cron). */
 export async function triggerGuestSync({ roomId, guestName }) {
   return supabase.functions.invoke('sync-guest-calendars', { body: { roomId, guestName } })
+}
+
+/**
+ * Create a real event on the owner's primary Google Calendar (server-side, using
+ * the stored refresh token). Needs the calendar.events scope — if the owner hasn't
+ * re-consented, the server returns { needsReconnect: true }.
+ * @returns {{ ok?: boolean, htmlLink?: string, error?: string, needsReconnect?: boolean }}
+ */
+export async function createCalendarEvent({ title, date, allDay, startTime, endTime, attendees, description, timezone }) {
+  const { data, error } = await supabase.functions.invoke('google-calendar-auth', {
+    body: { action: 'create_event', title, date, allDay, startTime, endTime, attendees, description, timezone },
+  })
+  if (error) return { error: error.message || 'Could not create event' }
+  return data || { error: 'No response' }
 }
 
 /** Disconnect a guest's calendar server-side (clears token + availability). */

@@ -44,6 +44,30 @@ async function exchangeCode(code: string, redirectUri: string) {
   return res.json();
 }
 
+// Get a fresh access token for an owner from their stored refresh token.
+async function freshOwnerToken(supabase: any, userId: string): Promise<string | null> {
+  const { data: p } = await supabase.from("profiles")
+    .select("google_refresh_token, google_access_token, google_token_expires_at")
+    .eq("id", userId).single();
+  if (!p?.google_refresh_token) return null;
+  if (p.google_access_token && p.google_token_expires_at > Date.now() + 300000) return p.google_access_token;
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      refresh_token: p.google_refresh_token,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      grant_type: "refresh_token",
+    }),
+  });
+  const tok = await res.json();
+  if (tok.error || !tok.access_token) return null;
+  const expiresAt = Date.now() + (tok.expires_in * 1000);
+  await supabase.from("profiles").update({ google_access_token: tok.access_token, google_token_expires_at: expiresAt }).eq("id", userId);
+  return tok.access_token;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -225,6 +249,57 @@ Deno.serve(async (req: Request) => {
       await supabase.from("guest_calendar_sync_state").delete().eq("room_id", roomId).eq("guest_name", guestName);
       await supabase.from("shared_availability").delete().eq("room_id", roomId).eq("guest_name", guestName);
       return jsonRes({ success: true });
+    }
+
+    // Create a real calendar event on the owner's primary calendar, optionally
+    // inviting attendees. Needs the calendar.events scope (owner re-consents once).
+    if (action === "create_event") {
+      const userId = (await getUser(req))?.id || body.userId;
+      if (!userId) return jsonRes({ error: "Not authenticated" }, 401);
+
+      const { title, date, allDay, startTime, endTime, attendees, description, timezone } = body;
+      if (!date) return jsonRes({ error: "Missing date" }, 400);
+
+      const token = await freshOwnerToken(supabase, userId);
+      if (!token) return jsonRes({ error: "No Google connection. Reconnect your calendar.", needsReconnect: true }, 401);
+
+      // Build the event. All-day uses date (exclusive end = next day); timed uses
+      // dateTime with the owner's timezone so it lands at the right local hour.
+      const tz = timezone || "UTC";
+      let start: Record<string, string>, end: Record<string, string>;
+      if (allDay) {
+        const next = new Date(date + "T00:00:00Z"); next.setUTCDate(next.getUTCDate() + 1);
+        start = { date };
+        end = { date: next.toISOString().slice(0, 10) };
+      } else {
+        start = { dateTime: `${date}T${startTime || "14:00"}:00`, timeZone: tz };
+        end = { dateTime: `${date}T${endTime || "15:00"}:00`, timeZone: tz };
+      }
+
+      const event: Record<string, unknown> = {
+        summary: title || "Meeting",
+        description: description || "Scheduled via Coordie.",
+        start,
+        end,
+      };
+      const emails = (attendees || []).filter((e: string) => e && e.includes("@"));
+      if (emails.length) event.attendees = emails.map((email: string) => ({ email }));
+
+      const sendUpdates = emails.length ? "all" : "none";
+      const res = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=${sendUpdates}`,
+        { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(event) },
+      );
+      const created = await res.json();
+      if (created.error || !created.id) {
+        const msg = created.error?.message || `events.insert ${res.status}`;
+        // Missing scope shows up as a 403 insufficientPermissions — tell the client to re-consent.
+        const needsReconnect = res.status === 403;
+        await supabase.from("diagnostics").insert({ event: "create_event", detail: { actor: "owner", status: "error", summary: "Create failed", error: msg } }).then(() => {}, () => {});
+        return jsonRes({ error: msg, needsReconnect }, res.status === 403 ? 403 : 500);
+      }
+      await supabase.from("diagnostics").insert({ event: "create_event", detail: { actor: "owner", status: "ok", summary: `Created "${event.summary}"`, date, allDay: !!allDay, attendees: emails.length } }).then(() => {}, () => {});
+      return jsonRes({ ok: true, htmlLink: created.htmlLink, id: created.id });
     }
 
     return jsonRes({ error: "Unknown action" }, 400);

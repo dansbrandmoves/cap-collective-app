@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-06-01 UTC
-**Last pushed commit:** `2f56bc6` — "park native in-app scheduling until Google re-verification"
+**Last session ended:** 2026-06-02 UTC
+**Last pushed commit:** `de1af9a` — "two-column booking date step + top-3 picks"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -21,26 +21,54 @@
 
 ---
 
-## ⏳ ONE thing waiting on the user (verify, do first)
-**Confirm the unified guest sync actually fires end-to-end.** All built + deployed, but as of
-session end NO guest had connected on a browser running the new bundle, so `guest_calendar_tokens`
-was still empty and there were zero `guest_sync` records. The likely cause: earlier reconnects ran
-the OLD cached JS (the unified-sync code only became *deployable* after the Vercel build fix at
-`ed18ab0` — prior pushes `b2c117b` failed to build). To verify:
-1. Confirm latest Vercel deploy is **green** (several mid-session builds failed; `ed18ab0`+ are fine).
-2. **Hard-refresh** the guest page (Cmd/Ctrl+Shift+R) — normal refresh serves stale JS.
-3. Reconnect daniel.furfaro. New code = a **popup** (not inline). Diagnostics should show
-   `guest_connect_calendar → "server sync running"`, then a **`guest_sync`** record, then another
-   every ~15 min from the cron.
-```sql
-select count(*) tokens, count(*) filter (where google_refresh_token is not null) with_refresh
-  from guest_calendar_tokens;
-select event, detail->>'actor', detail->>'status', detail->>'summary', created_at
-  from diagnostics order by created_at desc limit 10;
-```
-Expect ≥1 token WITH a refresh token, and `guest_sync` events with status `ok`.
-(Late in session the user said this "looks like it fixed it" after reconnecting on the new
-build — confirm the cron keeps it fresh: change an event, wait ≤15 min, watch for a new `guest_sync`.)
+## ✅ Shipped 2026-06-02 (this session) — calendar unification + UX polish
+
+**Big arc: unified the calendar look/feel/UX across PROJECTS + BOOKING.** Project UX is the
+north star; booking adopts the same components + visual language. Key principle the user kept
+returning to: the value is **overlap** ("when can everyone meet?" / "when are we both free?").
+
+- **One lined-grid calendar everywhere.** Project view (`ProjectOverview.jsx`) + booking
+  (`BookingPageView.jsx` `MonthCalendar`) + landing mockup (`HomePage.jsx`) all use the same
+  Apple-style grid: true rectangular cells, subtle continuous border lines, **green DOT** (not a
+  circle) when everyone/both are free, **weekend numbers muted** (`text-zinc-600`), today in teal,
+  selected day = `ring-2 ring-inset ring-accent`. `getMonthGrid` + new `trimBlankWeeks()` in
+  `utils/availability.js` (never render a trailing all-blank week — but `getMonthGrid` itself still
+  returns 42 cells; the test relies on that, don't change it).
+- **Shared `SlotRow` component** (`components/availability/SlotRow.jsx`) — booking's `TimeSlotPicker`
+  and the project Day Inspector render slots from one source. Teal selected / dimmed busy.
+- **Two-click scheduling** in the Day Inspector: tapping a slot SELECTS it (accent), the bottom
+  "Schedule meeting" button is what opens the GCal tab. Removed the manual time picker + all-day.
+- **Time-of-day filter** (Any time/Morning/Afternoon/Evening) on both: project work area + day
+  inspector "Pick a different time"; booking date step (once connected) + time step. It's
+  window-aware — `guestFreeDates`/best-days recompute per window so the dots/picks visibly change.
+- **Booking page redesigned single-column → then two-column date step** (`de1af9a`): left column =
+  title block + connect-calendar + filter + **TOP PICKS** (soonest 3 days you're both free, like
+  project Best Days); right column = calendar. Centered, minimal header (logo+title/time as one
+  object). Owner-canvas bloat gone. Booking uses the **owner's theme** (default light); violet
+  `ambient-glow` retinted teal.
+- **Day Inspector is now a flush full-height sidebar** (no floating rounded card / drop shadow).
+- **Modals portal to `document.body`** (`components/ui/Modal.jsx`) so they're true full-viewport
+  overlays (escape transformed/`overflow-hidden` ancestors). Booking-page kebab menu also portals.
+
+**Fixes (verified):**
+- **Person removal now sticks** (`2a7a294`). Root cause: removing a guest who'd connected their
+  calendar didn't work because the **15-min guest-sync cron rebuilt their `shared_availability`** from
+  their `guest_calendar_tokens` row (service-role-only — client can't delete it). Fix: new
+  **`remove-project-guest` edge fn** (service role, verifies caller owns the rooms) deletes the TOKEN
+  first, then sync_state/availability/requests/member. `removePersonEverywhere` in AppContext calls it.
+  **Lesson: anything a cron rebuilds can't be fixed by a client delete alone — kill the cron's input.**
+- **Instant project reload** (`9086230`): productions/roomMembers/bookingPages cached in localStorage,
+  painted immediately, revalidated in background (stale-while-revalidate). Safe now that all pages run
+  hooks before any early return (the old #310 trap is fixed). Cleared on sign-out. See
+  `project_coordie_render_perf.md`.
+- **Beefier free tier:** projects 1→3, rooms/project 2→5, booking pages 1→3 (`AppContext` consts).
+- **Unified Add People modal** (`AddPersonModal.jsx`): name + optional email → adds + emails their
+  invite link via new **`send-invite` edge fn** (Resend). Replaces the scattered Share section.
+- Project + booking cards are clickable; per-card actions in a `⋯` menu. Admin Users + Diagnostics
+  are now tabs (Diagnostics no longer a sidebar item). Owner email shows in the inspector ("You").
+
+**Landing page** rebuilt around the project story ("Find the day that works for everyone." +
+animated group-availability-converges mockup). Booking demoted to a secondary feature.
 
 ---
 
@@ -61,7 +89,7 @@ ready to launch native scheduling.
 
 ---
 
-## ✅ Shipped 2026-05-31 / 06-01 session (this one)
+## ✅ Shipped 2026-05-31 / 06-01 session
 **Native scheduling built then parked** (`02d1913` built it, `2f56bc6` parked it — see PARKED above).
 
 **Unified guest calendar sync — guests now sync server-side like owners** (`8c4c95c`):
@@ -142,12 +170,15 @@ aggregate calendar; **group/project delete fix** (cascade FKs); legal TOS/Privac
    roster strip (everyone in the group, visible to members) → best-window answer line →
    **LIST / CALENDAR / GRID** toggle over one dataset → push inspector. Build incrementally.
    Sidebars should be **collapsible + drag-resizable**.
-3. **A2/A3 — calendar convergence:** fold `ProjectOverview` grid into shared `MonthlyView`;
-   migrate `RoomCalendarPanel` + guest `RoomView` to the `role` prop (A1 added the prop, derived
-   internally) and delete the legacy booleans.
-4. **Bookings → a project "meeting" mode** (not a silo): `rooms.mode` + `bookings.room_id`,
-   guest pick-a-time via the unified calendar, retire `/booking-pages` last. (Revises the old
-   "don't merge bookings" decision.)
+3. **A2/A3 — calendar convergence:** _partly done this session_ — booking + project + landing now
+   share the lined-grid look and the `SlotRow` component. Still open: fold `ProjectOverview`'s grid
+   into a single shared `<MonthCalendar>` component (booking's `MonthCalendar` and the project grid
+   are still separate copies of the same markup), and migrate `RoomCalendarPanel` + guest `RoomView`
+   to the `role` prop and delete legacy booleans.
+4. **Bookings → a project "meeting" mode** (not a silo): the UX/look is now unified, but the data
+   merge isn't — `rooms.mode` + `bookings.room_id`, guest pick-a-time via the unified calendar,
+   retire `/booking-pages` last.
+5. **Native in-app scheduling** — still parked (see PARKED above); needs Google re-verification.
 
 ---
 
@@ -160,9 +191,20 @@ aggregate calendar; **group/project delete fix** (cascade FKs); legal TOS/Privac
   policies `to anon, authenticated` + explicit grants, or they silently fail (this was the
   guest-sync bug). `date_requests` may still have a `public`-targeted insert policy — check it
   if guest date requests don't persist.
-- **Owner-authenticated UI can't be verified by the agent** (no sign-in). Verify via: `npm test`,
-  Supabase SQL/MCP, the `diagnostics` table, the guest-facing surfaces (logged-out preview),
-  and the user click-testing. `preview_screenshot` times out in this env — use `preview_snapshot`.
+- **Owner-authenticated UI can't be verified by the agent** (no sign-in) — verify owner pages via
+  `npm test`, Supabase SQL/MCP, the `diagnostics` table, and clean production build. BUT the
+  **guest-facing surfaces CAN be eyeballed**: `preview_screenshot` works here (despite the old note)
+  — load `/book/<slug>` (active slug e.g. `30-minutes-DnzQ`), `/` (landing), `/room/:token`. To
+  simulate a connected guest calendar on the booking page: `sessionStorage.setItem('coordie-gcal','[]')`
+  then reload (empty array = all weekdays free → dots + top picks render).
+- **Anything a cron rebuilds can't be fixed by a client delete** — guest availability is rewritten
+  every 15 min from `guest_calendar_tokens`; to truly remove a guest you must delete the token first
+  (service-role only → `remove-project-guest` edge fn). Same shape applies to owner sync.
+- **`productions` ARE cached in localStorage now** (stale-while-revalidate, commit 9086230). Don't
+  revert it — the old #310 was the conditional-hooks bug, now fixed (all hooks before early returns).
+- **Build verify trick:** `npx vite build --outDir "dist_v$(date +%s)"` then `grep "built in"` — using a
+  fresh out dir each time avoids the Dropbox `EBUSY` rmdir error that hits when reusing `dist_verify`.
 - **Edge functions** are deployed via MCP and mirrored in `supabase/functions/` for VC; migrations
-  applied via MCP and mirrored in `supabase/migrations/`.
+  applied via MCP and mirrored in `supabase/migrations/`. Edge fns now: google-calendar-auth,
+  sync-calendar, sync-guest-calendars, send-invite, remove-project-guest, notify-*, stripe-*.
 - Supabase project: `xwuekcysigkujhyucugi`. GitHub: `dansbrandmoves/cap-collective-app`.

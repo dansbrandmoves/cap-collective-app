@@ -152,7 +152,7 @@ export function ProjectOverview({
   const todayStr = dateToStr(today)
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 sm:px-8 lg:px-12 py-8 sm:py-12">
+    <div className="flex-1 overflow-y-auto no-scrollbar px-5 sm:px-8 lg:px-12 py-8 sm:py-12">
       <div className="lg:flex lg:gap-5 lg:items-start">
       <div className="flex-1 min-w-0">
 
@@ -246,6 +246,7 @@ export function ProjectOverview({
             const isToday = ds === todayStr
             const hasData = info && info.knownCount > 0
             const allFree = hasData && info.freeCount === info.knownCount
+            const isSelected = inMonth && ds === inspected
             return (
               <button
                 key={i}
@@ -256,12 +257,18 @@ export function ProjectOverview({
                   !inMonth ? 'pointer-events-none' :
                   allFree ? 'bg-green-500/[0.09] hover:bg-green-500/[0.15] cursor-pointer' :
                   'hover:bg-white/[0.03] cursor-pointer'
-                } ${isToday && inMonth ? 'ring-1 ring-inset ring-accent/40' : ''} ${loading ? 'opacity-60' : ''}`}
+                } ${isSelected ? 'ring-2 ring-inset ring-accent bg-accent/[0.04]' : ''} ${loading ? 'opacity-60' : ''}`}
               >
                 {inMonth && (
-                  <span className={`text-[13px] sm:text-[15px] font-medium ${isToday ? 'text-accent' : 'text-zinc-200'}`}>
-                    {date.getDate()}
-                  </span>
+                  allFree ? (
+                    <span className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-green-600 text-white font-bold text-[13px] sm:text-[15px]">
+                      {date.getDate()}
+                    </span>
+                  ) : (
+                    <span className={`text-[13px] sm:text-[15px] font-medium ${isToday ? 'text-accent' : 'text-zinc-200'}`}>
+                      {date.getDate()}
+                    </span>
+                  )
                 )}
               </button>
             )

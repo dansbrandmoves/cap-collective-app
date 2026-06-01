@@ -84,6 +84,11 @@ html.light {
 }
 
 @layer components {
+  /* Hide the scrollbar but keep scrollability — for panels where a visible bar
+     looks like clutter (day inspector, calendar column). */
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
   .prose-room { color: #d4d4d8; @apply leading-relaxed; }
   html.light .prose-room { color: #3f3f46; }
 

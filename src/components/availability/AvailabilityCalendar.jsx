@@ -707,7 +707,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6">
 
           {/* ── Best times for everyone ── */}
           {bestSlots.length > 0 && (

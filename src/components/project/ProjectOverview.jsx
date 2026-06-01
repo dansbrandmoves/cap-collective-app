@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { DayInspectorPanel } from '../availability/AvailabilityCalendar'
 import {
-  getMonthGrid, dateToStr, deriveSlotState,
+  getMonthGrid, trimBlankWeeks, dateToStr, deriveSlotState,
   aggregateProjectDay, projectKnownPeople,
 } from '../../utils/availability'
 import { OWNER_LABEL } from '../../hooks/useProjectPeople'
@@ -59,7 +59,7 @@ export function ProjectOverview({
     return out
   }, [sharedAvailByRoom, excluded])
 
-  const grid = useMemo(() => getMonthGrid(year, month), [year, month])
+  const grid = useMemo(() => trimBlankWeeks(getMonthGrid(year, month)), [year, month])
 
   // Owner is free in the window if they have an available slot overlapping it.
   // ("Any time" → every slot qualifies, so this reduces to "free at all that day".)

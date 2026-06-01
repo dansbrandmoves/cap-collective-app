@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
-import { getMonthGrid, dateToStr, eventOverlapsSlot } from '../utils/availability'
+import { getMonthGrid, trimBlankWeeks, dateToStr, eventOverlapsSlot } from '../utils/availability'
 import { SlotRow } from '../components/availability/SlotRow'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
@@ -57,15 +57,15 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate, guestFreeDat
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
-  const grid = useMemo(() => getMonthGrid(viewDate.getFullYear(), viewDate.getMonth()), [viewDate])
+  const grid = useMemo(() => trimBlankWeeks(getMonthGrid(viewDate.getFullYear(), viewDate.getMonth())), [viewDate])
   const monthLabel = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   const dayHeaders = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-zinc-100 tracking-tight">{monthLabel}</h3>
-        <div className="flex items-center gap-1">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-[18px] font-semibold text-zinc-100 tracking-tight">{monthLabel}</h3>
+        <div className="flex items-center gap-1.5">
           <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
             className="w-10 h-10 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors">
             <ChevronLeft size={18} strokeWidth={1.75} />
@@ -77,40 +77,53 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate, guestFreeDat
         </div>
       </div>
 
-      <div className="grid grid-cols-7 mb-3">
-        {dayHeaders.map(d => (
-          <div key={d} className="text-center text-[12px] font-semibold text-zinc-500 uppercase tracking-[0.12em] py-2">{d}</div>
-        ))}
+      {/* Same lined-grid calendar as the project view — unified look. Green circle
+          = you're free that day, accent ring = selected. */}
+      <div className="rounded-2xl border border-white/[0.07] overflow-hidden">
+        <div className="grid grid-cols-7 border-b border-white/[0.07]">
+          {dayHeaders.map(d => (
+            <div key={d} className="text-center text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em] py-2.5 border-r border-white/[0.04] last:border-r-0">{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {grid.map(({ date, inMonth }, i) => {
+            const ds = dateToStr(date)
+            const isPast = date < today
+            const isToday = dateToStr(date) === dateToStr(today)
+            const isAvailable = inMonth && !isPast && availableDays.includes(date.getDay())
+            const isSelected = selectedDate === ds
+            const isGuestFree = guestFreeDates?.has(ds) && isAvailable
+            return (
+              <button key={i} disabled={!isAvailable} onClick={() => isAvailable && onSelectDate(ds)}
+                className={`relative min-h-[64px] sm:min-h-[84px] border-r border-b border-white/[0.04] flex items-start justify-start p-2 sm:p-2.5 transition-colors ${
+                  !inMonth || !isAvailable ? 'pointer-events-none' :
+                  isGuestFree ? 'bg-green-500/[0.09] hover:bg-green-500/[0.15] cursor-pointer' :
+                  'hover:bg-white/[0.03] cursor-pointer'
+                } ${isSelected ? 'ring-2 ring-inset ring-accent bg-accent/[0.04]' : ''}`}>
+                {inMonth && (
+                  isGuestFree ? (
+                    <span className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-green-600 text-white font-bold text-[13px] sm:text-[15px]">{date.getDate()}</span>
+                  ) : (
+                    <span className={`text-[13px] sm:text-[15px] font-medium ${
+                      !isAvailable ? 'text-zinc-700' : isToday ? 'text-accent' : 'text-zinc-200'
+                    }`}>{date.getDate()}</span>
+                  )
+                )}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5">
-        {grid.map(({ date, inMonth }, i) => {
-          const ds = dateToStr(date)
-          const isPast = date < today
-          const isToday = dateToStr(date) === dateToStr(today)
-          const isAvailable = inMonth && !isPast && availableDays.includes(date.getDay())
-          const isSelected = selectedDate === ds
-          const isGuestFree = guestFreeDates?.has(ds)
-
-          return (
-            <button key={i} disabled={!isAvailable} onClick={() => isAvailable && onSelectDate(ds)}
-              className={`relative aspect-square flex items-center justify-center text-base rounded-full transition-all duration-200 ease-ios font-medium ${
-                !inMonth ? 'text-transparent' :
-                isSelected ? 'bg-accent text-white shadow-[0_4px_16px_-4px_rgb(94_156_140/0.5)] scale-100' :
-                isAvailable ? 'text-zinc-100 hover:bg-white/5 hover:scale-105 cursor-pointer' :
-                'text-zinc-700 cursor-default'
-              }`}>
-              {date.getDate()}
-              {isToday && !isSelected && inMonth && (
-                <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent" />
-              )}
-              {!isToday && isGuestFree && !isSelected && isAvailable && (
-                <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-green-400/70" />
-              )}
-            </button>
-          )
-        })}
-      </div>
+      {/* Labeled key so availability isn't conveyed by colour alone */}
+      {guestFreeDates && guestFreeDates.size > 0 && (
+        <p className="flex items-center gap-2 text-[12px] text-zinc-500 mt-3">
+          <span className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 size={11} strokeWidth={2.5} className="text-white" />
+          </span>
+          Circled = you&rsquo;re free
+        </p>
+      )}
     </div>
   )
 }

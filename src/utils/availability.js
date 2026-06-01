@@ -220,6 +220,18 @@ export function getMonthGrid(year, month) {
 }
 
 /**
+ * Trim trailing weeks that are entirely outside the month, so a calendar never
+ * renders a blank 7-day row at the bottom. (getMonthGrid pads to a fixed 6 rows
+ * for layout stability; this is for views that prefer only as many rows as needed.)
+ */
+export function trimBlankWeeks(grid) {
+  const weeks = []
+  for (let i = 0; i < grid.length; i += 7) weeks.push(grid.slice(i, i + 7))
+  while (weeks.length > 1 && weeks[weeks.length - 1].every(c => !c.inMonth)) weeks.pop()
+  return weeks.flat()
+}
+
+/**
  * Get 7 Date objects starting from a given Monday (or any date)
  */
 export function getWeekDays(startDate) {

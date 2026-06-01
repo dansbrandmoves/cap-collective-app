@@ -174,8 +174,8 @@ html.light {
   /* Ambient radial glow for full-bleed hero backgrounds */
   .ambient-glow {
     background:
-      radial-gradient(ellipse 80% 50% at 20% 0%, rgb(139 92 246 / 0.10), transparent 60%),
-      radial-gradient(ellipse 60% 40% at 80% 100%, rgb(139 92 246 / 0.06), transparent 55%);
+      radial-gradient(ellipse 80% 50% at 20% 0%, rgb(94 156 140 / 0.10), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgb(94 156 140 / 0.06), transparent 55%);
   }
 
   /* Meta row — stacks vertically on mobile, flows horizontally on sm+ */
@@ -263,8 +263,8 @@ html.light .hover\:bg-white\/\[0\.08\]:hover { background-color: rgba(0,0,0,0.06
 /* Light mode: ambient glow — much subtler on white */
 html.light .ambient-glow {
   background:
-    radial-gradient(ellipse 80% 50% at 20% 0%, rgb(139 92 246 / 0.06), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 100%, rgb(139 92 246 / 0.04), transparent 55%) !important;
+    radial-gradient(ellipse 80% 50% at 20% 0%, rgb(94 156 140 / 0.06), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgb(94 156 140 / 0.04), transparent 55%) !important;
 }
 
 /* Light mode: lift shadow uses dark ink instead of black */

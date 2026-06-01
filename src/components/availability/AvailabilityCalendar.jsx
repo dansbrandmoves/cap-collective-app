@@ -5,6 +5,7 @@ import { DailyView } from './DailyView'
 import { DateRequestModal } from './DateRequestModal'
 import { useApp } from '../../contexts/AppContext'
 import { getWeekStart, dateToStr, deriveSlotState, eventOverlapsSlot } from '../../utils/availability'
+import { OWNER_LABEL } from '../../hooks/useProjectPeople'
 import { Button } from '../ui/Button'
 import { CalendarPlus, X, Check } from 'lucide-react'
 
@@ -466,7 +467,8 @@ function BestDaysStrip({ slots, calendarEvents, connectedCalendars, prefixRules,
  * caller combines every group's date-filtered requests/availability and we pull
  * member emails from all of those rooms. `actionLabel` renames the primary button. */
 export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRequests, sharedAvailability, onClose, actionLabel = 'Schedule meeting' }) {
-  const { getMembersForRoom, timezone } = useApp()
+  const { getMembersForRoom, timezone, user } = useApp()
+  const ownerEmail = (user?.email || '').trim() || null
   const memberRoomIds = useMemo(
     () => (roomIds && roomIds.length ? roomIds : (roomId ? [roomId] : [])),
     [roomIds, roomId]
@@ -492,12 +494,14 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
     dateRequests.forEach(r => { if (r.requester_name) set.add(r.requester_name) })
     sharedAvailability.forEach(a => { if (a.guest_name) set.add(a.guest_name) })
     return [...set].map(name => {
+      // The owner ("You") — use their account email from auth.
+      if (name === OWNER_LABEL) return { name, email: ownerEmail }
       const fromRequest = dateRequests.find(r => r.requester_name === name)?.requester_email
       const fromMember = members.find(m => m.name === name)?.email
       const email = (fromRequest || fromMember || '').trim()
       return { name, email: email || null }
     })
-  }, [dateRequests, sharedAvailability, members])
+  }, [dateRequests, sharedAvailability, members, ownerEmail])
 
   // Group members who HAVEN'T said they're free — still inviteable if this is
   // the most convenient day and they didn't respond.
@@ -590,7 +594,8 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
   // ── Scheduling form state ──
   // Default title from who's selected; user can override.
   const defaultTitle = useMemo(() => {
-    const list = [...selectedNames]
+    // Title names the OTHER people — you don't title a meeting after yourself.
+    const list = [...selectedNames].filter(n => n !== OWNER_LABEL)
     if (list.length === 1) return `Meeting with ${list[0]}`
     if (list.length > 1) return `Meeting · ${list.slice(0, 2).join(' & ')}${list.length > 2 ? ` +${list.length - 2}` : ''}`
     return 'Meeting'

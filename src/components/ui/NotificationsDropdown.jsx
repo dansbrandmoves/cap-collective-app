@@ -55,7 +55,7 @@ export function NotificationsDropdown() {
       >
         <Bell size={16} strokeWidth={1.75} />
         {unreadNotificationCount > 0 && (
-          <span className="absolute top-1 right-1 bg-accent text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 shadow-[0_2px_8px_-2px_rgb(139_92_246/0.6)]">
+          <span className="absolute top-1 right-1 bg-accent text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 shadow-[0_2px_8px_-2px_rgb(94_156_140/0.6)]">
             {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
           </span>
         )}

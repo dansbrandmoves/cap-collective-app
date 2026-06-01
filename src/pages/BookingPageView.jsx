@@ -95,7 +95,7 @@ function MonthCalendar({ availableDays, selectedDate, onSelectDate, guestFreeDat
             <button key={i} disabled={!isAvailable} onClick={() => isAvailable && onSelectDate(ds)}
               className={`relative aspect-square flex items-center justify-center text-base rounded-full transition-all duration-200 ease-ios font-medium ${
                 !inMonth ? 'text-transparent' :
-                isSelected ? 'bg-accent text-white shadow-[0_4px_16px_-4px_rgb(139_92_246/0.5)] scale-100' :
+                isSelected ? 'bg-accent text-white shadow-[0_4px_16px_-4px_rgb(94_156_140/0.5)] scale-100' :
                 isAvailable ? 'text-zinc-100 hover:bg-white/5 hover:scale-105 cursor-pointer' :
                 'text-zinc-700 cursor-default'
               }`}>
@@ -152,7 +152,7 @@ function TimeSlotPicker({ slots, takenSlots, ownerEvents, guestEvents, selectedD
             transition={{ delay: i * 0.015, duration: 0.2, ease: IOS_EASE }}
             className={`w-full min-h-touch flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 ease-ios ${
               isSelected
-                ? 'bg-accent text-white shadow-[0_8px_24px_-8px_rgb(139_92_246/0.5)]'
+                ? 'bg-accent text-white shadow-[0_8px_24px_-8px_rgb(94_156_140/0.5)]'
                 : isGuestBusy
                 ? 'border border-white/[0.05] text-zinc-600'
                 : 'border border-white/10 text-zinc-200 hover:border-accent/40 hover:bg-white/[0.03]'

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -18,7 +19,15 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   const [embedHideDesc, setEmbedHideDesc] = useState(false)
   const [embedTheme, setEmbedTheme] = useState('dark')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState(null)
+  const menuBtnRef = useRef(null)
   const [editing, setEditing] = useState(false)
+
+  function openMenu() {
+    const r = menuBtnRef.current?.getBoundingClientRect()
+    if (r) setMenuPos({ top: r.bottom + 6, right: window.innerWidth - r.right })
+    setMenuOpen(true)
+  }
   const [editForm, setEditForm] = useState({
     name: page.name,
     description: page.description || '',
@@ -67,16 +76,17 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
         <div className="flex items-start justify-between gap-3 mb-3">
           <h3 className="text-[17px] font-semibold text-zinc-100 leading-snug tracking-tight min-w-0 flex-1">{page.name}</h3>
           {/* All actions tucked into one menu — the card itself opens the page */}
-          <div className="relative flex-shrink-0 -mr-1.5" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setMenuOpen(v => !v)}
+          <div className="flex-shrink-0 -mr-1.5" onClick={(e) => e.stopPropagation()}>
+            <button ref={menuBtnRef} onClick={() => menuOpen ? setMenuOpen(false) : openMenu()}
               className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
               title="Options">
               <MoreHorizontal size={16} strokeWidth={2} />
             </button>
-            {menuOpen && (
+            {menuOpen && menuPos && createPortal(
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 z-20 w-44 bg-surface-800 border border-white/[0.08] rounded-xl shadow-xl shadow-black/40 py-1 animate-fadeIn">
+                <div className="fixed inset-0 z-[60]" onClick={() => setMenuOpen(false)} />
+                <div style={{ position: 'fixed', top: menuPos.top, right: menuPos.right }}
+                  className="z-[61] w-44 bg-surface-800 border border-white/[0.08] rounded-xl shadow-xl shadow-black/40 py-1 animate-fadeIn">
                   <button onClick={() => { copyLink(); setMenuOpen(false) }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.05] transition-colors">
                     {copied ? <Check size={13} strokeWidth={2} className="text-green-400" /> : <Copy size={13} strokeWidth={1.75} />} Copy link
@@ -99,7 +109,8 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
                     <Trash2 size={13} strokeWidth={1.75} /> Delete
                   </button>
                 </div>
-              </>
+              </>,
+              document.body
             )}
           </div>
         </div>

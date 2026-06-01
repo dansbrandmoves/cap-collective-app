@@ -320,18 +320,8 @@ export function BookingPageView() {
   const [searchParams] = useSearchParams()
   const hideLogo = searchParams.get('logo') === '0'
   const hideDesc = searchParams.get('desc') === '0'
-  const theme = searchParams.get('theme') // 'light' | 'dark' | null (null = dark)
+  const themeParam = searchParams.get('theme') // 'light' | 'dark' — embed override
   const { resolveBookingSlug, createBooking } = useApp()
-
-  // Apply theme to document root — safe in iframe (isolated document)
-  useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.classList.add('light')
-    } else {
-      document.documentElement.classList.remove('light')
-    }
-    return () => document.documentElement.classList.remove('light')
-  }, [theme])
 
   const [page, setPage] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -342,6 +332,15 @@ export function BookingPageView() {
   const [ownerLogo, setOwnerLogo] = useState(null)
   const [ownerLogoDark, setOwnerLogoDark] = useState(true)
   const [ownerGuestCalendarEnabled, setOwnerGuestCalendarEnabled] = useState(true)
+  const [ownerTheme, setOwnerTheme] = useState(null) // 'light' | 'dark' — the owner's app theme
+
+  // Render the page in the owner's chosen theme (their branded page). An embed
+  // ?theme= param overrides; default light when nothing is set.
+  useEffect(() => {
+    const effective = themeParam || ownerTheme || 'light'
+    document.documentElement.classList.toggle('light', effective === 'light')
+    return () => document.documentElement.classList.remove('light')
+  }, [themeParam, ownerTheme])
   const [guestEvents, setGuestEvents] = useState(() => {
     try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
   })
@@ -384,6 +383,7 @@ export function BookingPageView() {
         setOwnerLogo(data?.logo_url || null)
         setOwnerLogoDark(data?.logo_is_dark ?? true)
         setOwnerGuestCalendarEnabled(data?.settings?.guestCalendarEnabled ?? true)
+        setOwnerTheme(data?.settings?.theme || null)
       })
   }, [page])
 
@@ -573,7 +573,7 @@ export function BookingPageView() {
             {step === 'date' && (
               <motion.div
                 key="calendar"
-                className="w-full max-w-[660px]"
+                className="w-full max-w-[920px]"
                 initial={{ opacity: 0, x: 28 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -28 }}

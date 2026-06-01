@@ -152,9 +152,10 @@ export function ProjectOverview({
   const todayStr = dateToStr(today)
 
   return (
-    <div className="flex-1 overflow-y-auto no-scrollbar px-5 sm:px-8 lg:px-12 py-8 sm:py-12">
-      <div className="lg:flex lg:gap-5 lg:items-start">
-      <div className="flex-1 min-w-0">
+    <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="lg:flex lg:items-start">
+      {/* Calendar column carries the page padding; the inspector stays flush to the edge */}
+      <div className="flex-1 min-w-0 px-5 sm:px-8 lg:px-12 py-8 sm:py-12">
 
       {/* Schedule a meeting — calm, spacious, one question at a time (booking aesthetic) */}
       {includedKnown > 0 ? (
@@ -260,15 +261,13 @@ export function ProjectOverview({
                 } ${isSelected ? 'ring-2 ring-inset ring-accent bg-accent/[0.04]' : ''} ${loading ? 'opacity-60' : ''}`}
               >
                 {inMonth && (
-                  allFree ? (
-                    <span className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-green-600 text-white font-bold text-[13px] sm:text-[15px]">
-                      {date.getDate()}
-                    </span>
-                  ) : (
-                    <span className={`text-[13px] sm:text-[15px] font-medium ${isToday ? 'text-accent' : 'text-zinc-200'}`}>
-                      {date.getDate()}
-                    </span>
-                  )
+                  <span className={`text-[13px] sm:text-[15px] font-medium ${isToday ? 'text-accent' : 'text-zinc-200'}`}>
+                    {date.getDate()}
+                  </span>
+                )}
+                {/* Dot only when the whole group is free that day */}
+                {inMonth && allFree && (
+                  <span className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-green-500" />
                 )}
               </button>
             )

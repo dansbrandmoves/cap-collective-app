@@ -1,9 +1,10 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-05-31 (late) / 2026-06-01 UTC
-**Last pushed commit:** `604263b` — "fix light-mode headings"
-**Live at:** https://www.coordie.com (Vercel auto-deploys on push)
-**Google OAuth:** ✅ verified for `calendar.readonly` (no unverified-app warning).
+**Last session ended:** 2026-06-01 UTC
+**Last pushed commit:** `2f56bc6` — "park native in-app scheduling until Google re-verification"
+**Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
+  Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
+**Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
 **Commit convention:** prefix every commit subject with `coordie:` (parallel work across projects).
 **Becoming:** Arro Calendar / Arro Scheduler — part of the Arro family (erro.ai).
 
@@ -38,10 +39,31 @@ select event, detail->>'actor', detail->>'status', detail->>'summary', created_a
   from diagnostics order by created_at desc limit 10;
 ```
 Expect ≥1 token WITH a refresh token, and `guest_sync` events with status `ok`.
+(Late in session the user said this "looks like it fixed it" after reconnecting on the new
+build — confirm the cron keeps it fresh: change an event, wait ≤15 min, watch for a new `guest_sync`.)
 
 ---
 
-## ✅ Shipped 2026-05-31 session (this one)
+## 🅿️ PARKED: native in-app scheduling (revisit pre-launch-of-that-feature)
+Built the full "schedule a real meeting in-app" flow, then **deliberately parked it** because this is
+a live app and `calendar.events` is an unverified sensitive scope (would warn real users). Current
+state (`2f56bc6`): owner + guest OAuth are **read-only**; the Day Inspector has the nice scheduling
+form (title, Time window | All day toggle, best-slot prefill, attendee picker) but **"Schedule
+meeting" opens a prefilled Google Calendar tab** (no write scope). The native path is preserved:
+- `create_event` action is deployed in `google-calendar-auth` (unreachable for now).
+- `createCalendarEvent()` helper exists in `googleCalendar.js`.
+- To RE-ENABLE: flip `startGoogleAuth` to `OWNER_SCOPES` (readonly+events) and make
+  `handleCreate()` in AvailabilityCalendar.jsx call `createCalendarEvent(...)` instead of
+  `openGCalTemplate(...)`. THEN submit Google re-verification (scope justification + demo video +
+  privacy-policy Calendar-data disclosure — the privacy page may need a wording update first).
+User decided: stay on Google-Calendar-tab scheduling for now, polish everything else, revisit when
+ready to launch native scheduling.
+
+---
+
+## ✅ Shipped 2026-05-31 / 06-01 session (this one)
+**Native scheduling built then parked** (`02d1913` built it, `2f56bc6` parked it — see PARKED above).
+
 **Unified guest calendar sync — guests now sync server-side like owners** (`8c4c95c`):
 - New tables `guest_calendar_tokens` (+ `timezone`, refresh token, service-role-only RLS) and
   `guest_calendar_sync_state`. Mirrors the owner `profiles.google_refresh_token` + `calendar_sync_state`.

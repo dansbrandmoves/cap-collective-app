@@ -556,25 +556,28 @@ export function BookingPageView() {
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.24, ease: IOS_EASE }}>
 
-              {/* Work area above the calendar — north-star value framing + why it's here */}
+              {/* Work area above the calendar */}
               <div className="text-center mb-6">
-                <h2 className="text-[20px] sm:text-[24px] font-semibold text-zinc-50 tracking-tight mb-1">When are we both free?</h2>
-                <p className="text-[12px] text-zinc-500 mb-3">
-                  {ownerGuestCalendarEnabled
-                    ? 'Connect your calendar to see where you overlap — or pick a time of day.'
-                    : 'Pick a time of day to narrow it down.'}
-                </p>
+                <p className="text-[14px] text-zinc-400 mb-3">When are we both free?</p>
                 <div className="inline-flex flex-wrap items-center justify-center gap-2">
-                  <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">
-                    {WINDOW_ORDER.map(key => (
-                      <button key={key} onClick={() => setWindowKey(key)}
-                        className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                          windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
-                        }`}>
-                        {WINDOWS[key].label}
-                      </button>
-                    ))}
-                  </div>
+                  {(() => {
+                    // Time-of-day filtering only makes sense once we know the guest's
+                    // free time — gate the chips behind connecting a calendar.
+                    const locked = ownerGuestCalendarEnabled && guestEvents === null
+                    return (
+                      <div className={`inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5 transition-opacity ${locked ? 'opacity-40' : ''}`}>
+                        {WINDOW_ORDER.map(key => (
+                          <button key={key} disabled={locked} onClick={() => setWindowKey(key)}
+                            title={locked ? 'Connect your calendar to filter by time of day' : undefined}
+                            className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 disabled:cursor-not-allowed ${
+                              windowKey === key && !locked ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 enabled:hover:text-zinc-100'
+                            }`}>
+                            {WINDOWS[key].label}
+                          </button>
+                        ))}
+                      </div>
+                    )
+                  })()}
                   {ownerGuestCalendarEnabled && (
                     <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
                   )}

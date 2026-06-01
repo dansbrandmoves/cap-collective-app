@@ -1,25 +1,14 @@
 import { useState } from 'react'
 import { Users, CalendarDays, Check, UserPlus, Copy, X } from 'lucide-react'
 
-// The roster UI — lives in the project left panel. Add people, tap to
-// include/exclude (which drives the calendar), copy each person's invite link,
-// remove. Driven entirely by the useProjectPeople hook passed in from the parent.
+// The roster UI — lives in the project left panel. Add people (opens the Add
+// People modal), tap to include/exclude (which drives the calendar), copy each
+// person's invite link, remove. Driven by the useProjectPeople hook + parent.
 export function PeopleRoster({
   people, excluded, totalPeople, includedCount,
-  togglePerson, addPerson, removePerson, inviteLink, canAdd,
+  togglePerson, removePerson, inviteLink, canAdd, onAdd,
 }) {
-  const [adding, setAdding] = useState(false)
-  const [newName, setNewName] = useState('')
   const [copiedToken, setCopiedToken] = useState(null)
-
-  function submit(e) {
-    e?.preventDefault()
-    const name = newName.trim()
-    if (!name) return
-    addPerson(name)
-    setNewName('')
-    setAdding(false)
-  }
 
   function copy(token) {
     const link = inviteLink(token)
@@ -73,7 +62,9 @@ export function PeopleRoster({
                   ? <span className="text-[10px] text-zinc-600 flex-shrink-0">you</span>
                   : (!responded && <span className="text-[10px] text-zinc-600 italic flex-shrink-0">invited</span>)}
               </button>
-              {inviteToken && (
+              {/* Personal invite link — only useful until their calendar is
+                  synced. Once they're in, drop it (they don't need it anymore). */}
+              {inviteToken && !viaCalendar && (
                 <button onClick={() => copy(inviteToken)} title="Copy invite link"
                   className="text-zinc-600 hover:text-accent transition-colors flex-shrink-0">
                   {copiedToken === inviteToken ? <Check size={12} strokeWidth={3} className="text-green-400" /> : <Copy size={12} strokeWidth={2} />}
@@ -90,30 +81,13 @@ export function PeopleRoster({
         })}
       </div>
 
-      {adding ? (
-        <form onSubmit={submit} className="flex items-center gap-1.5 mt-2">
-          <input
-            autoFocus
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Escape') { setAdding(false); setNewName('') } }}
-            placeholder="Name"
-            className="flex-1 min-w-0 bg-surface-800 border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-[13px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all"
-          />
-          <button type="submit" disabled={!newName.trim()}
-            className="text-[12px] font-semibold px-2.5 py-1.5 rounded-lg bg-accent text-white disabled:opacity-40 transition-opacity flex-shrink-0">Add</button>
-          <button type="button" onClick={() => { setAdding(false); setNewName('') }}
-            className="text-zinc-600 hover:text-zinc-300 transition-colors p-1 flex-shrink-0"><X size={14} /></button>
-        </form>
-      ) : (
-        <button
-          onClick={() => setAdding(true)}
-          disabled={!canAdd}
-          className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-accent hover:text-accent/80 transition-colors disabled:opacity-40"
-        >
-          <UserPlus size={14} strokeWidth={2} /> Add person
-        </button>
-      )}
+      <button
+        onClick={onAdd}
+        disabled={!canAdd}
+        className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-accent hover:text-accent/80 transition-colors disabled:opacity-40"
+      >
+        <UserPlus size={14} strokeWidth={2} /> Add person
+      </button>
     </div>
   )
 }

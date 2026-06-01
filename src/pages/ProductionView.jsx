@@ -13,16 +13,16 @@ import { useProjectPeople } from '../hooks/useProjectPeople'
 import { useResizablePanel, ResizeHandle } from '../hooks/useResizablePanel'
 import { projectSlotsFromConfig } from '../utils/availability'
 import { PageLoader } from '../components/ui/PageLoader'
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { AddPersonModal } from '../components/project/AddPersonModal'
 import { supabase } from '../utils/supabase'
-import { Menu, X, Share2, ExternalLink, Check, Archive, XCircle, Eye, EyeOff } from 'lucide-react'
+import { Menu, X, PanelLeft, MoreHorizontal, Pencil, Trash2, Share2, ExternalLink, Check, Archive, XCircle, Eye, EyeOff } from 'lucide-react'
 
 export function ProductionView() {
   const { id } = useParams()
   const navigate = useNavigate()
   const {
     getProduction, updateProduction, deleteProduction,
-    createRoom, updateRoomName, deleteRoom, getRoomLink,
+    createRoom, updateRoomName, deleteRoom, getRoomLink, sendRoomInvite,
     effectiveSlots, calendarEvents, connectedCalendars, availabilityRules,
     prefixRules, slotStates, canAddRoom, FREE_ROOM_LIMIT, pendingRequestCounts,
     availabilityMode, blockDuration, businessHours, loading,
@@ -40,14 +40,8 @@ export function ProductionView() {
   const [deletingRoomId, setDeletingRoomId] = useState(null)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [showShare, setShowShare] = useState(false)
-  const [copiedRoomId, setCopiedRoomId] = useState(null)
-
-  function copyRoomLink(room) {
-    if (!room.openToken) return
-    navigator.clipboard.writeText(getRoomLink(room.openToken))
-    setCopiedRoomId(room.id)
-    setTimeout(() => setCopiedRoomId(prev => (prev === room.id ? null : prev)), 2000)
-  }
+  const [showProjectMenu, setShowProjectMenu] = useState(false)
+  const [showAddPerson, setShowAddPerson] = useState(false)
 
   // Auto-select a room when productions load: prefer one with pending requests, else first
   useEffect(() => {
@@ -154,7 +148,7 @@ export function ProductionView() {
             title="Expand panel"
             className="text-zinc-500 hover:text-zinc-100 transition-colors p-1.5 rounded-md hover:bg-surface-800"
           >
-            <PanelLeftOpen size={16} strokeWidth={1.75} />
+            <PanelLeft size={16} strokeWidth={1.75} />
           </button>
         </div>
       )}
@@ -173,12 +167,16 @@ export function ProductionView() {
         <ResizeHandle onPointerDown={sidePanel.startDrag} onDoubleClick={sidePanel.reset} side="right" dragging={sidePanel.dragging} />
         {/* Project header */}
         <div className="px-5 py-5 border-b border-white/[0.05]">
+          {/* Top nav row: back link (left) + collapse (top-right corner) */}
           <div className="flex items-center justify-between mb-3">
             <button onClick={() => navigate('/')} className="text-[12px] text-zinc-500 hover:text-zinc-200 flex items-center gap-1 transition-colors">
               ← Projects
             </button>
             <button onClick={() => setMobileShowSidebar(false)} className="md:hidden text-zinc-500 hover:text-zinc-200 transition-colors">
               <X size={16} />
+            </button>
+            <button onClick={sidePanel.toggle} title="Collapse panel" className="hidden md:flex text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded p-1 transition-colors">
+              <PanelLeft size={16} strokeWidth={1.75} />
             </button>
           </div>
           <div className="flex items-start justify-between gap-2">
@@ -192,19 +190,34 @@ export function ProductionView() {
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-0.5 flex-shrink-0">
-              <button onClick={() => setShowEditProject(true)} className="text-[11px] text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded px-2 py-1 transition-colors">Edit</button>
-              <button onClick={() => setShowDeleteConfirm(true)} className="text-[11px] text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded px-2 py-1 transition-colors">Delete</button>
-              <button onClick={sidePanel.toggle} title="Collapse panel" className="hidden md:flex text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded p-1 transition-colors ml-0.5">
-                <PanelLeftClose size={14} strokeWidth={1.75} />
+            {/* Edit / Delete tucked into a kebab so they never crowd the name */}
+            <div className="relative flex-shrink-0">
+              <button onClick={() => setShowProjectMenu(v => !v)} title="Project options"
+                className="text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded p-1.5 transition-colors">
+                <MoreHorizontal size={16} strokeWidth={2} />
               </button>
+              {showProjectMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowProjectMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-20 w-36 bg-surface-800 border border-white/[0.08] rounded-xl shadow-xl shadow-black/40 py-1 animate-fadeIn">
+                    <button onClick={() => { setShowProjectMenu(false); setShowEditProject(true) }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.05] transition-colors">
+                      <Pencil size={13} strokeWidth={1.75} /> Edit project
+                    </button>
+                    <button onClick={() => { setShowProjectMenu(false); setShowDeleteConfirm(true) }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-red-400 hover:bg-red-500/10 transition-colors">
+                      <Trash2 size={13} strokeWidth={1.75} /> Delete
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Left panel: People roster leads (pick who → calendar reacts), then a
-            compact Share section. "Who" on the left, "when" on the right. */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        {/* Left panel: People roster. "Add people" opens one modal that handles both
+            inviting by email and grabbing the shareable link. */}
+        <div className="flex-1 overflow-y-auto px-3 py-4">
           <div className="px-1">
             <PeopleRoster
               people={peopleState.people}
@@ -212,44 +225,11 @@ export function ProductionView() {
               totalPeople={peopleState.totalPeople}
               includedCount={peopleState.includedCount}
               togglePerson={peopleState.togglePerson}
-              addPerson={peopleState.addPerson}
               removePerson={peopleState.removePerson}
               inviteLink={peopleState.inviteLink}
               canAdd={!!primaryRoom}
+              onAdd={() => setShowAddPerson(true)}
             />
-          </div>
-
-          <div className="border-t border-white/[0.05] pt-4">
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest px-1 mb-2">Share</p>
-          {primaryRoom?.openToken ? (
-            <>
-              <button
-                onClick={() => copyRoomLink(primaryRoom)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] border transition-colors ${
-                  copiedRoomId === primaryRoom.id
-                    ? 'border-green-500/30 text-green-400 bg-green-500/10'
-                    : 'border-white/[0.08] text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.04]'
-                }`}
-              >
-                {copiedRoomId === primaryRoom.id ? <Check size={15} strokeWidth={2} /> : <Share2 size={15} strokeWidth={1.75} className="opacity-70" />}
-                {copiedRoomId === primaryRoom.id ? 'Copied!' : 'Copy shareable link'}
-              </button>
-              <a
-                href={getRoomLink(primaryRoom.openToken)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 mt-1 rounded-lg text-[13px] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] transition-colors"
-              >
-                <ExternalLink size={15} strokeWidth={1.75} className="opacity-70" />
-                Preview as guest
-              </a>
-              <p className="text-[11px] text-zinc-600 leading-relaxed px-1 mt-3">
-                Anyone with this link can add their availability. To invite specific people, use “Add person” above — each gets their own link.
-              </p>
-            </>
-          ) : (
-            <p className="text-[11px] text-zinc-600 px-1">No shareable link yet.</p>
-          )}
           </div>
         </div>
       </div>
@@ -318,6 +298,16 @@ export function ProductionView() {
           </div>
         </form>
       </Modal>
+
+      {/* Add People / Share Modal */}
+      <AddPersonModal
+        isOpen={showAddPerson}
+        onClose={() => setShowAddPerson(false)}
+        addPerson={peopleState.addPerson}
+        sendRoomInvite={sendRoomInvite}
+        shareLink={peopleState.shareLink}
+        productionName={production.name}
+      />
 
       {/* Rename Room Modal */}
       {renamingRoom && (

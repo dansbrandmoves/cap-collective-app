@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { useResizablePanel, ResizeHandle } from '../../hooks/useResizablePanel'
-import { LayoutGrid, CalendarCheck, LogOut, Shield, Activity, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { LayoutGrid, CalendarCheck, LogOut, Shield, Activity, PanelLeft } from 'lucide-react'
 
 // Primary destinations live at the top ("what you do"); configuration/utility is
 // pinned to the bottom ("settings"). Keeps the nav uncluttered and scannable.
@@ -67,7 +67,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
             title={railed ? 'Expand sidebar' : 'Collapse sidebar'}
             className="hidden md:flex items-center justify-center text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-surface-800"
           >
-            {railed ? <PanelLeftOpen size={16} strokeWidth={1.75} /> : <PanelLeftClose size={16} strokeWidth={1.75} />}
+            <PanelLeft size={16} strokeWidth={1.75} />
           </button>
         </div>
 

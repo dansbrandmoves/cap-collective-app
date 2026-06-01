@@ -163,9 +163,11 @@ export function AppProvider({ children }) {
   const [logoUrl, setLogoUrl] = useState(null)
   const [logoIsDark, setLogoIsDark] = useState(true)
 
-  const FREE_PROJECT_LIMIT = 1
-  const FREE_ROOM_LIMIT = 2
-  const FREE_BOOKING_PAGE_LIMIT = 1
+  // Generous free tier — a founder should be able to explore real work before
+  // ever seeing an upgrade prompt. Pro lifts these to unlimited.
+  const FREE_PROJECT_LIMIT = 3
+  const FREE_ROOM_LIMIT = 5
+  const FREE_BOOKING_PAGE_LIMIT = 3
 
   const [profileLoaded, setProfileLoaded] = useState(false)
 
@@ -983,6 +985,25 @@ export function AppProvider({ children }) {
       .then(({ error }) => { if (error) console.error('removeRoomMember:', error) })
   }, [])
 
+  // Email a person their personal invite link (Resend, via the send-invite edge fn).
+  const sendRoomInvite = useCallback(async ({ name, email, inviteToken, productionName }) => {
+    if (!email || !inviteToken) return false
+    const link = `${window.location.origin}/room/${inviteToken}`
+    const { error } = await supabase.functions.invoke('send-invite', {
+      body: {
+        toEmail: email, toName: name || '', inviteLink: link,
+        projectName: productionName || '', fromName: user?.user_metadata?.full_name || user?.email || 'Coordie',
+      },
+    })
+    logEvent('member_invite', {
+      actor: 'owner', status: error ? STATUS.ERROR : STATUS.OK,
+      summary: error ? `Invite email failed for ${email}` : `Invited ${name || email}`,
+      memberName: name || '', email, error,
+    })
+    if (error) { console.error('sendRoomInvite:', error); return false }
+    return true
+  }, [user])
+
   // Resolve a token to { productionId, roomId, mode, memberName }
   const resolveToken = useCallback(async (token) => {
     const [{ data: roomRows }, { data: memberRows }] = await Promise.all([
@@ -1259,7 +1280,7 @@ export function AppProvider({ children }) {
       // Rooms
       createRoom, updateRoomName, deleteRoom, updateRoomAccessMode,
       // Room Members
-      addRoomMember, removeRoomMember,
+      addRoomMember, removeRoomMember, sendRoomInvite,
       // Room
       updateSharedNotes, refreshRoom,
       // Booking Pages

@@ -57,10 +57,12 @@ export function useProjectPeople(production, { dateRequestsByRoom = {}, sharedAv
     setExcluded(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
   }, [])
 
-  const addPerson = useCallback((name) => {
+  // Returns the created member (with invite_token) so callers can build/send
+  // that person's personal link.
+  const addPerson = useCallback((name, email = '') => {
     const trimmed = (name || '').trim()
-    if (!trimmed || !primaryRoom) return
-    addRoomMember(primaryRoom.id, { name: trimmed, email: '' })
+    if (!trimmed || !primaryRoom) return null
+    return addRoomMember(primaryRoom.id, { name: trimmed, email: (email || '').trim() })
   }, [primaryRoom, addRoomMember])
 
   const removePerson = useCallback((memberId) => {
@@ -69,8 +71,11 @@ export function useProjectPeople(production, { dateRequestsByRoom = {}, sharedAv
 
   const inviteLink = useCallback((token) => (token ? getRoomLink(token) : null), [getRoomLink])
 
+  // The open "anyone can join" link for this project.
+  const shareLink = primaryRoom?.openToken ? getRoomLink(primaryRoom.openToken) : null
+
   return {
     people, excluded, includedOwner, totalPeople, includedCount,
-    togglePerson, addPerson, removePerson, inviteLink, primaryRoom,
+    togglePerson, addPerson, removePerson, inviteLink, shareLink, primaryRoom,
   }
 }

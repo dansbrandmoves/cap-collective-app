@@ -985,22 +985,20 @@ export function AppProvider({ children }) {
       .then(({ error }) => { if (error) console.error('removeRoomMember:', error) })
   }, [])
 
-  // Fully remove a person from a project: their member row AND every trace of
-  // their shared availability / date requests across the project's rooms. Without
-  // the latter they'd keep showing in the roster (sourced from those tables).
+  // Fully remove a person from a project. Done server-side (remove-project-guest
+  // edge fn, service role) because it must also delete the guest's calendar TOKEN —
+  // otherwise the 15-min guest-sync cron keeps rebuilding their shared_availability
+  // and they reappear. The edge fn verifies the caller owns the rooms.
   const removePersonEverywhere = useCallback(async ({ roomIds, name, memberId }) => {
-    if (memberId) {
-      setRoomMembers(prev => prev.filter(m => m.id !== memberId))
-      await supabase.from('room_members').delete().eq('id', memberId)
-    }
-    if (name && roomIds?.length) {
-      await supabase.from('date_requests').delete().eq('requester_name', name).in('room_id', roomIds)
-      await supabase.from('shared_availability').delete().eq('guest_name', name).in('room_id', roomIds)
-    }
+    if (memberId) setRoomMembers(prev => prev.filter(m => m.id !== memberId)) // optimistic
+    if (!name || !roomIds?.length) return true
+    const { error } = await supabase.functions.invoke('remove-project-guest', { body: { name, roomIds } })
     logEvent('member_remove', {
-      actor: 'owner', status: STATUS.OK, summary: `Removed ${name || 'person'}`, memberName: name || '',
+      actor: 'owner', status: error ? STATUS.ERROR : STATUS.OK,
+      summary: error ? `Failed to remove ${name}` : `Removed ${name}`, memberName: name || '', error,
     })
-    return true
+    if (error) console.error('remove-project-guest:', error)
+    return !error
   }, [])
 
   // Email a person their personal invite link (Resend, via the send-invite edge fn).

@@ -531,20 +531,20 @@ export function BookingPageView() {
     <div className="min-h-screen bg-surface-950 ambient-glow">
       <div className="mx-auto max-w-[940px] px-5 sm:px-8 py-8 sm:py-12 safe-top safe-bottom">
 
-        {/* Minimal header — small logo + title + duration on one line */}
-        <header className="flex items-center gap-3 mb-8">
+        {/* Minimal header — centered: logo, title, duration */}
+        <header className="flex flex-col items-center text-center gap-3 mb-8">
           {!hideLogo && (
             displayLogo ? (
-              <div className={`rounded-lg px-2 py-1 inline-flex flex-shrink-0 ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e] border border-white/10'}`}>
-                <img src={displayLogo} alt="" className="max-h-5 max-w-[84px] object-contain" />
+              <div className={`rounded-lg px-2.5 py-1.5 inline-flex ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e] border border-white/10'}`}>
+                <img src={displayLogo} alt="" className="max-h-6 max-w-[100px] object-contain" />
               </div>
             ) : (
-              <img src="/coordie-logo.svg" alt="Coordie" className="h-5 flex-shrink-0" style={{ filter: 'invert(1)' }} />
+              <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: 'invert(1)' }} />
             )
           )}
-          <div className="min-w-0">
-            <h1 className="text-[19px] sm:text-[22px] font-semibold text-zinc-50 tracking-tight leading-tight truncate">{page.name}</h1>
-            <p className="text-[13px] text-zinc-500 truncate">
+          <div>
+            <h1 className="text-[22px] sm:text-[26px] font-semibold text-zinc-50 tracking-tight leading-tight">{page.name}</h1>
+            <p className="text-[13px] text-zinc-500 mt-1">
               {page.duration_minutes} min{page.description && !hideDesc ? ` · ${page.description}` : ''}
             </p>
           </div>
@@ -556,24 +556,26 @@ export function BookingPageView() {
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.24, ease: IOS_EASE }}>
 
-              {/* Thin work area above the calendar: time-of-day filter + connect calendar */}
-              <div className="flex flex-wrap items-center gap-2 mb-5">
-                <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">
-                  {WINDOW_ORDER.map(key => (
-                    <button key={key} onClick={() => setWindowKey(key)}
-                      className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 ${
-                        windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
-                      }`}>
-                      {WINDOWS[key].label}
-                    </button>
-                  ))}
-                </div>
-                {ownerGuestCalendarEnabled && (
-                  <>
-                    <span className="text-zinc-700 mx-0.5 hidden sm:inline">·</span>
+              {/* Work area above the calendar — labeled so new visitors get why it's here */}
+              <div className="text-center mb-6">
+                <p className="text-[12px] text-zinc-500 mb-2.5">
+                  Prefer a time of day?{ownerGuestCalendarEnabled ? ' Connect your calendar to spot your free days.' : ''}
+                </p>
+                <div className="inline-flex flex-wrap items-center justify-center gap-2">
+                  <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">
+                    {WINDOW_ORDER.map(key => (
+                      <button key={key} onClick={() => setWindowKey(key)}
+                        className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 ${
+                          windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
+                        }`}>
+                        {WINDOWS[key].label}
+                      </button>
+                    ))}
+                  </div>
+                  {ownerGuestCalendarEnabled && (
                     <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
-                  </>
-                )}
+                  )}
+                </div>
               </div>
 
               <MonthCalendar
@@ -586,10 +588,10 @@ export function BookingPageView() {
           )}
 
           {step === 'time' && (
-            <motion.div key="time" className="max-w-[460px]"
+            <motion.div key="time" className="max-w-[460px] mx-auto"
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.24, ease: IOS_EASE }}>
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center gap-3 mb-6">
                 <button onClick={() => { setSelectedDate(null); setSelectedSlot(null) }}
                   className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2">
                   <ChevronLeft size={18} strokeWidth={1.75} />
@@ -608,10 +610,10 @@ export function BookingPageView() {
           )}
 
           {step === 'confirm' && (
-            <motion.div key="confirm" className="max-w-[480px]"
+            <motion.div key="confirm" className="max-w-[480px] mx-auto"
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.24, ease: IOS_EASE }}>
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center gap-3 mb-6">
                 <button onClick={() => setSelectedSlot(null)}
                   className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-500 hover:text-zinc-100 hover:bg-white/5 transition-colors -ml-2">
                   <ChevronLeft size={18} strokeWidth={1.75} />
@@ -624,7 +626,7 @@ export function BookingPageView() {
           )}
         </AnimatePresence>
 
-        <footer className="mt-10">
+        <footer className="mt-10 text-center">
           <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
             <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />

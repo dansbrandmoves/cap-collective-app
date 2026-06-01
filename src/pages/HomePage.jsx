@@ -4,123 +4,52 @@ import { CalendarDays, Users, Link2, CheckCircle2, ArrowRight, Inbox, LayoutGrid
 
 const FEATURES = [
   {
+    icon: Users,
+    title: 'When can everyone meet?',
+    desc: 'Add everyone to a project and Coordie surfaces the days the whole group is free — ranked, with the best day highlighted. Filter by morning, afternoon, or evening.',
+  },
+  {
     icon: CalendarDays,
     title: 'Calendar-driven availability',
-    desc: 'Connect Google Calendar and your real schedule drives everything — no manual updates. Events block or hold slots automatically.',
-  },
-  {
-    icon: Users,
-    title: 'Rooms for every group',
-    desc: "Clients, vendors, and crew each get their own scoped room. They see only what's relevant to them.",
-  },
-  {
-    icon: Link2,
-    title: 'Shareable room links',
-    desc: 'Copy a link and paste it in your email. Guests join in one click — no account, no app to download.',
-  },
-  {
-    icon: Inbox,
-    title: 'Date requests, handled',
-    desc: 'Guests select dates from your calendar and send a request. You review, approve, or decline — all in one place.',
+    desc: 'Connect Google Calendar and your real schedule drives everything — no manual updates. Busy times drop out automatically, for you and everyone you invite.',
   },
   {
     icon: LayoutGrid,
-    title: 'Projects, not chaos',
-    desc: 'Every production lives in its own space. Rooms, notes, messages, and availability — all together.',
+    title: 'Everyone in one project',
+    desc: 'Clients, vendors, and crew live together in a single project. See who has shared, who you’re still waiting on, and who’s in.',
+  },
+  {
+    icon: Link2,
+    title: 'One-click invites',
+    desc: 'Invite people by email or share one link. They join in a click — no account, no app to download — and their availability flows straight in.',
+  },
+  {
+    icon: Inbox,
+    title: 'Schedule in a tap',
+    desc: 'Pick the best day, choose a time everyone’s open, and send the meeting — prefilled and ready, with the right people attached.',
   },
   {
     icon: Zap,
-    title: 'Real-time collaboration',
-    desc: 'Shared notes and messages update live. Both sides are always looking at the same thing.',
+    title: 'Booking pages too',
+    desc: 'Need a classic “book time with me” link? Spin up a booking page in seconds. Same calendar, shareable anywhere.',
   },
 ]
 
 const HOW_IT_WORKS = [
-  { step: '01', title: 'Create a project', desc: 'Add your production with dates, description, and rooms for each set of collaborators.' },
-  { step: '02', title: 'Connect your calendar', desc: 'Link Google Calendar once. Your real availability updates automatically — no extra work.' },
-  { step: '03', title: 'Share a room link', desc: 'Each room gets a unique link. Paste it in your own email. They open it and see their space.' },
-  { step: '04', title: 'Coordinate together', desc: 'Guests view availability, request dates, and message you — all without creating an account.' },
+  { step: '01', title: 'Create a project', desc: 'Name your production and add the clients, vendors, and crew you need to line up.' },
+  { step: '02', title: 'Everyone shares their free time', desc: 'They connect a calendar or tap their free days — in one click, no account needed.' },
+  { step: '03', title: 'See the day that works', desc: 'The day the whole group is free turns green. Filter by time of day to narrow it down.' },
+  { step: '04', title: 'Send the meeting', desc: 'Pick the slot, attach the right people, and it’s scheduled. No back-and-forth.' },
 ]
 
-// Each persona picks a different day, with different owner-available slots
-// and a different guest-busy pattern. `slots` are the slots the owner offers
-// that day; `busy` means this guest's own calendar conflicts.
-const PERSONAS = [
-  {
-    name: 'Sarah Chen',     day: 17, selectedIdx: 4,
-    slots: [
-      { time: '9:00 AM',  busy: false },
-      { time: '9:30 AM',  busy: true  },
-      { time: '10:00 AM', busy: true  },
-      { time: '10:30 AM', busy: false },
-      { time: '11:00 AM', busy: false },
-      { time: '1:00 PM',  busy: false },
-      { time: '1:30 PM',  busy: true  },
-      { time: '2:00 PM',  busy: false },
-    ],
-  },
-  {
-    name: 'Amara Okafor',   day: 22, selectedIdx: 5,
-    slots: [
-      { time: '10:00 AM', busy: false },
-      { time: '10:30 AM', busy: false },
-      { time: '11:00 AM', busy: true  },
-      { time: '11:30 AM', busy: true  },
-      { time: '12:00 PM', busy: false },
-      { time: '2:00 PM',  busy: false },
-      { time: '2:30 PM',  busy: false },
-      { time: '3:00 PM',  busy: true  },
-    ],
-  },
-  {
-    name: 'Diego Rivera',   day: 8,  selectedIdx: 2,
-    slots: [
-      { time: '8:00 AM',  busy: true  },
-      { time: '8:30 AM',  busy: false },
-      { time: '9:00 AM',  busy: false },
-      { time: '9:30 AM',  busy: true  },
-      { time: '10:00 AM', busy: false },
-      { time: '10:30 AM', busy: true  },
-      { time: '11:00 AM', busy: false },
-    ],
-  },
-  {
-    name: 'Priya Patel',    day: 15, selectedIdx: 4,
-    slots: [
-      { time: '12:00 PM', busy: false },
-      { time: '12:30 PM', busy: true  },
-      { time: '1:00 PM',  busy: true  },
-      { time: '1:30 PM',  busy: false },
-      { time: '2:00 PM',  busy: false },
-      { time: '2:30 PM',  busy: false },
-      { time: '3:00 PM',  busy: true  },
-      { time: '3:30 PM',  busy: false },
-    ],
-  },
-  {
-    name: 'Zainab Ali',     day: 24, selectedIdx: 1,
-    slots: [
-      { time: '9:00 AM',  busy: false },
-      { time: '9:30 AM',  busy: false },
-      { time: '10:00 AM', busy: true  },
-      { time: '11:00 AM', busy: true  },
-      { time: '11:30 AM', busy: false },
-      { time: '12:00 PM', busy: false },
-    ],
-  },
-  {
-    name: 'Mei Tanaka',     day: 10, selectedIdx: 1,
-    slots: [
-      { time: '10:30 AM', busy: true  },
-      { time: '11:00 AM', busy: false },
-      { time: '11:30 AM', busy: false },
-      { time: '1:00 PM',  busy: true  },
-      { time: '1:30 PM',  busy: true  },
-      { time: '2:00 PM',  busy: false },
-      { time: '2:30 PM',  busy: false },
-    ],
-  },
+// The group whose availability converges in the hero demo. Each person's free
+// days are real overlapping sets — the intersection (everyone free) is 16 & 23.
+const TEAM = [
+  { name: 'Sarah Chen',   role: 'Client', via: 'calendar', free: [2, 3, 9, 16, 17, 23, 24, 30] },
+  { name: 'Diego Rivera', role: 'Vendor', via: 'tapped',   free: [8, 9, 15, 16, 22, 23, 29] },
+  { name: 'Priya Patel',  role: 'Crew',   via: 'calendar', free: [3, 10, 16, 17, 23, 24, 30] },
 ]
+const HERO_DAY = 16 // the day everyone lands on
 
 // April 2026 day labels (April 1 is a Wednesday)
 function weekdayLabel(day, format = 'long') {
@@ -128,100 +57,53 @@ function weekdayLabel(day, format = 'long') {
   return d.toLocaleDateString('en-US', { weekday: format })
 }
 
-// Phase sequence: fully-scripted booking flow demo
-// idle → click-date → click-connect → click-slot → form → type → submit → success → loop
-const PHASES = [
-  { name: 'idle',              duration: 1400 },
-  { name: 'cursor-to-date',    duration: 1200 },
-  { name: 'click-date',        duration: 700  },
-  { name: 'cursor-to-connect', duration: 1100 },
-  { name: 'click-connect',     duration: 700  },
-  { name: 'cursor-to-slot',    duration: 1300 },
-  { name: 'click-slot',        duration: 700  },
-  { name: 'form-entering',     duration: 700  },
-  { name: 'cursor-to-name',    duration: 800  },
-  { name: 'typing-name',       duration: 1800 },
-  { name: 'cursor-to-submit',  duration: 900  },
-  { name: 'click-submit',      duration: 700  },
-  { name: 'success',           duration: 2400 },
+// Scripted "when can everyone meet" demo: people share availability one by one,
+// the calendar converges, and the day everyone's free turns green.
+const PROJECT_PHASES = [
+  { joined: 0, duration: 1500 },
+  { joined: 1, duration: 1400 },
+  { joined: 2, duration: 1400 },
+  { joined: 3, duration: 1600 },
+  { joined: 3, answer: true, duration: 2800 },
 ]
 
-function HeroBookingMockup() {
+function HeroProjectMockup() {
   const [phaseIdx, setPhaseIdx] = useState(0)
-  const phase = PHASES[phaseIdx].name
+  const phase = PROJECT_PHASES[phaseIdx]
+  const joined = phase.joined
+  const showAnswer = !!phase.answer
+  const joinedTeam = TEAM.slice(0, joined)
 
-  // Random persona each cycle — different name, day, slots, busy pattern
-  const [personaIdx, setPersonaIdx] = useState(() => Math.floor(Math.random() * PERSONAS.length))
-  const persona = PERSONAS[personaIdx]
-  const guestName = persona.name
-  const slots = persona.slots
-  const selectedSlotIdx = persona.selectedIdx
-  const pickedDay = persona.day
-
-  // Pause animation when scrolled out of view (prevents mobile layout jumps)
   const cardRef = useRef(null)
   const [inView, setInView] = useState(true)
   useEffect(() => {
     const el = cardRef.current
     if (!el || typeof IntersectionObserver === 'undefined') return
-    const obs = new IntersectionObserver(
-      entries => setInView(entries[0].isIntersecting),
-      { threshold: 0.25 }
-    )
+    const obs = new IntersectionObserver(entries => setInView(entries[0].isIntersecting), { threshold: 0.25 })
     obs.observe(el)
     return () => obs.disconnect()
   }, [])
 
   useEffect(() => {
     if (!inView) return
-    const t = setTimeout(() => {
-      const next = (phaseIdx + 1) % PHASES.length
-      setPhaseIdx(next)
-      if (next === 0) {
-        setPersonaIdx(prev => {
-          let pick = Math.floor(Math.random() * PERSONAS.length)
-          if (pick === prev) pick = (pick + 1) % PERSONAS.length
-          return pick
-        })
-      }
-    }, PHASES[phaseIdx].duration)
+    const t = setTimeout(() => setPhaseIdx(p => (p + 1) % PROJECT_PHASES.length), phase.duration)
     return () => clearTimeout(t)
-  }, [phaseIdx, inView])
+  }, [phaseIdx, inView, phase.duration])
 
-  // Derived state
-  const isDateSelected = phaseIdx >= 2         // after click-date
-  const isConnected    = phaseIdx >= 4         // after click-connect
-  const isSlotSelected = phaseIdx >= 6         // after click-slot
-  const showForm       = phaseIdx >= 7 && phaseIdx <= 11
-  const showSuccess    = phaseIdx >= 12
-
-  // Typing animation: characters appear progressively during the 'typing-name' phase
-  const [typedChars, setTypedChars] = useState(0)
-  useEffect(() => {
-    if (phase !== 'typing-name') {
-      setTypedChars(showForm && phaseIdx > 9 ? guestName.length : 0)
-      return
-    }
-    setTypedChars(0)
-    const start = Date.now()
-    const tick = setInterval(() => {
-      const chars = Math.min(guestName.length, Math.floor((Date.now() - start) / 150))
-      setTypedChars(chars)
-      if (chars >= guestName.length) clearInterval(tick)
-    }, 70)
-    return () => clearInterval(tick)
-  }, [phase, phaseIdx, showForm])
+  // How many of the joined people are free on a given day.
+  function freeCount(day) {
+    return joinedTeam.filter(p => p.free.includes(day)).length
+  }
 
   return (
     <div className="relative">
-      {/* Ambient purple glow behind the card */}
       <div className="absolute -inset-8 sm:-inset-16 pointer-events-none opacity-60"
-        style={{ background: 'radial-gradient(ellipse at center, rgb(139 92 246 / 0.16), transparent 70%)' }} />
+        style={{ background: 'radial-gradient(ellipse at center, rgb(94 156 140 / 0.18), transparent 70%)' }} />
 
       <div ref={cardRef} className="relative bg-surface-900 border border-white/[0.08] rounded-3xl shadow-[0_24px_80px_-24px_rgba(0,0,0,0.6)] overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-[1.15fr_1fr]">
 
-          {/* LEFT — month calendar */}
+          {/* LEFT — month calendar that converges on green */}
           <div className="px-6 sm:px-8 py-7 sm:py-9 border-b md:border-b-0 md:border-r border-white/[0.06]">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-semibold text-zinc-50 tracking-tight">April 2026</h3>
@@ -239,27 +121,21 @@ function HeroBookingMockup() {
               {Array.from({ length: 35 }, (_, i) => {
                 const day = i - 2
                 const inMonth = day >= 1 && day <= 30
-                const isThisDate = day === pickedDay
-                const isSelected = isThisDate && isDateSelected
-                const isToday = day === 12
-                const hasFree = inMonth && isConnected && [2,3,8,9,10,15,16,17,21,22,23,24,28,29,30].includes(day)
-                const isClickFlash = isThisDate && phase === 'click-date'
-
+                const fc = inMonth ? freeCount(day) : 0
+                const allFree = joined > 0 && fc === joined
+                const isHero = day === HERO_DAY && showAnswer && allFree
                 return (
                   <div
                     key={i}
-                    className={`relative aspect-square flex items-center justify-center text-[12px] rounded-full font-medium transition-all duration-300 ease-ios
+                    className={`relative aspect-square flex items-center justify-center text-[12px] rounded-full font-medium transition-all duration-500 ease-ios
                       ${!inMonth ? 'text-transparent' :
-                        isSelected ? 'bg-accent text-white shadow-[0_3px_10px_-3px_rgb(139_92_246/0.35)]' :
-                        isClickFlash ? 'bg-accent/20 text-zinc-50' :
-                        'text-zinc-200'}`}
+                        isHero ? 'bg-green-500/90 text-white shadow-[0_3px_12px_-3px_rgb(34_197_94/0.5)]' :
+                        allFree ? 'bg-green-500/[0.14] text-green-300' :
+                        'text-zinc-300'}`}
                   >
                     {inMonth && <span>{day}</span>}
-                    {isToday && !isSelected && (
-                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent" />
-                    )}
-                    {hasFree && !isSelected && !isToday && (
-                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-green-400/80" />
+                    {inMonth && !allFree && fc > 0 && (
+                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-green-400/60" />
                     )}
                   </div>
                 )
@@ -267,130 +143,60 @@ function HeroBookingMockup() {
             </div>
           </div>
 
-          {/* RIGHT — dynamic content by phase */}
+          {/* RIGHT — roster fills in, then the answer */}
           <div className="relative px-6 sm:px-8 py-7 sm:py-9 flex flex-col min-h-[400px]">
+            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-4">Who can make it</p>
 
-            {/* Pre-date-click empty state */}
-            {!isDateSelected && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center animate-fadeIn">
-                <div className="w-10 h-10 rounded-full bg-white/[0.04] border border-white/5 flex items-center justify-center mb-3">
-                  <CalendarDays size={15} strokeWidth={1.5} className="text-zinc-500" />
+            <div className="space-y-1.5">
+              {TEAM.map((p, i) => {
+                const isIn = i < joined
+                return (
+                  <div key={p.name}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all duration-500 ease-ios ${
+                      isIn ? 'bg-white/[0.03] border-white/[0.08]' : 'border-white/[0.04] opacity-40'
+                    }`}>
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0 ${
+                      isIn ? 'bg-accent/20 text-accent border border-accent/30' : 'bg-white/[0.04] text-zinc-600 border border-white/10'
+                    }`}>
+                      {p.name[0]}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[13px] font-medium truncate ${isIn ? 'text-zinc-100' : 'text-zinc-500'}`}>{p.name}</p>
+                      <p className="text-[10px] text-zinc-500">{p.role}</p>
+                    </div>
+                    {isIn ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-green-400 flex-shrink-0">
+                        <CheckCircle2 size={11} strokeWidth={2.25} />
+                        {p.via === 'calendar' ? 'Synced' : 'Shared'}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-zinc-600 italic flex-shrink-0">waiting…</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="flex-1" />
+
+            {/* The answer */}
+            {showAnswer ? (
+              <div className="animate-fadeIn rounded-xl border border-green-500/30 bg-green-500/[0.08] px-4 py-3.5">
+                <p className="text-[10px] font-semibold text-green-400/80 uppercase tracking-[0.12em] mb-1">Best day for everyone</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[17px] font-semibold text-zinc-50 tracking-tight">
+                    {weekdayLabel(HERO_DAY, 'long')}, Apr {HERO_DAY}
+                  </p>
+                  <span className="text-[12px] font-bold text-green-400 tabular-nums">3/3 free</span>
                 </div>
-                <p className="text-[13px] font-medium text-zinc-300 mb-1">Pick a date</p>
-                <p className="text-[11px] text-zinc-500 leading-relaxed max-w-[180px]">
-                  Open times will appear here.
+              </div>
+            ) : (
+              <div className="rounded-xl border border-white/[0.06] px-4 py-3.5">
+                <p className="text-[13px] text-zinc-500">
+                  {joined === 0 ? 'Add your people and share their links.' : `${joined} of 3 shared — finding the overlap…`}
                 </p>
               </div>
             )}
-
-            {/* Day header — only once a date is selected */}
-            {isDateSelected && (
-              <div className="mb-4 animate-fadeIn">
-                <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">{weekdayLabel(pickedDay, 'long')}</p>
-                <p className="text-2xl font-semibold text-zinc-100 tracking-tight leading-none mt-0.5">{pickedDay}</p>
-              </div>
-            )}
-
-            {/* Slot list view */}
-            {isDateSelected && !showForm && !showSuccess && (
-              <>
-                <div className="h-7 mb-4 flex items-center">
-                  {!isConnected ? (
-                    <button
-                      className={`inline-flex items-center gap-1.5 text-[10px] font-medium text-zinc-200 border border-white/10 rounded-full px-3 py-1.5 transition-all
-                        ${phase === 'click-connect' ? 'bg-accent/25 border-accent/50' : 'bg-white/[0.04]'}`}
-                    >
-                      <CalendarDays size={10} strokeWidth={2} />
-                      Connect Calendar
-                    </button>
-                  ) : (
-                    <div className="inline-flex items-center gap-1.5 text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 rounded-full px-2.5 py-1 animate-fadeIn">
-                      <CheckCircle2 size={10} strokeWidth={2.25} />
-                      Your calendar connected
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-1.5 flex-1">
-                  {slots.map((slot, i) => {
-                    const isThisSlotSelected = i === selectedSlotIdx && isSlotSelected
-                    const isClickFlash = i === selectedSlotIdx && phase === 'click-slot' && !isThisSlotSelected
-                    const showBusy = isConnected && slot.busy
-                    return (
-                      <div key={slot.time}
-                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-300 ease-ios ${
-                          isThisSlotSelected
-                            ? 'bg-accent text-white shadow-[0_3px_10px_-3px_rgb(139_92_246/0.3)]'
-                            : isClickFlash
-                            ? 'bg-accent/15 border border-accent/40 text-zinc-100'
-                            : showBusy
-                            ? 'border border-white/[0.04] text-zinc-600'
-                            : 'border border-white/10 text-zinc-200'
-                        }`}>
-                        <span>{slot.time}</span>
-                        {showBusy && !isThisSlotSelected && !isClickFlash && (
-                          <span className="flex items-center gap-1 text-[9px] text-zinc-700">
-                            <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                            busy
-                          </span>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </>
-            )}
-
-            {/* Form view (phases 7-11) */}
-            {showForm && !showSuccess && (
-              <div className="flex-1 flex flex-col animate-fadeIn">
-                <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 mb-5">
-                  <div className="w-2 h-2 rounded-full bg-accent" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-semibold text-zinc-100">{slots[selectedSlotIdx].time}</p>
-                    <p className="text-[10px] text-zinc-500">30 minutes · {weekdayLabel(pickedDay, 'long')}, April {pickedDay}</p>
-                  </div>
-                </div>
-
-                <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-1.5">Your name</p>
-                <div
-                  className={`w-full flex items-center bg-white/[0.03] border rounded-lg px-3 py-2.5 text-[13px] text-zinc-100 transition-all
-                    ${phase === 'cursor-to-name' || phase === 'typing-name' ? 'border-accent/50 shadow-[0_0_0_2px_rgba(139,92,246,0.12)]' : 'border-white/10'}`}
-                >
-                  <span>{guestName.slice(0, typedChars)}</span>
-                  {phase === 'typing-name' && typedChars < guestName.length && (
-                    <span className="inline-block w-px h-4 bg-zinc-300 ml-0.5 animate-pulse" />
-                  )}
-                  {typedChars === 0 && phase !== 'typing-name' && (
-                    <span className="text-zinc-600">Your name</span>
-                  )}
-                </div>
-
-                <div className="flex-1" />
-
-                <button
-                  className={`w-full mt-5 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[13px] font-semibold transition-all
-                    ${phase === 'click-submit'
-                      ? 'bg-accent text-white shadow-[0_3px_10px_-3px_rgb(139_92_246/0.35)] scale-[0.99]'
-                      : 'bg-accent text-white'}`}
-                >
-                  Book it
-                  <ArrowRight size={12} strokeWidth={2.25} />
-                </button>
-              </div>
-            )}
-
-            {/* Success view (phase 12) */}
-            {showSuccess && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center animate-fadeIn">
-                <div className="w-12 h-12 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center mb-4">
-                  <CheckCircle2 size={22} strokeWidth={2} className="text-green-400" />
-                </div>
-                <p className="text-[18px] font-semibold text-zinc-50 tracking-tight mb-1">You're booked</p>
-                <p className="text-[12px] text-zinc-500">{guestName} · {weekdayLabel(pickedDay, 'short')} Apr {pickedDay}, {slots[selectedSlotIdx].time}</p>
-              </div>
-            )}
-
           </div>
         </div>
       </div>
@@ -433,13 +239,13 @@ export function HomePage() {
         </div>
 
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-zinc-100 leading-tight max-w-3xl mb-6">
-          Coordinate your projects,{' '}
-          <span className="text-accent">beautifully.</span>
+          Find the day that works for{' '}
+          <span className="text-accent">everyone.</span>
         </h1>
 
         <p className="text-lg sm:text-xl text-zinc-400 leading-relaxed max-w-xl mb-10">
-          Share availability, manage rooms, and keep every production organized —
-          without the back-and-forth.
+          Add your clients, vendors, and crew to a project. Everyone shares when they're free —
+          Coordie shows you the day that works. No back-and-forth.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -466,13 +272,13 @@ export function HomePage() {
         <div className="text-center mb-10 sm:mb-14">
           <p className="text-xs font-semibold text-accent uppercase tracking-widest mb-3">The magic</p>
           <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 max-w-2xl mx-auto leading-tight tracking-tight">
-            Guests connect their calendar — and instantly see which times actually work.
+            Everyone shares when they're free — the day that works for the whole group turns green.
           </h2>
           <p className="text-zinc-500 text-base mt-4 max-w-lg mx-auto">
-            No more "let me check and get back to you." The slots they're already busy in dim out automatically.
+            No more "let me check and get back to you." As people connect their calendars or tap their free days, the overlap appears on its own.
           </p>
         </div>
-        <HeroBookingMockup />
+        <HeroProjectMockup />
       </section>
 
       {/* Divider */}

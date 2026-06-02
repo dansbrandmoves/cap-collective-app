@@ -19,12 +19,16 @@ const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const { theme } = useApp()
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  const canSubmit = name.trim() && emailValid
   function handleSubmit(e) {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!canSubmit) return
     localStorage.setItem(`room-identity-${token}`, name.trim())
-    onConfirm(name.trim())
+    localStorage.setItem(`room-email-${token}`, email.trim())
+    onConfirm(name.trim(), email.trim())
   }
   return (
     <div className="fixed inset-0 bg-surface-950 ambient-glow flex items-center justify-center z-50 px-6">
@@ -39,8 +43,8 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
           )}
         </div>
         <h2 className="text-[24px] font-semibold text-zinc-50 tracking-tight leading-tight mb-2">Let’s find a day that works</h2>
-        <p className="text-[15px] text-zinc-400 leading-relaxed mb-7">First, what’s your name? So the team knows whose availability this is.</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <p className="text-[15px] text-zinc-400 leading-relaxed mb-7">Your name and email — so the team knows whose availability this is and can reach you about the meeting.</p>
+        <form onSubmit={handleSubmit} className="space-y-3">
           <input
             type="text"
             value={name}
@@ -49,7 +53,15 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
             autoFocus
             className="w-full bg-surface-800/70 border border-white/[0.06] rounded-xl px-4 py-3 text-[15px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all duration-200"
           />
-          <Button type="submit" disabled={!name.trim()} className="w-full">Continue →</Button>
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="you@email.com"
+            className="w-full bg-surface-800/70 border border-white/[0.06] rounded-xl px-4 py-3 text-[15px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all duration-200"
+          />
+          <Button type="submit" disabled={!canSubmit} className="w-full mt-1">Continue →</Button>
+          <p className="text-[12px] text-zinc-600 leading-relaxed">Your email is shared with the host only — used to send you the meeting invite.</p>
         </form>
       </div>
     </div>
@@ -254,73 +266,51 @@ function AvailabilityTab({ isOwner, production, availabilityRules, roomId, guest
     setExcluded(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
   }
 
-  if (!isOwner) {
-    return (
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-5 sm:px-8 pt-4 sm:pt-6 flex-shrink-0">
-          {guestCalendarEnabled && (
-            <GuestCalendarPanel
-              guestEvents={guestEvents}
-              onConnect={connectGuestCalendar}
-              onDisconnect={disconnectGuestCalendar}
-              ownerName={ownerName}
-              roomId={roomId}
-              guestName={guestName}
-            />
-          )}
-          {/* People to include in the overlap */}
-          {knownGuests.length > 0 && (
-            <div className="mb-1">
-              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Who to include</p>
-              <div className="flex flex-wrap gap-1.5">
-                <PersonChip name={ownerDisplay} active={includedOwner} onClick={() => setIncludedOwner(v => !v)} />
-                {knownGuests.map(n => (
-                  <PersonChip key={n} name={n} active={!excluded.has(n)} onClick={() => toggleGuest(n)} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <ProjectOverview
-          production={production}
-          slots={slots}
-          calendarEvents={effectiveCalendarEvents}
-          connectedCalendars={effectiveConnectedCalendars}
-          prefixRules={prefixRules}
-          businessHours={projectBusinessHours || businessHours}
-          loading={false}
-          dateRequestsByRoom={dateReqMap}
-          sharedAvailByRoom={sharedMap}
-          excluded={excluded}
-          includedOwner={includedOwner}
-          totalPeople={totalPeople}
-          ownerLabel={ownerDisplay}
-          ownerEmail={null}
-        />
-      </div>
-    )
-  }
-
-  // Owner viewing a room directly keeps the detailed slot calendar.
+  // Unified room calendar: the dots overlap view for everyone (owner and guests).
+  // Guests connect a calendar to contribute; the owner's availability comes from
+  // their own connected calendar.
+  const ownerChipLabel = isOwner ? 'You' : ownerDisplay
   return (
-    <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
-      <AvailabilityCalendar
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="px-5 sm:px-8 pt-4 sm:pt-6 flex-shrink-0">
+        {!isOwner && guestCalendarEnabled && (
+          <GuestCalendarPanel
+            guestEvents={guestEvents}
+            onConnect={connectGuestCalendar}
+            onDisconnect={disconnectGuestCalendar}
+            ownerName={ownerName}
+            roomId={roomId}
+            guestName={guestName}
+          />
+        )}
+        {/* People to include in the overlap */}
+        {knownGuests.length > 0 && (
+          <div className="mb-1">
+            <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Who to include</p>
+            <div className="flex flex-wrap gap-1.5">
+              <PersonChip name={ownerChipLabel} active={includedOwner} onClick={() => setIncludedOwner(v => !v)} />
+              {knownGuests.map(n => (
+                <PersonChip key={n} name={n} active={!excluded.has(n)} onClick={() => toggleGuest(n)} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <ProjectOverview
+        production={production}
         slots={slots}
         calendarEvents={effectiveCalendarEvents}
         connectedCalendars={effectiveConnectedCalendars}
-        availabilityRules={availabilityRules}
         prefixRules={prefixRules}
-        isOwner={isOwner}
-        slotStates={slotStates}
         businessHours={projectBusinessHours || businessHours}
-        guestSlotSelection={guestSlotSelection}
-        roomId={roomId}
-        guestName={guestName}
-        ownerName={ownerName}
-        onRequestSubmit={(rId, data) => createDateRequest(rId, { ...data, ownerId })}
-        dateRequests={dateRequests}
-        sharedAvailability={sharedAvailability}
-        guestEvents={guestEvents}
+        loading={false}
+        dateRequestsByRoom={dateReqMap}
+        sharedAvailByRoom={sharedMap}
+        excluded={excluded}
+        includedOwner={includedOwner}
+        totalPeople={totalPeople}
+        ownerLabel={isOwner ? undefined : ownerDisplay}
+        ownerEmail={isOwner ? undefined : null}
       />
     </div>
   )
@@ -328,7 +318,7 @@ function AvailabilityTab({ isOwner, production, availabilityRules, roomId, guest
 
 export function RoomView() {
   const { token } = useParams()
-  const { getProduction, getRoom, getMembersForRoom, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions } = useApp()
+  const { getProduction, getRoom, getMembersForRoom, addRoomMember, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions } = useApp()
   const [roomTab, setRoomTab] = useState('schedule') // 'schedule' | 'board'
   const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)
@@ -485,7 +475,16 @@ export function RoomView() {
   // token, but if that didn't resolve (e.g. the shared open link was used for an
   // invite_only room) we fall back to the same prompt instead of a dead flow.
   if (!isOwner && !guestName) {
-    return <NamePrompt token={token} onConfirm={setGuestName} ownerLogo={ownerLogo} ownerLogoDark={ownerLogoDark} />
+    // Joining via an open link now requires name + email. Record them as a room
+    // member so the host has their email (for the meeting invite) and sees them.
+    const handleGuestJoin = (name, email) => {
+      setGuestName(name)
+      const existing = getMembersForRoom(resolved.roomId).some(m => (m.email || '').toLowerCase() === (email || '').toLowerCase())
+      if (resolved.roomId && name && !existing) {
+        try { addRoomMember(resolved.roomId, { name, email }) } catch (e) { /* best-effort */ }
+      }
+    }
+    return <NamePrompt token={token} onConfirm={handleGuestJoin} ownerLogo={ownerLogo} ownerLogoDark={ownerLogoDark} />
   }
 
   return (

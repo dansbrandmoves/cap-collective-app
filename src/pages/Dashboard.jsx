@@ -4,7 +4,7 @@ import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { UpgradeModal } from '../components/ui/UpgradeModal'
-import { FolderOpen, Plus, CalendarDays, Users, Pencil, ArrowRight, Trash2 } from 'lucide-react'
+import { FolderOpen, Plus, CalendarDays, Users, Pencil, ArrowRight, Trash2, LogOut } from 'lucide-react'
 import { PageLoader } from '../components/ui/PageLoader'
 
 function formatDateRange(start, end) {
@@ -28,11 +28,14 @@ function daysUntil(dateStr) {
   return { label: `In ${diff} days`, style: 'text-zinc-400 bg-white/[0.04] border-white/10' }
 }
 
-function ProjectCard({ production, onUpdate, onDelete }) {
+function ProjectCard({ production, onUpdate, onDelete, role = 'owner', onOpen, onLeave }) {
   const navigate = useNavigate()
   const { getMembersForRoom } = useApp()
+  const isMember = role === 'member'
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const open = () => (onOpen ? onOpen() : navigate(`/project/${production.id}`))
   const [editForm, setEditForm] = useState({
     name: production.name,
     description: production.description || '',
@@ -65,7 +68,7 @@ function ProjectCard({ production, onUpdate, onDelete }) {
   return (
     <>
       <div
-        onClick={() => navigate(`/project/${production.id}`)}
+        onClick={open}
         className="bg-surface-900 border border-white/[0.06] rounded-2xl overflow-hidden shadow-sm shadow-black/10 hover:border-white/10 hover:shadow-lift transition-all duration-200 ease-ios cursor-pointer"
       >
         <div className="p-5 sm:p-6">
@@ -76,27 +79,39 @@ function ProjectCard({ production, onUpdate, onDelete }) {
               {production.name}
             </h3>
             <div className="flex items-center gap-0.5 flex-shrink-0 -mr-1.5">
-              <button
-                onClick={(e) => { e.stopPropagation(); setEditing(true) }}
-                className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
-                title="Edit project"
-              >
-                <Pencil size={14} strokeWidth={1.75} />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setConfirmDelete(true) }}
-                className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                title="Delete project"
-              >
-                <Trash2 size={14} strokeWidth={1.75} />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); navigate(`/project/${production.id}`) }}
-                className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
-                title="Open project"
-              >
-                <ArrowRight size={14} strokeWidth={1.75} />
-              </button>
+              {isMember ? (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setConfirmLeave(true) }}
+                  className="flex items-center gap-1.5 h-9 px-2.5 rounded-lg text-[12px] font-medium text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  title="Leave project"
+                >
+                  <LogOut size={13} strokeWidth={1.75} /> Leave
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditing(true) }}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
+                    title="Edit project"
+                  >
+                    <Pencil size={14} strokeWidth={1.75} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(true) }}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    title="Delete project"
+                  >
+                    <Trash2 size={14} strokeWidth={1.75} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); open() }}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 transition-colors"
+                    title="Open project"
+                  >
+                    <ArrowRight size={14} strokeWidth={1.75} />
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -189,13 +204,33 @@ function ProjectCard({ production, onUpdate, onDelete }) {
           <Button variant="danger" onClick={() => { onDelete(production.id); setConfirmDelete(false) }}>Delete</Button>
         </div>
       </Modal>
+
+      {/* Leave confirm modal (members) */}
+      <Modal isOpen={confirmLeave} onClose={() => setConfirmLeave(false)} title="Leave Project">
+        <p className="text-sm text-zinc-400 mb-6">
+          Leave <span className="text-zinc-100 font-medium">"{production.name}"</span>? You’ll be removed from the project and stop sharing your availability. You can rejoin from your invite link.
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={() => setConfirmLeave(false)}>Cancel</Button>
+          <Button variant="danger" onClick={() => { onLeave?.(); setConfirmLeave(false) }}>Leave</Button>
+        </div>
+      </Modal>
     </>
   )
 }
 
 export function Dashboard() {
-  const { productions, createProduction, updateProduction, deleteProduction, loading, canAddProject, isProPlan, FREE_PROJECT_LIMIT } = useApp()
+  const { productions, createProduction, updateProduction, deleteProduction, loading, canAddProject, isProPlan, FREE_PROJECT_LIMIT, user, roomMembers, leaveProject } = useApp()
   const navigate = useNavigate()
+  // Projects I own vs projects shared with me (I'm a member, not the owner).
+  const owned = productions.filter(p => p.ownerId === user?.id)
+  const shared = productions.filter(p => p.ownerId && p.ownerId !== user?.id)
+  // The room token to open a shared project as a member (the room my email is in).
+  const memberRoomToken = (p) => {
+    const email = (user?.email || '').toLowerCase()
+    const myRoom = p.rooms?.find(r => roomMembers.some(m => (m.roomId || m.room_id) === r.id && (m.email || '').toLowerCase() === email)) || p.rooms?.[0]
+    return myRoom?.openToken || null
+  }
   const [showModal, setShowModal] = useState(false)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [form, setForm] = useState({ name: '', description: '', startDate: '', endDate: '' })
@@ -243,7 +278,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {productions.length === 0 ? (
+      {owned.length === 0 && shared.length === 0 ? (
         <div className="border border-dashed border-surface-600 rounded-2xl p-12 sm:p-16 text-center">
           <div className="w-12 h-12 rounded-xl bg-surface-800 border border-surface-700 flex items-center justify-center mx-auto mb-5">
             <FolderOpen size={20} strokeWidth={1.5} className="text-zinc-500" />
@@ -257,7 +292,7 @@ export function Dashboard() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {productions.map(p => (
+          {owned.map(p => (
             <ProjectCard
               key={p.id}
               production={p}
@@ -265,6 +300,25 @@ export function Dashboard() {
               onDelete={deleteProduction}
             />
           ))}
+        </div>
+      )}
+
+      {/* Shared with me — projects I was invited to */}
+      {shared.length > 0 && (
+        <div className="mt-12">
+          <h2 className="text-[15px] font-semibold text-zinc-300 tracking-tight mb-1">Shared with me</h2>
+          <p className="text-[13px] text-zinc-500 mb-5">Projects you’ve been invited to join.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {shared.map(p => (
+              <ProjectCard
+                key={p.id}
+                production={p}
+                role="member"
+                onOpen={() => { const t = memberRoomToken(p); if (t) navigate(`/room/${t}`) }}
+                onLeave={() => leaveProject(p.id)}
+              />
+            ))}
+          </div>
         </div>
       )}
 

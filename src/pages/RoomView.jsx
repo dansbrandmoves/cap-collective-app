@@ -318,13 +318,19 @@ export function RoomView() {
   useEffect(() => {
     if (!resolved) return
     if (isOwner) { setGuestName(null); return }
+    // Signed-in member: identify by their account email (no name prompt) — this is
+    // what makes an invited collaborator's project feel like "theirs" once they sign up.
+    if (user?.email) {
+      const mine = getMembersForRoom(resolved.roomId).find(m => (m.email || '').toLowerCase() === user.email.toLowerCase())
+      if (mine?.name) { setGuestName(mine.name); return }
+    }
     if (resolved.mode === 'invite_only') {
       setGuestName(resolved.memberName)
     } else {
       const stored = localStorage.getItem(`room-identity-${token}`)
       if (stored) setGuestName(stored)
     }
-  }, [resolved, isOwner, token])
+  }, [resolved, isOwner, token, user?.email, getMembersForRoom])
 
   useEffect(() => {
     if (!resolved) return
@@ -479,13 +485,27 @@ export function RoomView() {
           )}
         </div>
 
-        {/* Powered by Coordie — tucked at the bottom of the sidebar, unobtrusive */}
+        {/* Bottom of sidebar: a soft growth nudge for not-signed-in guests (the project
+            follows them in when they sign up); just "Powered by Coordie" once signed in. */}
         <div className="px-5 py-3 border-t border-white/[0.05]">
-          <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
-            <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
-            Powered by Coordie
-          </a>
+          {!user ? (
+            <a href="/signin"
+              className="group flex items-center gap-2 rounded-lg px-2.5 py-2 -mx-1 hover:bg-accent/[0.08] transition-colors">
+              <span className="w-7 h-7 rounded-lg bg-accent/15 border border-accent/25 flex items-center justify-center flex-shrink-0">
+                <img src="/coordie-logo.svg" alt="" className="h-3" style={{ filter: 'invert(1)' }} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[12px] font-medium text-zinc-200 group-hover:text-white leading-tight">Create your free Coordie</span>
+                <span className="block text-[11px] text-zinc-500 leading-tight">Keep this project — and start your own.</span>
+              </span>
+            </a>
+          ) : (
+            <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
+              <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
+              Powered by Coordie
+            </a>
+          )}
         </div>
       </aside>
 

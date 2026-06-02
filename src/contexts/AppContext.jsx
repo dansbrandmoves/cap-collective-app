@@ -145,7 +145,7 @@ async function seedSupabase(ownerId) {
   }
 }
 
-async function fetchAll(ownerId) {
+async function fetchAll(ownerId, userEmail) {
   console.log('[Coordie] fetchAll for owner:', ownerId)
   const prodQuery = ownerId
     ? supabase.from('productions').select('*').eq('owner_id', ownerId).order('created_at')
@@ -158,7 +158,22 @@ async function fetchAll(ownerId) {
     supabase.from('messages').select('*').order('timestamp'),
     supabase.from('room_members').select('*'),
   ])
-  return { prods, rms, notes, msgs, members }
+
+  // Projects shared WITH me: rooms whose member email matches my account, minus
+  // ones I own. This is the growth loop — invited collaborators see the project in
+  // their own dashboard the moment they sign up with the email they were invited at.
+  let memberProds = []
+  const email = (userEmail || '').toLowerCase()
+  if (email) {
+    const myRoomIds = (members || []).filter(m => (m.email || '').toLowerCase() === email).map(m => m.room_id)
+    const myProdIds = [...new Set((rms || []).filter(r => myRoomIds.includes(r.id)).map(r => r.production_id))]
+      .filter(pid => !(prods || []).some(p => p.id === pid))
+    if (myProdIds.length) {
+      const { data } = await supabase.from('productions').select('*').in('id', myProdIds)
+      memberProds = data || []
+    }
+  }
+  return { prods, rms, notes, msgs, members, memberProds }
 }
 
 export function AppProvider({ children }) {
@@ -604,41 +619,39 @@ export function AppProvider({ children }) {
     }, 12000)
 
     // Fetch everything in parallel (productions + booking pages)
-    const dataPromise = fetchAll(ownerId)
+    const dataPromise = fetchAll(ownerId, user?.email)
     const bookingPromise = ownerId
       ? supabase.from('booking_pages').select('*').eq('owner_id', ownerId).order('created_at')
       : Promise.resolve({ data: [] })
 
     Promise.all([dataPromise, bookingPromise])
-      .then(async ([{ prods, rms, notes, msgs, members }, { data: bPages }]) => {
-        console.log('[Coordie] Fetched:', { prods: prods?.length || 0, rooms: rms?.length || 0, bookingPages: bPages?.length || 0 })
+      .then(async ([{ prods, rms, notes, msgs, members, memberProds }, { data: bPages }]) => {
+        const owned = prods || []
+        const shared = memberProds || []
+        console.log('[Coordie] Fetched:', { owned: owned.length, shared: shared.length, rooms: rms?.length || 0, bookingPages: bPages?.length || 0 })
         setBookingPages(bPages || [])
-        if (!prods?.length && ownerId) {
-          // Only seed if this is a brand new user — check if any productions exist at all
+        // Seed only a brand-new user with nothing of their own and nothing shared.
+        if (!owned.length && !shared.length && ownerId) {
           const { count } = await supabase.from('productions').select('id', { count: 'exact', head: true })
           if (count === 0) {
             await seedSupabase(ownerId)
-            const fresh = await fetchAll(ownerId)
-            setProductions(buildProductions(fresh.prods, fresh.rms, fresh.notes, fresh.msgs))
+            const fresh = await fetchAll(ownerId, user?.email)
+            setProductions(buildProductions([...(fresh.prods || []), ...(fresh.memberProds || [])], fresh.rms, fresh.notes, fresh.msgs))
             setRoomMembers(fresh.members || [])
-          } else {
-            // User just has no productions yet — that's fine, show empty state
-            setProductions([])
-            setRoomMembers(members || [])
+            return
           }
-        } else {
-          // Backfill any rooms missing an open_token
-          const missing = (rms || []).filter(r => !r.open_token)
-          if (missing.length) {
-            await Promise.all(missing.map(r => {
-              const token = nanoid(8)
-              r.open_token = token
-              return supabase.from('rooms').update({ open_token: token }).eq('id', r.id)
-            }))
-          }
-          setProductions(buildProductions(prods, rms, notes, msgs))
-          setRoomMembers(members || [])
         }
+        // Backfill any rooms missing an open_token
+        const missing = (rms || []).filter(r => !r.open_token)
+        if (missing.length) {
+          await Promise.all(missing.map(r => {
+            const token = nanoid(8)
+            r.open_token = token
+            return supabase.from('rooms').update({ open_token: token }).eq('id', r.id)
+          }))
+        }
+        setProductions(buildProductions([...owned, ...shared], rms, notes, msgs))
+        setRoomMembers(members || [])
       })
       .catch(err => {
         console.error('Supabase load failed, using localStorage:', err)
@@ -1021,6 +1034,32 @@ export function AppProvider({ children }) {
     return !error
   }, [])
 
+  // Member self-removal: leave a project I was invited to (I'm not the owner).
+  // Mirrors removePersonEverywhere but the member does it to themselves — kills their
+  // calendar token (via the guest's own guest_disconnect) so the 15-min cron stops
+  // rebuilding their availability, then clears their rows.
+  const leaveProject = useCallback(async (productionId) => {
+    const prod = productions.find(p => p.id === productionId)
+    const email = (user?.email || '').toLowerCase()
+    if (!prod || !email) return false
+    const roomIds = (prod.rooms || []).map(r => r.id)
+    const myRows = roomMembers.filter(m => roomIds.includes(m.roomId || m.room_id) && (m.email || '').toLowerCase() === email)
+    const myNames = [...new Set(myRows.map(m => m.name).filter(Boolean))]
+    // Optimistic: drop the project + my membership from local state.
+    setProductions(prev => prev.filter(p => p.id !== productionId))
+    setRoomMembers(prev => prev.filter(m => !(roomIds.includes(m.roomId || m.room_id) && (m.email || '').toLowerCase() === email)))
+    for (const rid of roomIds) {
+      for (const name of myNames) {
+        try { await supabase.functions.invoke('google-calendar-auth', { body: { action: 'guest_disconnect', roomId: rid, guestName: name } }) } catch { /* best-effort */ }
+        await supabase.from('shared_availability').delete().eq('room_id', rid).eq('guest_name', name)
+      }
+      await supabase.from('date_requests').delete().eq('room_id', rid).eq('requester_email', user.email)
+    }
+    await supabase.from('room_members').delete().in('room_id', roomIds).eq('email', user.email)
+    logEvent('member_leave', { actor: user.email, status: STATUS.OK, summary: `Left ${prod.name}` })
+    return true
+  }, [productions, roomMembers, user])
+
   // Email a person their personal invite link (Resend, via the send-invite edge fn).
   const sendRoomInvite = useCallback(async ({ name, email, inviteToken, productionName }) => {
     if (!email || !inviteToken) return false
@@ -1316,7 +1355,7 @@ export function AppProvider({ children }) {
       // Rooms
       createRoom, updateRoomName, deleteRoom, updateRoomAccessMode,
       // Room Members
-      addRoomMember, removeRoomMember, removePersonEverywhere, sendRoomInvite,
+      addRoomMember, removeRoomMember, removePersonEverywhere, leaveProject, sendRoomInvite,
       // Room
       updateSharedNotes, refreshRoom,
       // Booking Pages

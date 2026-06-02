@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-06-02 UTC
-**Last pushed commit:** `de1af9a` — "two-column booking date step + top-3 picks"
+**Last session ended:** 2026-06-02 UTC (session 2 — Tasks board + Whiteboard + perf)
+**Last pushed commit:** `b288e3c` — "refresh landing + sign-in for board + whiteboard"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -21,7 +21,74 @@
 
 ---
 
-## ✅ Shipped 2026-06-02 (this session) — calendar unification + UX polish
+## ✅ Shipped 2026-06-02 (session 2 — latest) — Tasks board, Whiteboard, perf, marketing
+
+**The project now has three surfaces, as tabs: `Schedule · Tasks · Board`.** (Owner project
+view AND guest room — same components.) Naming: kanban = **Tasks**, infinite canvas = **Board**.
+
+- **Tasks — a real Trello-style board** (`components/project/Board.jsx`, `hooks/useBoard.js`).
+  Editable lists (add/rename/delete/reorder via grip), cards drag **between AND within** lists with a
+  precise insertion line (`reorderTask`), assignees from the project roster. Click a card → **detail
+  modal** (`TaskDetailModal`): editable title + description, Members, and a realtime **Comments &
+  activity** feed (`hooks/useTaskComments.js`, author + timestamp + "Card created" line).
+  Tables: `tasks` (+ `column_id`, `description`), `board_columns`, `task_comments`. One board **per
+  project**; anon read/write like chat/notes; realtime. Default cols seeded To do/Doing/Done.
+- **Board — a slimmed-down Miro** (`components/project/Whiteboard.jsx`, `hooks/useCanvas.js`).
+  Infinite canvas, bottom-center toolbar, zoom-to-fit, toggleable dot grid (theme-aware).
+  Elements: sticky / rect / circle / text / **comment pin** (author+timestamp) / **image** / **connector**.
+  - **Images**: `utils/imageOptimizer.js` downscales→WebP (~320KB) before upload to the public
+    `canvas-images` storage bucket; quota-capped (30MB/project, 200MB/account); proportional resize.
+  - **Connectors**: drag from an element's **side dot** to another → naturally-curving arrow that
+    **anchors to the four side dots** and tracks the elements as they move; click → style bar
+    (thickness / arrow dir / color). Rendered in an SVG layer behind elements.
+  - **Four-corner resize**, stickies have a paper gradient+shadow+sharp corners.
+  - **Mobile**: `touch-action:none` on the viewport (smooth pan/drag for ALL objects) + **pinch-zoom**
+    (multi-pointer map; ref-based `applyZoom` to dodge stale closures in long-lived listeners).
+  Table: `canvas_elements` (type, x/y/w/h/z, text, color, font, author, **src/bytes** for images,
+  **from_id/to_id/meta** for connectors). Migrations: `20260603_*` (board_columns_and_group_access,
+  canvas_elements, canvas_images_storage, canvas_connectors, task_details_and_comments).
+
+- **Guest room rebuilt as the project shell** (`RoomView.jsx`): collapsible **left sidebar**
+  (owner branding + project name + People include/exclude filter + "Powered by Coordie"), **no top
+  banner**, **connect-first middle** (Connect-your-calendar → then "When can everyone meet?" + a subtle
+  disconnect pill), and a true **full-bleed top→bottom right day inspector**. `ProjectOverview` is now a
+  real **two-pane** layout (calendar column scrolls; inspector fills height — `lg:h-full`, not sticky
+  `h-screen`). Tabs float over content on `lg` so canvas+inspector reach the top. Guest = exact same
+  experience as owner; schedule data + people-select lifted to RoomView. `AvailabilityTab` removed.
+- **Join requires name + email** for open-link guests; the joiner is recorded as a room member.
+- **Instant-load perf**: Tasks (`useBoard`) + Board (`useCanvas`) cache to localStorage
+  (stale-while-revalidate, keys `coordie-board-<pid>` / `coordie-canvas-<pid>`) and paint instantly.
+  **Calendar fetches windowed** to `[now-7d, now+120d]` (`calendarWindow()` in AppContext + guest fetch
+  in RoomView) instead of all ~2,700 rows. (Trade-off: events >120d out won't show until widened.)
+- **Owner project view**: tab bar floats on `lg` so the Schedule day inspector + Board canvas bleed to
+  the top edge; mobile nav consolidated to one menu (sidebar `relative`+`fixed` clash fixed — see gotcha).
+- **Hidden the "groups" concept** in UI (dashboard shows "N people", not "N groups").
+- **David "0 free days" fixed** — `sync-guest-calendars` v2: a day is only UNAVAILABLE when heavily
+  booked (≥6h, `BUSY_DAY_MINUTES`); `transparency:'transparent'` events don't block; opaque all-day
+  blocks. Was marking any day with any event busy → busy calendars contributed nothing. (0→50 free days.)
+- **Marketing refresh** (`b288e3c`): landing hero + feature grid + sign-in now pitch the full workspace
+  (find the day → plan on a shared **board** + **whiteboard**); dropped stale "Booking pages too" /
+  "Share rooms with groups" cards.
+
+**Light-mode fix:** Tasks cards have a visible border + soft shadow (white/7% was invisible on light).
+
+### 🔜 Queued, greenlit, NOT started — **Board Phase 1** (do this first next session)
+Desktop **natural pan/zoom** (two-finger scroll pans, ⌘/pinch zooms, Space+drag pans anywhere — today
+desktop wheel always zooms & pan needs empty space); **undo/redo** (⌘Z, command-stack of inverse ops —
+note: `useCanvas.deleteElement` no longer removes the storage file, partly to keep image-delete
+undoable); **hover-reveal connect dots + one-time coachmark**; **⌘D duplicate**; **concurrent-edit
+safeguard** (pause the realtime refetch during active drag/typing so unsaved edits aren't clobbered).
+User said "yes to all." Audit reasoning is in this session's chat.
+
+### Loose ends
+- `PersonChip` in `RoomView.jsx` is now unused (harmless) — can delete.
+- Whiteboard image-delete leaves the storage file orphaned (row deleted → frees quota, file lingers);
+  fine for now, could add a cleanup pass.
+- Anon writes on board/canvas/images/task_comments (like chat/notes) — tighten before a true public launch.
+
+---
+
+## ✅ Shipped 2026-06-02 (session 1) — calendar unification + UX polish
 
 **Big arc: unified the calendar look/feel/UX across PROJECTS + BOOKING.** Project UX is the
 north star; booking adopts the same components + visual language. Key principle the user kept
@@ -161,6 +228,9 @@ aggregate calendar; **group/project delete fix** (cascade FKs); legal TOS/Privac
 ---
 
 ## 🔜 Open / next (priority order)
+0. **Board Phase 1** (greenlit, not started — see the "Queued" block in this session's shipped notes):
+   desktop natural pan/zoom, undo/redo, hover-reveal connect dots + first-use coachmark, ⌘D duplicate,
+   concurrent-edit safeguard. **Start here.**
 1. **S2 — Google push notifications** (true seconds-live). Layers on the S1 engine. Plan is in
    `…/.claude/plans/let-s-double-down-on-steady-wall.md`. **Needs user config:** a
    `coordie.com/api/gcal-webhook` Vercel route (I provide code) + **domain verification** in
@@ -207,4 +277,19 @@ aggregate calendar; **group/project delete fix** (cascade FKs); legal TOS/Privac
 - **Edge functions** are deployed via MCP and mirrored in `supabase/functions/` for VC; migrations
   applied via MCP and mirrored in `supabase/migrations/`. Edge fns now: google-calendar-auth,
   sync-calendar, sync-guest-calendars, send-invite, remove-project-guest, notify-*, stripe-*.
+- **Touch on the canvas:** the whiteboard sets `touch-action:none` on the viewport so the browser
+  stops hijacking touch gestures — that's what made pan/drag/resize smooth on mobile. Don't remove it.
+- **`relative` + `fixed` on one element = bug:** a mobile slide-over that had both classes resolved to
+  `relative` (in-flow) and reserved its width off-screen, leaving a dead gutter. Pattern is `fixed`
+  (mobile drawer) + `md:relative`/`md:sticky` (desktop) — never both unprefixed. Fixed in app-shell
+  `Sidebar.jsx`, project `ProductionView.jsx`, and guest `RoomView.jsx`.
+- **Calendar fetch is windowed** to `[now-7d, now+120d]` (`calendarWindow()`); navigating the calendar
+  >120 days out shows no events until a sync widens it. Widen the window if that ever bites.
+- **Tasks/Board cache to localStorage** (`coordie-board-<pid>` / `coordie-canvas-<pid>`,
+  stale-while-revalidate). Data is always in Supabase; the cache just kills the empty-flash on load.
+- **Preview Supabase can flake** (timed out mid-session this round → "Loading…" + stale HMR errors in
+  the console that referenced already-removed components). Not a code bug; retry. Guest surfaces are
+  still eyeball-able via `preview_screenshot` once it's connected (`/room/G9E7b3U9` is an active token).
+- New edge fn version: `sync-guest-calendars` **v2** (free-day logic relaxed — busy days = ≥6h booked,
+  Free/transparent events ignored). New storage bucket `canvas-images` (public, anon read/write).
 - Supabase project: `xwuekcysigkujhyucugi`. GitHub: `dansbrandmoves/cap-collective-app`.

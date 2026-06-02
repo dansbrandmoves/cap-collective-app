@@ -51,6 +51,16 @@ function RootRoute() {
   return <AppShell />
 }
 
+// Room route: signed-in users get the AppShell frame (main nav) with RoomView in
+// the outlet; account-less guests get RoomView standalone (full-screen, no nav).
+function RoomRoute() {
+  const { isOwner, authLoading } = useApp()
+  if (authLoading && hadStoredSession) return <AppShell />
+  if (authLoading) return <RoomView />
+  if (!isOwner) return <RoomView />
+  return <AppShell />
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -59,7 +69,11 @@ function AppRoutes() {
       <Route path="/home" element={<Navigate to="/" replace />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
-      <Route path="/room/:token" element={<RoomView />} />
+      {/* Signed-in users keep their main app nav (AppShell) while viewing a room
+          they're a member of; account-less guests get the standalone room. */}
+      <Route path="/room/:token" element={<RoomRoute />}>
+        <Route index element={<RoomView />} />
+      </Route>
       <Route path="/book/:slug" element={<BookingPageView />} />
 
       {/* Root: marketing or dashboard based on auth */}

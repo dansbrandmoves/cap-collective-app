@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { useParams, useSearchParams, Link } from 'react-router-dom'
+import { useParams, useSearchParams, Link, useOutletContext } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -226,6 +226,11 @@ function PersonChip({ name, active, onClick }) {
 export function RoomView() {
   const { token } = useParams()
   const { getProduction, getRoom, getMembersForRoom, addRoomMember, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions, calendarEvents, connectedCalendars, prefixRules } = useApp()
+  // When a signed-in user opens a room, we're rendered inside AppShell (main nav).
+  // openGlobalMenu opens that nav on mobile; null for account-less standalone guests.
+  const outletCtx = useOutletContext()
+  const openGlobalMenu = outletCtx?.openGlobalMenu
+  const embedded = !!openGlobalMenu
   const [roomTab, setRoomTab] = useState('schedule') // 'schedule' | 'board'
   const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)
@@ -484,7 +489,7 @@ export function RoomView() {
   ) : null
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface-950">
+    <div className={`flex overflow-hidden bg-surface-950 ${embedded ? 'flex-1 min-h-0 self-stretch' : 'h-screen'}`}>
       <JoinSignInModal
         isOpen={joinOpen}
         onClose={() => setJoinOpen(false)}
@@ -590,8 +595,13 @@ export function RoomView() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
         {/* Mobile top bar */}
         <div className="md:hidden relative z-20 flex items-center gap-2 px-3 py-3 border-b border-white/[0.05] bg-surface-900 flex-shrink-0 safe-top">
-          <button onClick={() => setSidebarOpen(true)} className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-300 hover:text-zinc-100 hover:bg-white/5 transition-colors" aria-label="Open menu">
-            <Menu size={19} strokeWidth={1.75} />
+          {embedded && (
+            <button onClick={openGlobalMenu} className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-300 hover:text-zinc-100 hover:bg-white/5 transition-colors" aria-label="Open navigation">
+              <Menu size={19} strokeWidth={1.75} />
+            </button>
+          )}
+          <button onClick={() => setSidebarOpen(true)} className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-300 hover:text-zinc-100 hover:bg-white/5 transition-colors" aria-label={embedded ? 'Open project panel' : 'Open menu'}>
+            {embedded ? <PanelLeft size={19} strokeWidth={1.75} /> : <Menu size={19} strokeWidth={1.75} />}
           </button>
           <span className="text-sm font-semibold text-zinc-100 flex-1 truncate tracking-tight">{production.name}</span>
         </div>

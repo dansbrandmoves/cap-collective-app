@@ -10,7 +10,7 @@ export function AppShell() {
   const location = useLocation()
   // Pages that render their OWN unified mobile header (so we don't stack a second
   // bar on top of theirs). The project view folds the global menu into its bar.
-  const ownsMobileHeader = location.pathname.startsWith('/project/')
+  const ownsMobileHeader = location.pathname.startsWith('/project/') || location.pathname.startsWith('/room/')
 
   return (
     <div className="flex min-h-screen bg-surface-950">

@@ -76,7 +76,7 @@ export function ProductionView() {
   const sidePanel = useResizablePanel('coordie-project-panel', { defaultWidth: 288, min: 240, max: 420, side: 'right' })
   const PANEL_RAIL = 48
   const board = useBoard(id)
-  const canvas = useCanvas(id)
+  const canvas = useCanvas(id, production?.ownerId)
 
   // Early return AFTER all hooks. Distinguish "still loading" from "truly missing":
   // during initial load productions is empty, so show a spinner, not "not found".

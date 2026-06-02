@@ -318,7 +318,7 @@ export function RoomView() {
   // Project-level board (shared by everyone on the project). Hook runs every render
   // with a possibly-null id so the hook count stays stable before the early returns.
   const board = useBoard(resolved?.productionId)
-  const canvas = useCanvas(resolved?.productionId)
+  const canvas = useCanvas(resolved?.productionId, production?.ownerId)
   const boardPeople = useMemo(
     () => (resolved?.roomId ? getMembersForRoom(resolved.roomId) : []),
     [resolved?.roomId, getMembersForRoom]

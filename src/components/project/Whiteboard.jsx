@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   MousePointer2, StickyNote, Square, Circle, Type, MessageSquare,
-  Grid3x3, Minus, Plus, Maximize, Trash2,
+  Grid3x3, Minus, Plus, Maximize, Trash2, Image as ImageIcon, Loader2,
 } from 'lucide-react'
 import { useApp } from '../../contexts/AppContext'
 
@@ -69,17 +69,35 @@ export function Whiteboard({ canvas, authorName }) {
   const { theme } = useApp()
   const isLight = theme === 'light'
   const dotColor = isLight ? 'rgba(15,23,42,0.16)' : 'rgba(255,255,255,0.10)'
-  const { elements, addElement, patchElement, persistElement, deleteElement, bringToFront } = canvas
+  const { elements, addElement, addImage, patchElement, persistElement, deleteElement, bringToFront } = canvas
   const [tool, setTool] = useState('select')
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [selectedId, setSelectedId] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [showGrid, setShowGrid] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [toast, setToast] = useState(null)
   const viewportRef = useRef(null)
+  const fileRef = useRef(null)
   const drag = useRef(null) // { mode:'pan'|'move'|'resize', ... }
 
   useEffect(() => { injectFonts() }, [])
+
+  // Image upload: optimize + quota-check + upload happen in the hook; we just place
+  // it at the viewport center and surface any error.
+  async function handleImagePick(e) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-picking the same file
+    if (!file) return
+    setUploading(true)
+    const rect = viewportRef.current?.getBoundingClientRect()
+    const at = rect ? screenToCanvas(rect.left + rect.width / 2, rect.top + rect.height / 2) : { x: 0, y: 0 }
+    const res = await addImage(file, { author: authorName, at })
+    setUploading(false)
+    if (res?.error) { setToast(res.error); setTimeout(() => setToast(null), 4000) }
+    else if (res?.element) { setTool('select'); setSelectedId(res.element.id) }
+  }
 
   const selected = elements.find(e => e.id === selectedId) || null
 
@@ -172,7 +190,15 @@ export function Whiteboard({ canvas, authorName }) {
     } else if (d.mode === 'resize') {
       const dx = (e.clientX - d.startX) / zoom
       const dy = (e.clientY - d.startY) / zoom
-      patchElement(d.id, { w: Math.max(40, d.origin.w + dx), h: Math.max(32, d.origin.h + dy) })
+      const { x, y, w, h } = d.origin
+      const c = d.corner || 'se'
+      const minW = 40, minH = 32
+      let nx = x, ny = y, nw = w, nh = h
+      if (c === 'se') { nw = Math.max(minW, w + dx); nh = Math.max(minH, h + dy) }
+      else if (c === 'sw') { nw = Math.max(minW, w - dx); nh = Math.max(minH, h + dy); nx = x + (w - nw) }
+      else if (c === 'ne') { nw = Math.max(minW, w + dx); nh = Math.max(minH, h - dy); ny = y + (h - nh) }
+      else if (c === 'nw') { nw = Math.max(minW, w - dx); nh = Math.max(minH, h - dy); nx = x + (w - nw); ny = y + (h - nh) }
+      patchElement(d.id, { x: nx, y: ny, w: nw, h: nh })
     }
   }, [zoom, patchElement])
 
@@ -180,7 +206,7 @@ export function Whiteboard({ canvas, authorName }) {
     const d = drag.current
     if (d && (d.mode === 'move' || d.mode === 'resize')) {
       const el = elementsRef.current.find(x => x.id === d.id)
-      if (el) persistElement(d.id, d.mode === 'move' ? { x: el.x, y: el.y } : { w: el.w, h: el.h })
+      if (el) persistElement(d.id, d.mode === 'move' ? { x: el.x, y: el.y } : { x: el.x, y: el.y, w: el.w, h: el.h })
     }
     drag.current = null
     window.removeEventListener('pointermove', onPointerMove)
@@ -216,9 +242,9 @@ export function Whiteboard({ canvas, authorName }) {
     window.addEventListener('pointerup', onPointerUp)
   }
 
-  function startResize(e, el) {
+  function startResize(e, el, corner = 'se') {
     e.stopPropagation()
-    drag.current = { mode: 'resize', id: el.id, startX: e.clientX, startY: e.clientY, origin: { w: el.w, h: el.h } }
+    drag.current = { mode: 'resize', id: el.id, corner, startX: e.clientX, startY: e.clientY, origin: { x: el.x, y: el.y, w: el.w, h: el.h } }
     window.addEventListener('pointermove', onPointerMove)
     window.addEventListener('pointerup', onPointerUp)
   }
@@ -260,7 +286,7 @@ export function Whiteboard({ canvas, authorName }) {
             editing={editingId === el.id}
             tool={tool}
             onPointerDown={(e) => startMove(e, el)}
-            onStartResize={(e) => startResize(e, el)}
+            onStartResize={(e, corner) => startResize(e, el, corner)}
             onDoubleClick={() => { if (el.type !== 'comment') { setSelectedId(el.id); setEditingId(el.id) } }}
             onOpenComment={() => { setSelectedId(el.id); setEditingId(el.id) }}
             onChangeText={(text) => patchElement(el.id, { text })}
@@ -297,6 +323,11 @@ export function Whiteboard({ canvas, authorName }) {
             </button>
           )
         })}
+        {/* Add image */}
+        <button onClick={() => fileRef.current?.click()} title="Add image" disabled={uploading}
+          className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors disabled:opacity-50">
+          {uploading ? <Loader2 size={17} strokeWidth={1.9} className="animate-spin" /> : <ImageIcon size={17} strokeWidth={1.9} />}
+        </button>
         <div className="w-px h-6 bg-white/10 mx-1" />
         <button onClick={() => setShowGrid(g => !g)} title="Toggle grid"
           className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
@@ -322,6 +353,16 @@ export function Whiteboard({ canvas, authorName }) {
           <Maximize size={16} strokeWidth={1.9} />
         </button>
       </div>
+
+      {/* Hidden file input for image upload */}
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
+
+      {/* Toast (quota / upload errors) */}
+      {toast && (
+        <div data-ui className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 bg-surface-800 border border-red-500/30 text-red-300 text-[13px] rounded-xl px-4 py-2.5 shadow-lift max-w-xs text-center">
+          {toast}
+        </div>
+      )}
 
       {/* Empty hint */}
       {elements.length === 0 && (
@@ -376,6 +417,17 @@ function CanvasElement({ el, selected, editing, tool, onPointerDown, onStartResi
     )
   }
 
+  // Image element — fills its box; resizes from the four corners.
+  if (el.type === 'image') {
+    return (
+      <div style={base} onPointerDown={onPointerDown}
+        className={`group overflow-hidden rounded-xl bg-surface-800 ${selected ? 'outline outline-2 outline-accent outline-offset-2' : ''} ${tool === 'select' ? 'cursor-move' : ''}`}>
+        {el.src && <img src={el.src} alt="" draggable={false} className="w-full h-full object-cover pointer-events-none select-none" />}
+        <ResizeHandles show={selected && tool === 'select'} onStart={onStartResize} />
+      </div>
+    )
+  }
+
   const isShape = el.type === 'rect' || el.type === 'circle'
   const style = {
     ...base,
@@ -419,34 +471,47 @@ function CanvasElement({ el, selected, editing, tool, onPointerDown, onStartResi
         </div>
       )}
 
-      {/* Resize handle */}
-      {selected && tool === 'select' && (isShape || el.type === 'sticky' || el.type === 'text') && (
-        <div
-          data-ui
-          onPointerDown={(e) => { e.stopPropagation(); onStartResize(e) }}
-          className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-accent border-2 border-surface-950 cursor-se-resize"
-        />
-      )}
+      {/* Four-corner resize handles */}
+      <ResizeHandles show={selected && tool === 'select' && (isShape || el.type === 'sticky' || el.type === 'text')} onStart={onStartResize} />
     </div>
   )
+}
+
+// Classic four-corner resize handles — standard white circles.
+function ResizeHandles({ show, onStart }) {
+  if (!show) return null
+  const corners = [
+    ['nw', '-top-1.5 -left-1.5 cursor-nw-resize'],
+    ['ne', '-top-1.5 -right-1.5 cursor-ne-resize'],
+    ['sw', '-bottom-1.5 -left-1.5 cursor-sw-resize'],
+    ['se', '-bottom-1.5 -right-1.5 cursor-se-resize'],
+  ]
+  return corners.map(([c, cls]) => (
+    <div key={c} data-ui
+      onPointerDown={(e) => { e.stopPropagation(); onStart(e, c) }}
+      className={`absolute w-3 h-3 rounded-full bg-white border-2 border-accent shadow-sm ${cls}`} />
+  ))
 }
 
 function ElementBar({ el, pan, zoom, onColor, onFont, onDelete }) {
   // Anchor above the element in screen space.
   const left = el.x * zoom + pan.x + (el.w * zoom) / 2
   const top = el.y * zoom + pan.y
+  const isImage = el.type === 'image'
   const showFont = el.type === 'sticky' || el.type === 'text' || el.type === 'rect' || el.type === 'circle'
   return (
     <div data-ui onPointerDown={(e) => e.stopPropagation()}
       className="absolute z-20 flex items-center gap-2 bg-surface-900/95 backdrop-blur-xl border border-white/[0.1] rounded-xl px-2.5 py-1.5 shadow-lift"
       style={{ left, top: Math.max(8, top - 52), transform: 'translateX(-50%)' }}>
-      <div className="flex items-center gap-1">
-        {COLORS.map(c => (
-          <button key={c} onClick={() => onColor(c)} title="Color"
-            className={`w-5 h-5 rounded-full border transition-transform hover:scale-110 ${el.color === c ? 'border-white ring-1 ring-white' : 'border-black/20'}`}
-            style={{ background: c }} />
-        ))}
-      </div>
+      {!isImage && (
+        <div className="flex items-center gap-1">
+          {COLORS.map(c => (
+            <button key={c} onClick={() => onColor(c)} title="Color"
+              className={`w-5 h-5 rounded-full border transition-transform hover:scale-110 ${el.color === c ? 'border-white ring-1 ring-white' : 'border-black/20'}`}
+              style={{ background: c }} />
+          ))}
+        </div>
+      )}
       {showFont && (
         <>
           <div className="w-px h-5 bg-white/10" />
@@ -459,7 +524,7 @@ function ElementBar({ el, pan, zoom, onColor, onFont, onDelete }) {
           </select>
         </>
       )}
-      <div className="w-px h-5 bg-white/10" />
+      {(!isImage || showFont) && <div className="w-px h-5 bg-white/10" />}
       <button onClick={onDelete} title="Delete"
         className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
         <Trash2 size={14} strokeWidth={1.9} />

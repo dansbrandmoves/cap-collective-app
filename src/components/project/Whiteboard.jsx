@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import {
   MousePointer2, StickyNote, Square, Circle, Type, MessageSquare,
-  Grid3x3, Minus, Plus, Maximize, Trash2, Image as ImageIcon, Loader2,
+  Minus, Plus, Maximize, Trash2, Image as ImageIcon, Loader2,
 } from 'lucide-react'
 import { useApp } from '../../contexts/AppContext'
 
 // A slimmed-down infinite canvas (think Miro, minus the bloat). Pan by dragging
 // empty space, zoom with the wheel or the toolbar, drop stickies / shapes / text /
-// comment pins, toggle a dot grid, and "Fit" to frame everything. Collaborative +
+// comment pins, on a subtle always-on dot grid, and "Fit" to frame everything. Collaborative +
 // realtime via useCanvas. Built from scratch — no canvas library dependency.
 
 const GRID = 24 // canvas units between grid dots
@@ -112,7 +112,6 @@ export function Whiteboard({ canvas, authorName }) {
   const [zoom, setZoom] = useState(1)
   const [selectedId, setSelectedId] = useState(null)
   const [editingId, setEditingId] = useState(null)
-  const [showGrid, setShowGrid] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [toast, setToast] = useState(null)
   const [linkFrom, setLinkFrom] = useState(null)  // element id we're dragging a connector from
@@ -436,7 +435,7 @@ export function Whiteboard({ canvas, authorName }) {
         // Stop the browser from claiming touch gestures (native scroll/zoom) so our
         // pointer-driven pan / drag / resize / pinch stay smooth — for every object.
         touchAction: 'none',
-        backgroundImage: showGrid ? `radial-gradient(circle, ${dotColor} 1px, transparent 1px)` : 'none',
+        backgroundImage: `radial-gradient(circle, ${dotColor} 1px, transparent 1px)`,
         backgroundSize: `${GRID * zoom}px ${GRID * zoom}px`,
         backgroundPosition: `${pan.x}px ${pan.y}px`,
       }}
@@ -533,13 +532,6 @@ export function Whiteboard({ canvas, authorName }) {
         <button onClick={() => fileRef.current?.click()} title="Add image" disabled={uploading}
           className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors disabled:opacity-50">
           {uploading ? <Loader2 size={17} strokeWidth={1.9} className="animate-spin" /> : <ImageIcon size={17} strokeWidth={1.9} />}
-        </button>
-        <div className="w-px h-6 bg-white/10 mx-1" />
-        <button onClick={() => setShowGrid(g => !g)} title="Toggle grid"
-          className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
-            showGrid ? 'text-accent' : 'text-zinc-500 hover:text-zinc-100 hover:bg-white/[0.06]'
-          }`}>
-          <Grid3x3 size={17} strokeWidth={1.9} />
         </button>
         <div className="w-px h-6 bg-white/10 mx-1" />
         <button onClick={() => zoomTo(zoom / 1.2)} title="Zoom out"

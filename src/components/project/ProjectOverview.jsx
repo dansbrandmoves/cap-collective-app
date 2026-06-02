@@ -37,6 +37,8 @@ const dedupeNames = (arr) => {
 export function ProjectOverview({
   production, slots, calendarEvents, connectedCalendars, prefixRules, businessHours,
   loading, dateRequestsByRoom = {}, sharedAvailByRoom = {}, excluded, includedOwner, totalPeople = 0,
+  // When a guest views this (RoomView), the "owner" is the host, not "You".
+  ownerLabel = OWNER_LABEL, ownerEmail = undefined,
 }) {
   const rooms = production.rooms || []
 
@@ -140,7 +142,7 @@ export function ProjectOverview({
       }
     }
     if (includedOwner && ownerFreeInWindow(new Date(inspected + 'T00:00:00'), WINDOWS.any)) {
-      avail.push({ date: inspected, is_available: true, guest_name: OWNER_LABEL })
+      avail.push({ date: inspected, is_available: true, guest_name: ownerLabel })
     }
     return { reqs, avail }
   }, [inspected, rooms, fReq, fAvail, includedOwner]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -285,6 +287,8 @@ export function ProjectOverview({
           dateRequests={inspectorData.reqs}
           sharedAvailability={inspectorData.avail}
           actionLabel="Schedule meeting"
+          ownerLabel={ownerLabel}
+          ownerEmail={ownerEmail}
           onClose={() => setInspected(null)}
         />
       )}

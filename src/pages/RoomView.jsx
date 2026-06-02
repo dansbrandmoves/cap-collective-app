@@ -6,8 +6,10 @@ import { Badge } from '../components/ui/Badge'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { Board } from '../components/project/Board'
 import { Whiteboard } from '../components/project/Whiteboard'
+import { ProjectOverview } from '../components/project/ProjectOverview'
 import { useBoard } from '../hooks/useBoard'
 import { useCanvas } from '../hooks/useCanvas'
+import { projectKnownPeople } from '../utils/availability'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured, connectGuestCalendarOffline, triggerGuestSync, disconnectGuestCalendar as disconnectGuestCalendarServer } from '../utils/googleCalendar'
 import { CalendarDays, CheckCircle2 } from 'lucide-react'
@@ -150,12 +152,29 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect, ownerName, r
   )
 }
 
-function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots, projectBusinessHours, guestSlotSelection, ownerCalendarEvents, ownerConnectedCalendars, ownerId, ownerName, guestCalendarEnabled }) {
+function PersonChip({ name, active, onClick }) {
+  return (
+    <button onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full pl-1 pr-3 py-1 text-[12px] font-medium border transition-colors ${
+        active ? 'bg-accent/15 text-accent border-accent/25' : 'bg-white/[0.03] text-zinc-500 border-white/[0.07] hover:text-zinc-300'
+      }`}>
+      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${active ? 'bg-accent/25 text-accent' : 'bg-white/[0.06] text-zinc-400'}`}>
+        {name[0]?.toUpperCase()}
+      </span>
+      {name}
+    </button>
+  )
+}
+
+function AvailabilityTab({ isOwner, production, availabilityRules, roomId, guestName, slots, projectBusinessHours, guestSlotSelection, ownerCalendarEvents, ownerConnectedCalendars, ownerId, ownerName, guestCalendarEnabled }) {
   const { calendarEvents, connectedCalendars, prefixRules, createDateRequest, slotStates, businessHours } = useApp()
   const effectiveCalendarEvents = isOwner ? calendarEvents : ownerCalendarEvents
   const effectiveConnectedCalendars = isOwner ? connectedCalendars : ownerConnectedCalendars
   const [dateRequests, setDateRequests] = useState([])
   const [sharedAvailability, setSharedAvailability] = useState([])
+  // People-select state for the guest overlap view.
+  const [excluded, setExcluded] = useState(() => new Set())
+  const [includedOwner, setIncludedOwner] = useState(true)
 
   // Lifted guest calendar state — survives view switches and remounts
   const [guestEvents, setGuestEvents] = useState(() => {
@@ -220,10 +239,25 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
     return () => { supabase.removeChannel(channel) }
   }, [roomId])
 
-  return (
-    <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
-      {!isOwner && (
-        <>
+  // Guest overlap view: same dots calendar + scheduling the owner gets, fed with
+  // this room's shared availability. Availability is shared by connecting a calendar.
+  const dateReqMap = useMemo(() => ({ [roomId]: dateRequests }), [roomId, dateRequests])
+  const sharedMap = useMemo(() => ({ [roomId]: sharedAvailability }), [roomId, sharedAvailability])
+  const rooms = production?.rooms || []
+  const knownGuests = useMemo(
+    () => [...projectKnownPeople(rooms, dateReqMap, sharedMap)],
+    [rooms, dateReqMap, sharedMap]
+  )
+  const ownerDisplay = ownerName || 'Host'
+  const totalPeople = knownGuests.length + 1
+  function toggleGuest(name) {
+    setExcluded(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
+  }
+
+  if (!isOwner) {
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="px-5 sm:px-8 pt-4 sm:pt-6 flex-shrink-0">
           {guestCalendarEnabled && (
             <GuestCalendarPanel
               guestEvents={guestEvents}
@@ -234,17 +268,42 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
               guestName={guestName}
             />
           )}
-          <p className="text-sm text-zinc-400 mb-4">
-            {guestCalendarEnabled && guestEvents === null
-              ? (guestSlotSelection
-                  ? 'Or tap a date below to pick the time slots that work for you.'
-                  : 'Or just tap the days you’re free below — no account needed.')
-              : (guestSlotSelection
-                  ? 'Tap a date to pick which time slots work for you.'
-                  : 'Tap the days you’re free, then send them over.')}
-          </p>
-        </>
-      )}
+          {/* People to include in the overlap */}
+          {knownGuests.length > 0 && (
+            <div className="mb-1">
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Who to include</p>
+              <div className="flex flex-wrap gap-1.5">
+                <PersonChip name={ownerDisplay} active={includedOwner} onClick={() => setIncludedOwner(v => !v)} />
+                {knownGuests.map(n => (
+                  <PersonChip key={n} name={n} active={!excluded.has(n)} onClick={() => toggleGuest(n)} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <ProjectOverview
+          production={production}
+          slots={slots}
+          calendarEvents={effectiveCalendarEvents}
+          connectedCalendars={effectiveConnectedCalendars}
+          prefixRules={prefixRules}
+          businessHours={projectBusinessHours || businessHours}
+          loading={false}
+          dateRequestsByRoom={dateReqMap}
+          sharedAvailByRoom={sharedMap}
+          excluded={excluded}
+          includedOwner={includedOwner}
+          totalPeople={totalPeople}
+          ownerLabel={ownerDisplay}
+          ownerEmail={null}
+        />
+      </div>
+    )
+  }
+
+  // Owner viewing a room directly keeps the detailed slot calendar.
+  return (
+    <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
       <AvailabilityCalendar
         slots={slots}
         calendarEvents={effectiveCalendarEvents}
@@ -482,6 +541,7 @@ export function RoomView() {
       {roomTab === 'schedule' && (
         <AvailabilityTab
           isOwner={isOwner}
+          production={production}
           availabilityRules={availabilityRules}
           roomId={roomId}
           guestName={guestName}

@@ -12,7 +12,7 @@ import { useCanvas } from '../hooks/useCanvas'
 import { projectKnownPeople } from '../utils/availability'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured, connectGuestCalendarOffline, triggerGuestSync, disconnectGuestCalendar as disconnectGuestCalendarServer } from '../utils/googleCalendar'
-import { CalendarDays, CheckCircle2 } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Menu, X, PanelLeft, Check } from 'lucide-react'
 import { startRun, STATUS } from '../utils/diag'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -68,8 +68,9 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
   )
 }
 
-// Guest calendar panel — connects guest's Google Calendar so they can see their busy/free overlay in the views
-function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect, ownerName, roomId, guestName }) {
+// Guest calendar panel — connects guest's Google Calendar so they can see their busy/free overlay in the views.
+// `compact` drops the caption so it can live in the toolbar/tabs row without blocking the calendar.
+function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect, ownerName, roomId, guestName, compact = false }) {
   const who = ownerName ? ownerName.split(' ')[0] : 'the team'
   const [gisReady, setGisReady] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -108,31 +109,35 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect, ownerName, r
 
   if (!configured) return null
 
-  // Compact connect affordance (booking-page style) — a single button + one line,
-  // never a full-area takeover. The calendar shows underneath either way.
+  // Connect affordance — compact (button only, for the toolbar) keeps it out of the
+  // calendar's way; non-compact adds a one-line explainer.
   if (guestEvents === null) {
     return (
-      <div className="mb-4 flex flex-col items-start sm:flex-row sm:items-center gap-2.5">
+      <div className={compact ? 'inline-flex' : 'mb-4 flex flex-col items-start sm:flex-row sm:items-center gap-2.5'}>
         <Button
           onClick={handleConnect}
           disabled={!gisReady || loading || !guestName}
+          size={compact ? 'sm' : undefined}
           className="justify-center flex-shrink-0"
+          title="Highlights when you and the team are both free. Only free/busy is shared — never event details."
         >
           <CalendarDays size={15} strokeWidth={1.75} className="mr-2" />
-          {loading ? 'Connecting…' : 'Connect your calendar'}
+          {loading ? 'Connecting…' : 'Connect calendar'}
         </Button>
-        <p className="text-[12px] text-zinc-500 leading-relaxed max-w-sm">
-          Highlights when you and {who} are both free. Only your free/busy is shared — never event details.
-        </p>
+        {!compact && (
+          <p className="text-[12px] text-zinc-500 leading-relaxed max-w-sm">
+            Highlights when you and {who} are both free. Only your free/busy is shared — never event details.
+          </p>
+        )}
         {error && <p className="text-xs text-red-400">{error}</p>}
       </div>
     )
   }
 
   return (
-    <div className="mb-4 inline-flex items-center gap-2 text-[12px] font-medium text-green-400 bg-green-500/[0.08] border border-green-500/20 rounded-full pl-2.5 pr-2 py-1.5">
+    <div className={`inline-flex items-center gap-2 text-[12px] font-medium text-green-400 bg-green-500/[0.08] border border-green-500/20 rounded-full pl-2.5 pr-2 py-1.5 ${compact ? '' : 'mb-4'}`}>
       <CheckCircle2 size={14} strokeWidth={2} />
-      Calendar connected
+      <span className="hidden sm:inline">Calendar connected</span><span className="sm:hidden">Connected</span>
       <span className="text-zinc-600">·</span>
       <button onClick={onDisconnect} className="text-zinc-500 hover:text-zinc-300 transition-colors">Disconnect</button>
       {error && <span className="text-red-400 ml-1">{error}</span>}
@@ -163,48 +168,6 @@ function AvailabilityTab({ isOwner, production, availabilityRules, roomId, guest
   // People-select state for the guest overlap view.
   const [excluded, setExcluded] = useState(() => new Set())
   const [includedOwner, setIncludedOwner] = useState(true)
-
-  // Lifted guest calendar state — survives view switches and remounts
-  const [guestEvents, setGuestEvents] = useState(() => {
-    try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
-  })
-  // Calendar connect now goes through the offline (refresh-token) flow: the popup
-  // code client stores a refresh token server-side, and the sync-guest-calendars
-  // edge function owns writing shared_availability (and keeps it fresh on a 15-min
-  // cron). Here we just hold the events for the guest's local busy overlay and
-  // kick off an immediate first sync so they don't wait for the cron.
-  async function connectGuestCalendar(events) {
-    setGuestEvents(events)
-    try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch (e) { /* */ }
-
-    const run = startRun('guest_connect_calendar', { actor: guestName || 'unknown guest', roomId })
-    run.step('connected via offline code client', STATUS.OK, { eventCount: events?.length ?? 0 })
-
-    if (!roomId || !guestName) {
-      run.step('aborted: missing identity', STATUS.SKIP, { roomId, guestName })
-      run.finish(STATUS.SKIP, 'Skipped — missing roomId or guestName (guest may be viewing as owner)')
-      return
-    }
-
-    // Trigger the server-side sync immediately; it derives free days in the
-    // guest's timezone and writes shared_availability. Realtime updates the owner.
-    const { error } = await triggerGuestSync({ roomId, guestName })
-    if (error) {
-      run.step('trigger server sync', STATUS.ERROR, { error: error.message })
-      run.finish(STATUS.ERROR, 'Connected, but the first server sync failed (cron will retry)')
-    } else {
-      run.step('trigger server sync', STATUS.OK)
-      run.finish(STATUS.OK, `Connected ${guestName} — server sync running`)
-    }
-  }
-  async function disconnectGuestCalendar() {
-    setGuestEvents(null)
-    try { sessionStorage.removeItem('coordie-gcal') } catch (e) { /* */ }
-    if (roomId && guestName) {
-      const { error } = await disconnectGuestCalendarServer({ roomId, guestName })
-      if (error) console.error('[coordie] guest disconnect failed:', error.message)
-    }
-  }
 
   useEffect(() => {
     if (!roomId) return
@@ -246,33 +209,17 @@ function AvailabilityTab({ isOwner, production, availabilityRules, roomId, guest
   // Guests connect a calendar to contribute; the owner's availability comes from
   // their own connected calendar.
   const ownerChipLabel = isOwner ? 'You' : ownerDisplay
-  // Connect panel + people chips ride at the top of the calendar COLUMN (headerSlot)
-  // rather than above the whole view, so the day inspector bleeds to the top edge.
-  const scheduleHeader = (
-    <div className="mb-5">
-      {!isOwner && guestCalendarEnabled && (
-        <GuestCalendarPanel
-          guestEvents={guestEvents}
-          onConnect={connectGuestCalendar}
-          onDisconnect={disconnectGuestCalendar}
-          ownerName={ownerName}
-          roomId={roomId}
-          guestName={guestName}
-        />
-      )}
-      {knownGuests.length > 0 && (
-        <div>
-          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Who to include</p>
-          <div className="flex flex-wrap gap-1.5">
-            <PersonChip name={ownerChipLabel} active={includedOwner} onClick={() => setIncludedOwner(v => !v)} />
-            {knownGuests.map(n => (
-              <PersonChip key={n} name={n} active={!excluded.has(n)} onClick={() => toggleGuest(n)} />
-            ))}
-          </div>
-        </div>
-      )}
+  // Only the compact people chips ride at the top of the calendar column now — the
+  // connect-calendar control lives up in the tabs row so it never blocks the calendar.
+  const scheduleHeader = knownGuests.length > 0 ? (
+    <div className="mb-5 flex flex-wrap items-center gap-1.5">
+      <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mr-1">Who</span>
+      <PersonChip name={ownerChipLabel} active={includedOwner} onClick={() => setIncludedOwner(v => !v)} />
+      {knownGuests.map(n => (
+        <PersonChip key={n} name={n} active={!excluded.has(n)} onClick={() => toggleGuest(n)} />
+      ))}
     </div>
-  )
+  ) : null
   return (
     <ProjectOverview
       production={production}
@@ -296,7 +243,7 @@ function AvailabilityTab({ isOwner, production, availabilityRules, roomId, guest
 
 export function RoomView() {
   const { token } = useParams()
-  const { getProduction, getRoom, getMembersForRoom, addRoomMember, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions } = useApp()
+  const { getProduction, getRoom, getMembersForRoom, addRoomMember, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions, calendarEvents, connectedCalendars, prefixRules } = useApp()
   const [roomTab, setRoomTab] = useState('schedule') // 'schedule' | 'board'
   const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)
@@ -330,6 +277,62 @@ export function RoomView() {
   const [searchParams] = useSearchParams()
   const previewAsGuest = searchParams.get('preview') === 'guest'
   const isOwner = !previewAsGuest && !!user && production?.ownerId === user.id
+
+  // Guest calendar connect lives at the RoomView level so its control can sit in the
+  // tabs row (out of the calendar's way). Server owns ongoing sync; we hold events
+  // only to know connected/not, and trigger an immediate first sync on connect.
+  const [guestEvents, setGuestEvents] = useState(() => {
+    try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch { return null }
+  })
+  const connectGuestCalendar = useCallback(async (events) => {
+    setGuestEvents(events)
+    try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch { /* */ }
+    const rid = resolved?.roomId
+    if (!rid || !guestName) return
+    const run = startRun('guest_connect_calendar', { actor: guestName, roomId: rid })
+    run.step('connected via offline code client', STATUS.OK, { eventCount: events?.length ?? 0 })
+    const { error } = await triggerGuestSync({ roomId: rid, guestName })
+    run.finish(error ? STATUS.ERROR : STATUS.OK, error ? 'First server sync failed (cron will retry)' : `Connected ${guestName}`)
+  }, [resolved?.roomId, guestName])
+  const disconnectGuestCalendar = useCallback(async () => {
+    setGuestEvents(null)
+    try { sessionStorage.removeItem('coordie-gcal') } catch { /* */ }
+    const rid = resolved?.roomId
+    if (rid && guestName) {
+      const { error } = await disconnectGuestCalendarServer({ roomId: rid, guestName })
+      if (error) console.error('[coordie] guest disconnect failed:', error.message)
+    }
+  }, [resolved?.roomId, guestName])
+
+  // ── Schedule data + people-select (lifted so the left sidebar owns the People filter) ──
+  const [dateRequests, setDateRequests] = useState([])
+  const [sharedAvailability, setSharedAvailability] = useState([])
+  const [excluded, setExcluded] = useState(() => new Set())
+  const [includedOwner, setIncludedOwner] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)      // mobile drawer
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false) // desktop collapse
+
+  useEffect(() => {
+    const rid = resolved?.roomId
+    if (!rid) return
+    const loadReq = () => supabase.from('date_requests').select('*').eq('room_id', rid).then(({ data }) => setDateRequests(data || []))
+    const loadAvail = () => supabase.from('shared_availability').select('*').eq('room_id', rid).then(({ data }) => setSharedAvailability(data || []))
+    loadReq(); loadAvail()
+    const channel = supabase
+      .channel(`room-overlap-${rid}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'date_requests', filter: `room_id=eq.${rid}` }, loadReq)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_availability', filter: `room_id=eq.${rid}` }, loadAvail)
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [resolved?.roomId])
+
+  const schedRoomId = resolved?.roomId
+  const dateReqMap = useMemo(() => ({ [schedRoomId]: dateRequests }), [schedRoomId, dateRequests])
+  const sharedMap = useMemo(() => ({ [schedRoomId]: sharedAvailability }), [schedRoomId, sharedAvailability])
+  const knownGuests = useMemo(
+    () => (production ? [...projectKnownPeople(production.rooms || [], dateReqMap, sharedMap)] : []),
+    [production, dateReqMap, sharedMap]
+  )
 
   // Use project-specific slots if configured, otherwise global
   const slots = useMemo(() => {
@@ -465,109 +468,178 @@ export function RoomView() {
     return <NamePrompt token={token} onConfirm={handleGuestJoin} ownerLogo={ownerLogo} ownerLogoDark={ownerLogoDark} />
   }
 
-  return (
-    <div className="flex flex-col h-screen bg-surface-950">
-      {/* Room header */}
-      <div className="flex items-center justify-between px-5 sm:px-8 py-3.5 sm:py-4 border-b border-white/[0.06] bg-surface-900/80 backdrop-blur-xl safe-top">
-        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-          {isOwner && (
-            <Link to={`/project/${productionId}`} className="text-[13px] text-zinc-500 hover:text-zinc-200 transition-colors flex-shrink-0 flex items-center gap-1">
-              <span>←</span> <span className="hidden sm:inline">{production.name}</span><span className="sm:hidden">Back</span>
-            </Link>
-          )}
-          {!isOwner && (
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {ownerLogo ? (
-                <div className={`rounded-lg px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
-                  <img src={ownerLogo} alt="" className="max-h-4 max-w-[80px] object-contain" />
-                </div>
-              ) : (
-                <img src="/coordie-logo.svg" alt="Coordie" className="h-4" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
-              )}
-            </div>
-          )}
-          <div className="h-4 w-px bg-white/10 flex-shrink-0" />
-          <div className="min-w-0">
-            <span className="text-[15px] font-semibold text-zinc-100 truncate tracking-tight">{room.name}</span>
-            <span className="text-zinc-600 mx-1.5 text-sm hidden sm:inline">·</span>
-            <span className="text-[13px] text-zinc-500 hidden sm:inline truncate">{production.name}</span>
-          </div>
-        </div>
-        {isOwner && (
-          <span className="flex-shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full bg-accent/10 text-accent border border-accent/20">Owner</span>
-        )}
-      </div>
+  const effectiveCalendarEvents = isOwner ? calendarEvents : ownerCalendarEvents
+  const effectiveConnectedCalendars = isOwner ? connectedCalendars : ownerConnectedCalendars
+  const ownerDisplay = ownerName || 'Host'
+  const ownerChipLabel = isOwner ? 'You' : ownerDisplay
+  const totalPeople = knownGuests.length + 1
+  const toggleGuest = (name) => setExcluded(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
 
-      {/* Schedule | Tasks | Board tabs — Tasks + Board are shared by everyone on the project */}
-      <div className="px-5 sm:px-8 pt-4 flex-shrink-0">
-        <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-xl p-1">
-          {[['schedule', 'Schedule'], ['tasks', 'Tasks'], ['board', 'Board']].map(([key, label]) => (
-            <button key={key} onClick={() => setRoomTab(key)}
-              className={`px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                roomTab === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
-              }`}>
-              {label}
-              {key === 'tasks' && board.tasks.length > 0 && (
-                <span className="ml-1.5 text-[11px] text-zinc-500 tabular-nums">{board.tasks.length}</span>
-              )}
+  // Connect-first: the calendar column leads with the connect prompt (or, once
+  // connected, a subtle disconnect pill). People filtering lives in the left sidebar.
+  const connectSlot = (!isOwner && ownerGuestCalendarEnabled) ? (
+    <div className="mb-6">
+      <GuestCalendarPanel
+        guestEvents={guestEvents}
+        onConnect={connectGuestCalendar}
+        onDisconnect={disconnectGuestCalendar}
+        ownerName={ownerName}
+        roomId={roomId}
+        guestName={guestName}
+      />
+    </div>
+  ) : null
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-surface-950">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-20 md:hidden" onClick={() => setSidebarOpen(false)} />}
+
+      {/* Collapsed rail (desktop) — click to re-expand */}
+      {sidebarCollapsed && (
+        <div className="hidden md:flex flex-col items-center w-12 flex-shrink-0 bg-surface-900 border-r border-white/[0.06] py-4">
+          <button onClick={() => setSidebarCollapsed(false)} title="Expand panel"
+            className="text-zinc-500 hover:text-zinc-100 transition-colors p-1.5 rounded-md hover:bg-surface-800">
+            <PanelLeft size={16} strokeWidth={1.75} />
+          </button>
+        </div>
+      )}
+
+      {/* Left sidebar: branding + name + People filter + Powered by Coordie */}
+      <aside className={`fixed inset-y-0 left-0 z-30 w-72 bg-surface-900 border-r border-white/[0.06] flex flex-col
+        md:relative md:z-auto md:translate-x-0 transition-transform duration-300 ease-ios
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        ${sidebarCollapsed ? 'md:hidden' : ''}`}>
+        <div className="px-5 py-5 border-b border-white/[0.05]">
+          <div className="flex items-center justify-between mb-3 gap-2">
+            {ownerLogo ? (
+              <div className={`rounded-lg px-2 py-1 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
+                <img src={ownerLogo} alt="" className="max-h-5 max-w-[120px] object-contain" />
+              </div>
+            ) : (
+              <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
+            )}
+            <div className="flex items-center gap-1">
+              {isOwner && <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">Owner</span>}
+              <button onClick={() => setSidebarOpen(false)} className="md:hidden text-zinc-500 hover:text-zinc-200 p-1"><X size={16} /></button>
+              <button onClick={() => setSidebarCollapsed(true)} title="Collapse panel" className="hidden md:flex text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded p-1"><PanelLeft size={15} strokeWidth={1.75} /></button>
+            </div>
+          </div>
+          <h2 className="text-[15px] font-semibold text-zinc-50 leading-snug tracking-tight truncate">{room.name}</h2>
+          <p className="text-xs text-zinc-500 mt-0.5 truncate">{production.name}</p>
+          {isOwner && (
+            <Link to={`/project/${productionId}`} className="inline-flex items-center gap-1 mt-2 text-[12px] text-zinc-500 hover:text-zinc-200 transition-colors">← Back to project</Link>
+          )}
+        </div>
+
+        {/* People filter — toggle who counts toward the overlap */}
+        <div className="flex-1 overflow-y-auto px-3 py-4 no-scrollbar">
+          <p className="px-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">People</p>
+          {[{ name: ownerChipLabel, active: includedOwner, toggle: () => setIncludedOwner(v => !v), sub: isOwner ? 'you' : 'host' },
+            ...knownGuests.map(n => ({ name: n, active: !excluded.has(n), toggle: () => toggleGuest(n), sub: n === guestName ? 'you' : null }))
+          ].map((p, i) => (
+            <button key={i} onClick={p.toggle}
+              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/[0.04] transition-colors text-left">
+              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${p.active ? 'bg-accent/20 text-accent' : 'bg-white/[0.05] text-zinc-500'}`}>
+                {p.name[0]?.toUpperCase()}
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className={`block text-[13px] truncate ${p.active ? 'text-zinc-100' : 'text-zinc-500'}`}>{p.name}</span>
+                {p.sub && <span className="block text-[11px] text-zinc-600">{p.sub}</span>}
+              </span>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${p.active ? 'bg-accent border-accent text-white' : 'border-white/15 text-transparent'}`}>
+                <Check size={12} strokeWidth={3} />
+              </span>
             </button>
           ))}
+          {knownGuests.length === 0 && (
+            <p className="px-2 mt-1 text-[12px] text-zinc-600 leading-relaxed">As people connect their calendars, they’ll appear here.</p>
+          )}
         </div>
-      </div>
 
-      {roomTab === 'schedule' && (
-        <AvailabilityTab
-          isOwner={isOwner}
-          production={production}
-          availabilityRules={availabilityRules}
-          roomId={roomId}
-          guestName={guestName}
-          slots={slots}
-          projectBusinessHours={production?.availability_config?.businessHours}
-          guestSlotSelection={production?.availability_config?.guestSlotSelection || false}
-          ownerCalendarEvents={ownerCalendarEvents}
-          ownerConnectedCalendars={ownerConnectedCalendars}
-          ownerId={production?.ownerId}
-          ownerName={ownerName}
-          guestCalendarEnabled={ownerGuestCalendarEnabled}
-        />
-      )}
-      {roomTab === 'tasks' && (
-        <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
-          <Board
-            columns={board.columns}
-            tasksByColumn={board.tasksByColumn}
-            people={boardPeople}
-            projectId={resolved?.productionId}
-            authorName={isOwner ? (ownerName || 'Owner') : guestName}
-            addColumn={board.addColumn}
-            renameColumn={board.renameColumn}
-            deleteColumn={board.deleteColumn}
-            moveColumn={board.moveColumn}
-            addTask={board.addTask}
-            updateTask={board.updateTask}
-            moveTask={board.moveTask}
-            reorderTask={board.reorderTask}
-            deleteTask={board.deleteTask}
-          />
-        </div>
-      )}
-      {roomTab === 'board' && (
-        <div className="flex-1 min-h-0 mt-3 overflow-hidden">
-          <Whiteboard canvas={canvas} authorName={isOwner ? (ownerName || 'Owner') : guestName} />
-        </div>
-      )}
-
-      {/* Footer */}
-      {!isOwner && (
-        <div className="px-5 py-3 border-t border-white/[0.05] flex items-center justify-center safe-bottom-sm">
+        {/* Powered by Coordie — tucked at the bottom of the sidebar, unobtrusive */}
+        <div className="px-5 py-3 border-t border-white/[0.05]">
           <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
             <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
             Powered by Coordie
           </a>
         </div>
-      )}
+      </aside>
+
+      {/* Main */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
+        {/* Mobile top bar */}
+        <div className="md:hidden relative z-20 flex items-center gap-2 px-3 py-3 border-b border-white/[0.05] bg-surface-900 flex-shrink-0 safe-top">
+          <button onClick={() => setSidebarOpen(true)} className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-300 hover:text-zinc-100 hover:bg-white/5 transition-colors" aria-label="Open menu">
+            <Menu size={19} strokeWidth={1.75} />
+          </button>
+          <span className="text-sm font-semibold text-zinc-100 flex-1 truncate tracking-tight">{room.name}</span>
+        </div>
+
+        {/* Floating tabs (lg) so the calendar + day inspector bleed to the top */}
+        <div className="relative z-20 lg:absolute lg:inset-x-0 lg:top-0 lg:pointer-events-none px-5 sm:px-8 pt-4 sm:pt-5 flex-shrink-0">
+          <div className="inline-flex items-center gap-0.5 bg-surface-900/80 lg:backdrop-blur-md border border-white/[0.05] rounded-xl p-1 pointer-events-auto">
+            {[['schedule', 'Schedule'], ['tasks', 'Tasks'], ['board', 'Board']].map(([key, label]) => (
+              <button key={key} onClick={() => setRoomTab(key)}
+                className={`px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                  roomTab === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
+                }`}>
+                {label}
+                {key === 'tasks' && board.tasks.length > 0 && (
+                  <span className="ml-1.5 text-[11px] text-zinc-500 tabular-nums">{board.tasks.length}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {roomTab === 'schedule' && (
+          <ProjectOverview
+            production={production}
+            slots={slots}
+            calendarEvents={effectiveCalendarEvents}
+            connectedCalendars={effectiveConnectedCalendars}
+            prefixRules={prefixRules}
+            businessHours={production?.availability_config?.businessHours || businessHours}
+            loading={false}
+            dateRequestsByRoom={dateReqMap}
+            sharedAvailByRoom={sharedMap}
+            excluded={excluded}
+            includedOwner={includedOwner}
+            totalPeople={totalPeople}
+            ownerLabel={isOwner ? undefined : ownerDisplay}
+            ownerEmail={isOwner ? undefined : null}
+            floatingHeader
+            headerSlot={connectSlot}
+          />
+        )}
+        {roomTab === 'tasks' && (
+          <div className="flex-1 overflow-y-auto no-scrollbar px-5 sm:px-8 py-4 sm:py-6 lg:pt-[88px]">
+            <Board
+              columns={board.columns}
+              tasksByColumn={board.tasksByColumn}
+              people={boardPeople}
+              projectId={resolved?.productionId}
+              authorName={isOwner ? (ownerName || 'Owner') : guestName}
+              addColumn={board.addColumn}
+              renameColumn={board.renameColumn}
+              deleteColumn={board.deleteColumn}
+              moveColumn={board.moveColumn}
+              addTask={board.addTask}
+              updateTask={board.updateTask}
+              moveTask={board.moveTask}
+              reorderTask={board.reorderTask}
+              deleteTask={board.deleteTask}
+            />
+          </div>
+        )}
+        {roomTab === 'board' && (
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <Whiteboard canvas={canvas} authorName={isOwner ? (ownerName || 'Owner') : guestName} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }

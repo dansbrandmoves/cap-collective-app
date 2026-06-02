@@ -681,7 +681,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
           height, anchored to the right edge with a left divider (no floating card). */}
       <div className="bg-surface-900 flex flex-col safe-bottom
         fixed inset-x-0 bottom-0 z-50 max-h-[88vh] rounded-t-[20px] border-t border-white/[0.06] shadow-[0_-12px_40px_-8px_rgb(0_0_0/0.6)] animate-slideUp
-        lg:sticky lg:inset-auto lg:top-0 lg:z-auto lg:h-screen lg:max-h-screen lg:w-[380px] lg:shrink-0 lg:self-start lg:rounded-none lg:border-0 lg:border-l lg:border-white/[0.07] lg:shadow-none lg:animate-none">
+        lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-full lg:w-[380px] lg:shrink-0 lg:rounded-none lg:border-0 lg:border-l lg:border-white/[0.07] lg:shadow-none lg:animate-none">
 
         {/* Mobile grab handle */}
         <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">

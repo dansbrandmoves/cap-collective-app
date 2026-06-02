@@ -162,11 +162,12 @@ export function ProjectOverview({
   const todayStr = dateToStr(today)
 
   return (
-    <div className="flex-1 overflow-y-auto no-scrollbar">
-      <div className="lg:flex lg:items-start">
-      {/* Calendar column carries the page padding; the inspector stays flush to the edge.
+    // True two-pane: the calendar column scrolls on its own; the day inspector is a
+    // full-height pane (top→bottom of the available area) on lg, a bottom sheet on mobile.
+    <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+      {/* Calendar column scrolls independently and carries the page padding.
           With a floating header, add lg top clearance so the heading clears the tabs. */}
-      <div className={`flex-1 min-w-0 px-5 sm:px-8 lg:px-12 pb-8 sm:pb-12 pt-8 sm:pt-12 ${floatingHeader ? 'lg:pt-[88px]' : ''}`}>
+      <div className={`flex-1 min-w-0 min-h-0 overflow-y-auto no-scrollbar px-5 sm:px-8 lg:px-12 pb-8 sm:pb-12 pt-8 sm:pt-12 ${floatingHeader ? 'lg:pt-[88px]' : ''}`}>
 
       {headerSlot}
 
@@ -288,7 +289,7 @@ export function ProjectOverview({
           })}
         </div>
       </div>
-      </div>{/* /main column */}
+      </div>{/* /calendar column */}
 
       {inspected && inspectorData && (
         <DayInspectorPanel
@@ -303,7 +304,6 @@ export function ProjectOverview({
           onClose={() => setInspected(null)}
         />
       )}
-      </div>{/* /split row */}
     </div>
   )
 }

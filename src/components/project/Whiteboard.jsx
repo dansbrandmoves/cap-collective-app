@@ -514,14 +514,15 @@ export function Whiteboard({ canvas, authorName }) {
       )}
 
       {/* Bottom-center toolbar */}
-      <div data-ui className="absolute bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-1 max-w-[calc(100%-16px)] bg-surface-900/90 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-2 py-1.5 shadow-lift"
+      <div data-ui className="absolute left-1/2 -translate-x-1/2 flex flex-nowrap items-center justify-start sm:justify-center gap-0.5 sm:gap-1 max-w-[calc(100%-16px)] overflow-x-auto no-scrollbar bg-surface-900/90 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-1.5 sm:px-2 py-1.5 shadow-lift"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
         onPointerDown={(e) => e.stopPropagation()}>
         {TOOLS.map(t => {
           const Icon = t.icon
           const active = tool === t.key
           return (
             <button key={t.key} onClick={() => setTool(t.key)} title={t.label}
-              className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
+              className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl shrink-0 transition-colors ${
                 active ? 'bg-accent text-white' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]'
               }`}>
               <Icon size={17} strokeWidth={1.9} />
@@ -530,24 +531,24 @@ export function Whiteboard({ canvas, authorName }) {
         })}
         {/* Add image */}
         <button onClick={() => fileRef.current?.click()} title="Add image" disabled={uploading}
-          className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors disabled:opacity-50">
+          className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl shrink-0 text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors disabled:opacity-50">
           {uploading ? <Loader2 size={17} strokeWidth={1.9} className="animate-spin" /> : <ImageIcon size={17} strokeWidth={1.9} />}
         </button>
         <div className="w-px h-6 bg-white/10 mx-1" />
         <button onClick={() => zoomTo(zoom / 1.2)} title="Zoom out"
-          className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors">
+          className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl shrink-0 text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors">
           <Minus size={17} strokeWidth={1.9} />
         </button>
         <button onClick={() => zoomTo(1)} title="Reset zoom"
-          className="min-w-[46px] h-9 px-1 text-[12px] font-medium text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.06] rounded-xl tabular-nums transition-colors">
+          className="min-w-[44px] h-8 sm:h-9 px-1 shrink-0 text-[12px] font-medium text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.06] rounded-xl tabular-nums transition-colors">
           {Math.round(zoom * 100)}%
         </button>
         <button onClick={() => zoomTo(zoom * 1.2)} title="Zoom in"
-          className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors">
+          className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl shrink-0 text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors">
           <Plus size={17} strokeWidth={1.9} />
         </button>
         <button onClick={fitToContent} title="Zoom to fit everything"
-          className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors">
+          className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl shrink-0 text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors">
           <Maximize size={16} strokeWidth={1.9} />
         </button>
       </div>

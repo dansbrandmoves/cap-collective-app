@@ -244,6 +244,9 @@ export function AppProvider({ children }) {
       if (s.theme) setTheme(s.theme)
       if (s.slotStateCustomizations) setSlotStateCustomizations(s.slotStateCustomizations)
       if (s.prefixRules?.length) setPrefixRules(s.prefixRules)
+      if (s.brandColor !== undefined) setBrandColor(s.brandColor)
+      if (s.bookingTheme) setBookingTheme(s.bookingTheme)
+      if (s.logoMode) setLogoMode(s.logoMode)
     }
     // Restore connected calendars from Supabase (cross-device sync)
     if (data?.connected_calendars?.length) {
@@ -387,6 +390,12 @@ export function AppProvider({ children }) {
   const [calendarSyncing, setCalendarSyncing] = useState(false)
   const [lastSynced, setLastSynced] = useState(() => stored?.lastSynced ?? null)
   const [theme, setTheme] = useState(() => stored?.theme ?? 'dark')
+  // Booking-page branding (account-wide). brandColor null = Coordie teal default.
+  // bookingTheme: 'light' | 'dark' (neutral) | 'auto' (match embedding site).
+  // logoMode: 'logo' (uploaded) | 'avatar' (profile photo) | 'none'.
+  const [brandColor, setBrandColor] = useState(() => stored?.brandColor ?? null)
+  const [bookingTheme, setBookingTheme] = useState(() => stored?.bookingTheme ?? 'light')
+  const [logoMode, setLogoMode] = useState(() => stored?.logoMode ?? 'logo')
   const [slotStateCustomizations, setSlotStateCustomizations] = useState(() => stored?.slotStateCustomizations ?? {})
   const [businessHours, setBusinessHours] = useState(() => {
     const saved = stored?.businessHours
@@ -702,11 +711,13 @@ export function AppProvider({ children }) {
       googleAccessToken, googleTokenExpiresAt, lastSynced,
       theme, slotStateCustomizations, businessHours, guestCalendarEnabled,
       availabilityMode, blockDuration, timezone,
+      brandColor, bookingTheme, logoMode,
     })
   }, [productions, roomMembers, bookingPages,
       slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced, theme, slotStateCustomizations,
-      businessHours, guestCalendarEnabled, availabilityMode, blockDuration, timezone])
+      businessHours, guestCalendarEnabled, availabilityMode, blockDuration, timezone,
+      brandColor, bookingTheme, logoMode])
 
   // --- Slots ---
   const createSlot = useCallback((data) => {
@@ -807,10 +818,10 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!user?.id || !profileLoaded) return
     supabase.from('profiles').update({
-      settings: { guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules }
+      settings: { guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules, brandColor, bookingTheme, logoMode }
     }).eq('id', user.id)
       .then(({ error }) => { if (error) console.error('Sync settings:', error) })
-  }, [guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules, user?.id, profileLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules, brandColor, bookingTheme, logoMode, user?.id, profileLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const replaceCalendarEvents = useCallback(async (newEvents) => {
     setCalendarEvents(newEvents)
@@ -1376,6 +1387,8 @@ export function AppProvider({ children }) {
       roomMembers,
       // Theme
       theme, toggleTheme,
+      // Booking-page branding (account-wide)
+      brandColor, setBrandColor, bookingTheme, setBookingTheme, logoMode, setLogoMode,
       // Slot States (customizable)
       slotStates, slotStateCustomizations,
       updateSlotStateCustomization, resetSlotStateCustomizations, resetAllSettings,

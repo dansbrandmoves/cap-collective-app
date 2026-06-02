@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { supabase } from '../utils/supabase'
 import { useApp } from '../contexts/AppContext'
-import { CalendarDays, Users, CheckCircle2, Mail, ArrowRight } from 'lucide-react'
+import { CalendarDays, Users, LayoutGrid, Mail, ArrowRight } from 'lucide-react'
 
 const FEATURES = [
-  { icon: CalendarDays, label: 'Connect your calendar', desc: 'Pull real availability from Google Calendar automatically.' },
-  { icon: Users, label: 'Share rooms with groups', desc: 'Clients and collaborators get their own scoped view.' },
-  { icon: CheckCircle2, label: 'Coordinate without chaos', desc: 'Date requests, shared notes, and availability — all in one place.' },
+  { icon: CalendarDays, label: 'Find the day that works', desc: 'Connect your calendar and the days everyone’s free surface on their own.' },
+  { icon: LayoutGrid, label: 'Plan it together', desc: 'A shared board and whiteboard for the whole project — tasks, ideas, references.' },
+  { icon: Users, label: 'Invite anyone with a link', desc: 'Clients and crew join in a click — no account, no app to download.' },
 ]
 
 export function AuthPage() {

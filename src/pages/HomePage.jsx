@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useApp } from '../contexts/AppContext'
-import { CalendarDays, Users, Link2, CheckCircle2, ArrowRight, Inbox, LayoutGrid, Zap, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, Users, Link2, CheckCircle2, ArrowRight, Inbox, LayoutGrid, Shapes, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const FEATURES = [
   {
@@ -15,8 +15,13 @@ const FEATURES = [
   },
   {
     icon: LayoutGrid,
-    title: 'Everyone in one project',
-    desc: 'Clients, vendors, and crew live together in a single project. See who has shared, who you’re still waiting on, and who’s in.',
+    title: 'A shared board',
+    desc: 'Plan the work together on a fast, Trello-style board — lists, cards, and assignees that everyone on the project can see and move in real time.',
+  },
+  {
+    icon: Shapes,
+    title: 'An infinite whiteboard',
+    desc: 'Think out loud on a shared canvas: sticky notes, shapes, images, and connecting arrows. Map a shoot, sketch a flow, pin references — together, live.',
   },
   {
     icon: Link2,
@@ -28,18 +33,13 @@ const FEATURES = [
     title: 'Schedule in a tap',
     desc: 'Pick the best day, choose a time everyone’s open, and send the meeting — prefilled and ready, with the right people attached.',
   },
-  {
-    icon: Zap,
-    title: 'Booking pages too',
-    desc: 'Need a classic “book time with me” link? Spin up a booking page in seconds. Same calendar, shareable anywhere.',
-  },
 ]
 
 const HOW_IT_WORKS = [
   { step: '01', title: 'Create a project', desc: 'Name your production and add the clients, vendors, and crew you need to line up.' },
   { step: '02', title: 'Everyone shares their free time', desc: 'They connect a calendar or tap their free days — in one click, no account needed.' },
   { step: '03', title: 'See the day that works', desc: 'The day the whole group is free turns green. Filter by time of day to narrow it down.' },
-  { step: '04', title: 'Send the meeting', desc: 'Pick the slot, attach the right people, and it’s scheduled. No back-and-forth.' },
+  { step: '04', title: 'Lock it in, then plan it', desc: 'Send the meeting in a tap — then track the work on the board and sketch ideas on the whiteboard, together.' },
 ]
 
 // The group whose availability converges in the hero demo. Each person's free
@@ -248,8 +248,8 @@ export function HomePage() {
         </h1>
 
         <p className="text-lg sm:text-xl text-zinc-400 leading-relaxed max-w-xl mb-10">
-          Add your clients, vendors, and crew to a project. Everyone shares when they're free —
-          Coordie shows you the day that works. No back-and-forth.
+          Add your clients, vendors, and crew to a project. Find the day everyone's free —
+          then plan it together on a shared board and whiteboard. No back-and-forth.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -292,9 +292,9 @@ export function HomePage() {
       <section id="features" className="px-5 sm:px-8 py-20 sm:py-28 max-w-6xl mx-auto w-full">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Features</p>
-          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-3">Everything you need to coordinate</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-3">Find the time, plan the work, think together</h2>
           <p className="text-zinc-500 text-base max-w-xl mx-auto">
-            One tool for availability, communication, and scheduling — designed around how creative productions actually work.
+            Scheduling, a shared board, and a whiteboard in one calm workspace — designed around how creative productions actually run.
           </p>
         </div>
 

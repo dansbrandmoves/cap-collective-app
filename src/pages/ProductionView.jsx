@@ -165,7 +165,7 @@ export function ProductionView() {
       <div
         style={{ width: sidePanel.collapsed ? undefined : sidePanel.width }}
         className={`
-        relative fixed inset-y-0 left-0 z-30 w-72 bg-surface-900 border-r border-white/[0.06] flex flex-col
+        fixed inset-y-0 left-0 z-30 w-72 bg-surface-900 border-r border-white/[0.06] flex flex-col
         md:relative md:z-auto md:translate-x-0
         ${sidePanel.dragging ? '' : 'transition-transform duration-300 ease-ios'}
         ${mobileShowSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}

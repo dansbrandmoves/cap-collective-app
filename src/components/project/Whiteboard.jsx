@@ -269,7 +269,7 @@ export function Whiteboard({ canvas, authorName }) {
       )}
 
       {/* Bottom-center toolbar */}
-      <div data-ui className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-surface-900/90 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-2 py-1.5 shadow-lift"
+      <div data-ui className="absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-1 max-w-[calc(100vw-16px)] bg-surface-900/90 backdrop-blur-xl border border-white/[0.08] rounded-2xl px-2 py-1.5 shadow-lift"
         onPointerDown={(e) => e.stopPropagation()}>
         {TOOLS.map(t => {
           const Icon = t.icon

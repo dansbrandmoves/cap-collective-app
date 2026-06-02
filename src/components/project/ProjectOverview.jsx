@@ -43,6 +43,10 @@ export function ProjectOverview({
   // column needs top clearance so its heading clears the floating tabs — while the
   // inspector still bleeds to the very top edge.
   floatingHeader = false,
+  // Optional content rendered at the top of the calendar column (left side) — e.g.
+  // the guest's connect-calendar panel + people chips. Keeping it in the column
+  // (rather than above the whole view) lets the day inspector bleed to the top.
+  headerSlot = null,
 }) {
   const rooms = production.rooms || []
 
@@ -163,6 +167,8 @@ export function ProjectOverview({
       {/* Calendar column carries the page padding; the inspector stays flush to the edge.
           With a floating header, add lg top clearance so the heading clears the tabs. */}
       <div className={`flex-1 min-w-0 px-5 sm:px-8 lg:px-12 pb-8 sm:pb-12 pt-8 sm:pt-12 ${floatingHeader ? 'lg:pt-[88px]' : ''}`}>
+
+      {headerSlot}
 
       {/* Schedule a meeting — calm, spacious, one question at a time (booking aesthetic) */}
       {includedKnown > 0 ? (

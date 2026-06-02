@@ -246,49 +246,51 @@ function AvailabilityTab({ isOwner, production, availabilityRules, roomId, guest
   // Guests connect a calendar to contribute; the owner's availability comes from
   // their own connected calendar.
   const ownerChipLabel = isOwner ? 'You' : ownerDisplay
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-5 sm:px-8 pt-4 sm:pt-6 flex-shrink-0">
-        {!isOwner && guestCalendarEnabled && (
-          <GuestCalendarPanel
-            guestEvents={guestEvents}
-            onConnect={connectGuestCalendar}
-            onDisconnect={disconnectGuestCalendar}
-            ownerName={ownerName}
-            roomId={roomId}
-            guestName={guestName}
-          />
-        )}
-        {/* People to include in the overlap */}
-        {knownGuests.length > 0 && (
-          <div className="mb-1">
-            <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Who to include</p>
-            <div className="flex flex-wrap gap-1.5">
-              <PersonChip name={ownerChipLabel} active={includedOwner} onClick={() => setIncludedOwner(v => !v)} />
-              {knownGuests.map(n => (
-                <PersonChip key={n} name={n} active={!excluded.has(n)} onClick={() => toggleGuest(n)} />
-              ))}
-            </div>
+  // Connect panel + people chips ride at the top of the calendar COLUMN (headerSlot)
+  // rather than above the whole view, so the day inspector bleeds to the top edge.
+  const scheduleHeader = (
+    <div className="mb-5">
+      {!isOwner && guestCalendarEnabled && (
+        <GuestCalendarPanel
+          guestEvents={guestEvents}
+          onConnect={connectGuestCalendar}
+          onDisconnect={disconnectGuestCalendar}
+          ownerName={ownerName}
+          roomId={roomId}
+          guestName={guestName}
+        />
+      )}
+      {knownGuests.length > 0 && (
+        <div>
+          <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Who to include</p>
+          <div className="flex flex-wrap gap-1.5">
+            <PersonChip name={ownerChipLabel} active={includedOwner} onClick={() => setIncludedOwner(v => !v)} />
+            {knownGuests.map(n => (
+              <PersonChip key={n} name={n} active={!excluded.has(n)} onClick={() => toggleGuest(n)} />
+            ))}
           </div>
-        )}
-      </div>
-      <ProjectOverview
-        production={production}
-        slots={slots}
-        calendarEvents={effectiveCalendarEvents}
-        connectedCalendars={effectiveConnectedCalendars}
-        prefixRules={prefixRules}
-        businessHours={projectBusinessHours || businessHours}
-        loading={false}
-        dateRequestsByRoom={dateReqMap}
-        sharedAvailByRoom={sharedMap}
-        excluded={excluded}
-        includedOwner={includedOwner}
-        totalPeople={totalPeople}
-        ownerLabel={isOwner ? undefined : ownerDisplay}
-        ownerEmail={isOwner ? undefined : null}
-      />
+        </div>
+      )}
     </div>
+  )
+  return (
+    <ProjectOverview
+      production={production}
+      slots={slots}
+      calendarEvents={effectiveCalendarEvents}
+      connectedCalendars={effectiveConnectedCalendars}
+      prefixRules={prefixRules}
+      businessHours={projectBusinessHours || businessHours}
+      loading={false}
+      dateRequestsByRoom={dateReqMap}
+      sharedAvailByRoom={sharedMap}
+      excluded={excluded}
+      includedOwner={includedOwner}
+      totalPeople={totalPeople}
+      ownerLabel={isOwner ? undefined : ownerDisplay}
+      ownerEmail={isOwner ? undefined : null}
+      headerSlot={scheduleHeader}
+    />
   )
 }
 

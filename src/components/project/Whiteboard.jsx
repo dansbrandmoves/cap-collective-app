@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import {
   MousePointer2, StickyNote, Square, Circle, Type, MessageSquare,
-  Minus, Plus, Maximize, Trash2, Image as ImageIcon, Loader2,
+  Minus, Plus, Maximize, Trash2, Image as ImageIcon, Loader2, Replace,
 } from 'lucide-react'
 import { useApp } from '../../contexts/AppContext'
 
@@ -106,7 +106,7 @@ export function Whiteboard({ canvas, authorName }) {
   const { theme } = useApp()
   const isLight = theme === 'light'
   const dotColor = isLight ? 'rgba(15,23,42,0.16)' : 'rgba(255,255,255,0.10)'
-  const { elements, addElement, addImage, addConnector, patchElement, persistElement, deleteElement, bringToFront } = canvas
+  const { elements, addElement, addImage, replaceImage, addConnector, patchElement, persistElement, deleteElement, bringToFront } = canvas
   const [tool, setTool] = useState('select')
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
@@ -118,6 +118,7 @@ export function Whiteboard({ canvas, authorName }) {
   const [linkPoint, setLinkPoint] = useState(null) // current cursor in canvas coords while linking
   const viewportRef = useRef(null)
   const fileRef = useRef(null)
+  const replaceRef = useRef(null) // hidden input for replacing an existing image
   const drag = useRef(null) // { mode:'pan'|'move'|'resize'|'link'|'pinch', ... }
   const pointers = useRef(new Map()) // active touch/pen pointers on the canvas (for pinch)
   const pinchRef = useRef(null)
@@ -152,6 +153,17 @@ export function Whiteboard({ canvas, authorName }) {
     setUploading(false)
     if (res?.error) { setToast(res.error); setTimeout(() => setToast(null), 4000) }
     else if (res?.element) { setTool('select'); setSelectedId(res.element.id) }
+  }
+
+  async function handleReplacePick(e) {
+    const file = e.target.files?.[0]
+    const id = e.target.dataset.elId
+    e.target.value = '' // allow re-picking the same file
+    if (!file || !id) return
+    setUploading(true)
+    const res = await replaceImage(id, file)
+    setUploading(false)
+    if (res?.error) { setToast(res.error); setTimeout(() => setToast(null), 4000) }
   }
 
   const selected = elements.find(e => e.id === selectedId) || null
@@ -497,6 +509,7 @@ export function Whiteboard({ canvas, authorName }) {
           zoom={zoom}
           onColor={(color) => persistElement(selected.id, { color })}
           onFont={(font) => persistElement(selected.id, { font })}
+          onReplace={() => { if (replaceRef.current) { replaceRef.current.dataset.elId = selected.id; replaceRef.current.click() } }}
           onDelete={() => { deleteElement(selected.id); setSelectedId(null) }}
         />
       )}
@@ -555,6 +568,7 @@ export function Whiteboard({ canvas, authorName }) {
 
       {/* Hidden file input for image upload */}
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImagePick} />
+      <input ref={replaceRef} type="file" accept="image/*" className="hidden" onChange={handleReplacePick} />
 
       {/* Toast (quota / upload errors) */}
       {toast && (
@@ -756,7 +770,7 @@ function ConnectorBar({ cv, pan, zoom, onStyle, onColor, onDelete }) {
   )
 }
 
-function ElementBar({ el, pan, zoom, onColor, onFont, onDelete }) {
+function ElementBar({ el, pan, zoom, onColor, onFont, onReplace, onDelete }) {
   // Anchor above the element in screen space.
   const left = el.x * zoom + pan.x + (el.w * zoom) / 2
   const top = el.y * zoom + pan.y
@@ -787,7 +801,13 @@ function ElementBar({ el, pan, zoom, onColor, onFont, onDelete }) {
           </select>
         </>
       )}
-      {(!isImage || showFont) && <div className="w-px h-5 bg-white/10" />}
+      {isImage && (
+        <button onClick={onReplace} title="Replace image"
+          className="flex items-center gap-1.5 h-7 px-2 rounded-lg text-[12px] font-medium text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors">
+          <Replace size={13} strokeWidth={1.9} /> Replace
+        </button>
+      )}
+      <div className="w-px h-5 bg-white/10" />
       <button onClick={onDelete} title="Delete"
         className="w-7 h-7 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
         <Trash2 size={14} strokeWidth={1.9} />

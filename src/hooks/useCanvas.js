@@ -166,5 +166,54 @@ export function useCanvas(projectId, ownerId) {
     return { ok: true, element: el }
   }, [projectId, ownerId, addElement])
 
-  return { elements, loading, addElement, addImage, addConnector, patchElement, persistElement, deleteElement, bringToFront }
+  // Swap an image element's picture for a new one: same optimize → quota → upload
+  // pipeline as addImage, keep the element's position/width (re-fit height to the
+  // new aspect ratio), then delete the OLD stored file so it stops using quota.
+  const replaceImage = useCallback(async (id, file) => {
+    if (!projectId) return { error: 'No project.' }
+    const el = elements.find(e => e.id === id)
+    if (!el || el.type !== 'image') return { error: 'Not an image.' }
+
+    let opt
+    try { opt = await optimizeImage(file) } catch (e) { return { error: e?.message || 'Could not read that image.' } }
+    const bytes = opt.blob.size
+
+    // Quota — net change (subtract the image we're replacing).
+    const { data: projRows } = await supabase.from('canvas_elements').select('bytes').eq('project_id', projectId)
+    const projUsed = (projRows || []).reduce((s, r) => s + (r.bytes || 0), 0) - (el.bytes || 0)
+    if (projUsed + bytes > PROJECT_IMAGE_LIMIT) {
+      return { error: 'This project has hit its image storage limit. Delete some images to add more.' }
+    }
+    if (ownerId) {
+      const { data: projIds } = await supabase.from('productions').select('id').eq('owner_id', ownerId)
+      const ids = (projIds || []).map(p => p.id)
+      if (ids.length) {
+        const { data: accRows } = await supabase.from('canvas_elements').select('bytes').in('project_id', ids)
+        const accUsed = (accRows || []).reduce((s, r) => s + (r.bytes || 0), 0) - (el.bytes || 0)
+        if (accUsed + bytes > ACCOUNT_IMAGE_LIMIT) {
+          return { error: 'Your account has hit its image storage limit.' }
+        }
+      }
+    }
+
+    // Upload to a fresh path (new name busts the browser cache + handles ext change).
+    const ext = opt.type === 'image/webp' ? 'webp' : 'jpg'
+    const path = `${projectId}/${id}-${nanoid(6)}.${ext}`
+    const { error: upErr } = await supabase.storage.from(IMG_BUCKET).upload(path, opt.blob, { contentType: opt.type, upsert: true })
+    if (upErr) return { error: 'Upload failed: ' + upErr.message }
+    const { data: pub } = supabase.storage.from(IMG_BUCKET).getPublicUrl(path)
+
+    // Keep position + current width; re-fit height to the new aspect ratio.
+    const w = el.w
+    const h = Math.max(40, Math.round(w * (opt.height / opt.width)))
+    persistElement(id, { src: pub.publicUrl, bytes, w, h })
+
+    // Free the old stored file.
+    const oldPath = el.src?.split(`/${IMG_BUCKET}/`)[1]
+    if (oldPath) supabase.storage.from(IMG_BUCKET).remove([oldPath])
+
+    return { ok: true }
+  }, [projectId, ownerId, elements, persistElement])
+
+  return { elements, loading, addElement, addImage, replaceImage, addConnector, patchElement, persistElement, deleteElement, bringToFront }
 }

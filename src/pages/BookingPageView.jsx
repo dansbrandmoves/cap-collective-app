@@ -337,11 +337,24 @@ export function BookingPageView() {
   const [ownerTheme, setOwnerTheme] = useState(null) // 'light' | 'dark' — the owner's app theme
   const [windowKey, setWindowKey] = useState('any')   // time-of-day slot filter
 
-  // Render the page in the owner's chosen theme (their branded page). An embed
-  // ?theme= param overrides; default light when nothing is set.
+  // Render the page in the owner's chosen theme. Embed ?theme= overrides:
+  //   light | dark | auto (auto follows the embedding site's color scheme).
+  // Dark uses a NEUTRAL charcoal (the .booking-neutral class), not the app's
+  // tinted slate, so embedded pages sit comfortably on any site.
+  const [resolvedTheme, setResolvedTheme] = useState('light')
   useEffect(() => {
-    const effective = themeParam || ownerTheme || 'light'
-    document.documentElement.classList.toggle('light', effective === 'light')
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
+    const compute = () => {
+      let effective = themeParam || ownerTheme || 'light'
+      if (themeParam === 'auto') effective = mq?.matches ? 'dark' : 'light'
+      setResolvedTheme(effective)
+      document.documentElement.classList.toggle('light', effective === 'light')
+    }
+    compute()
+    if (themeParam === 'auto' && mq?.addEventListener) {
+      mq.addEventListener('change', compute)
+      return () => { mq.removeEventListener('change', compute); document.documentElement.classList.remove('light') }
+    }
     return () => document.documentElement.classList.remove('light')
   }, [themeParam, ownerTheme])
   const [guestEvents, setGuestEvents] = useState(() => {
@@ -544,11 +557,11 @@ export function BookingPageView() {
     <div className="flex items-center gap-3">
       {!hideLogo && (
         displayLogo ? (
-          <div className={`rounded-lg px-2.5 py-1.5 inline-flex flex-shrink-0 ${displayLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e] border border-white/10'}`}>
-            <img src={displayLogo} alt="" className="max-h-7 max-w-[110px] object-contain" />
-          </div>
+          // Host's brand mark on a clear background (no chip) so it looks like
+          // their page, not ours. "Powered by Coordie" lives in the footer.
+          <img src={displayLogo} alt="" className="max-h-9 max-w-[130px] object-contain flex-shrink-0" />
         ) : (
-          <img src="/coordie-logo.svg" alt="Coordie" className="h-6 flex-shrink-0" style={{ filter: 'invert(1)' }} />
+          <img src="/coordie-logo.svg" alt="Coordie" className="h-6 flex-shrink-0" style={{ filter: resolvedTheme === 'light' ? 'none' : 'invert(1)' }} />
         )
       )}
       <div className="text-left min-w-0">
@@ -561,7 +574,7 @@ export function BookingPageView() {
   )
 
   return (
-    <div className="min-h-dvh bg-surface-950 ambient-glow">
+    <div className="booking-neutral min-h-dvh bg-surface-950 ambient-glow">
       <div className="mx-auto max-w-[940px] px-5 sm:px-8 py-8 sm:py-12 safe-top safe-bottom">
 
         {/* On the slot/confirm steps the title sits centered up top; on the date

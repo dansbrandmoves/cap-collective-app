@@ -19,6 +19,23 @@ html.light {
   --surface-600: #d1d5db;
 }
 
+/* Booking pages override the app's tinted slate with a NEUTRAL palette so they
+   sit comfortably embedded on any site (dark = true charcoal, not greenish). */
+.booking-neutral {
+  --surface-950: #0c0c0d;
+  --surface-900: #161617;
+  --surface-800: #1f1f21;
+  --surface-700: #2b2b2e;
+  --surface-600: #3a3a3e;
+}
+html.light .booking-neutral {
+  --surface-950: #ffffff;
+  --surface-900: #f7f7f8;
+  --surface-800: #f0f0f1;
+  --surface-700: #e4e4e6;
+  --surface-600: #d4d4d6;
+}
+
 @layer base {
   html {
     @apply bg-surface-950 antialiased;

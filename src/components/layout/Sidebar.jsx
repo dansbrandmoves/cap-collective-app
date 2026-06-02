@@ -50,7 +50,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
       )}
       <aside
         style={{ width: railed ? RAIL : panel.width }}
-        className={`relative flex-shrink-0 bg-surface-900 border-r border-surface-700 flex flex-col
+        className={`flex-shrink-0 bg-surface-900 border-r border-surface-700 flex flex-col
         ${panel.dragging ? '' : 'transition-[width] duration-150'}
         fixed inset-y-0 left-0 z-50
         md:sticky md:top-0 md:h-screen md:translate-x-0 md:z-auto

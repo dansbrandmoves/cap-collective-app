@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { useApp } from '../../contexts/AppContext'
 import { Menu } from 'lucide-react'
@@ -7,6 +7,10 @@ import { Menu } from 'lucide-react'
 export function AppShell() {
   const { isOwner, theme } = useApp()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const location = useLocation()
+  // Pages that render their OWN unified mobile header (so we don't stack a second
+  // bar on top of theirs). The project view folds the global menu into its bar.
+  const ownsMobileHeader = location.pathname.startsWith('/project/')
 
   return (
     <div className="flex min-h-screen bg-surface-950">
@@ -14,7 +18,7 @@ export function AppShell() {
         <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
       )}
       <main className="flex-1 min-w-0 flex flex-col">
-        {isOwner && (
+        {isOwner && !ownsMobileHeader && (
           <div className="md:hidden flex items-center justify-between px-5 h-14 bg-surface-900/95 backdrop-blur-xl border-b border-white/[0.05] sticky top-0 z-30 safe-top">
             <div className="flex items-center gap-2">
               <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
@@ -28,7 +32,7 @@ export function AppShell() {
             </button>
           </div>
         )}
-        <Outlet />
+        <Outlet context={{ openGlobalMenu: () => setMobileMenuOpen(true) }} />
       </main>
     </div>
   )

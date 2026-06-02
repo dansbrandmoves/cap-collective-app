@@ -30,6 +30,7 @@ function daysUntil(dateStr) {
 
 function ProjectCard({ production, onUpdate, onDelete }) {
   const navigate = useNavigate()
+  const { getMembersForRoom } = useApp()
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -40,7 +41,14 @@ function ProjectCard({ production, onUpdate, onDelete }) {
   })
 
   const countdown = production.startDate ? daysUntil(production.startDate) : null
-  const totalRooms = production.rooms?.length ?? 0
+  // People on the project: distinct invited members across its rooms, plus you.
+  const peopleCount = (() => {
+    const names = new Set()
+    for (const r of (production.rooms || [])) {
+      for (const m of (getMembersForRoom?.(r.id) || [])) if (m.name) names.add(m.name)
+    }
+    return names.size + 1
+  })()
 
   async function handleSave(e) {
     e.preventDefault()
@@ -107,7 +115,7 @@ function ProjectCard({ production, onUpdate, onDelete }) {
             )}
             <div className="flex items-center gap-1.5 text-[13px] text-zinc-400">
               <Users size={13} strokeWidth={1.75} className="text-zinc-500" />
-              {totalRooms} {totalRooms === 1 ? 'group' : 'groups'}
+              {peopleCount} {peopleCount === 1 ? 'person' : 'people'}
             </div>
           </div>
 
@@ -174,7 +182,7 @@ function ProjectCard({ production, onUpdate, onDelete }) {
       {/* Delete confirm modal */}
       <Modal isOpen={confirmDelete} onClose={() => setConfirmDelete(false)} title="Delete Project">
         <p className="text-sm text-zinc-400 mb-6">
-          Delete <span className="text-zinc-100 font-medium">"{production.name}"</span>? This removes all groups and data. This cannot be undone.
+          Delete <span className="text-zinc-100 font-medium">"{production.name}"</span>? This removes all its data. This cannot be undone.
         </p>
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={() => setConfirmDelete(false)}>Cancel</Button>

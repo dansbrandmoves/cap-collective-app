@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useOutletContext } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
@@ -19,11 +19,12 @@ import { projectSlotsFromConfig } from '../utils/availability'
 import { PageLoader } from '../components/ui/PageLoader'
 import { AddPersonModal } from '../components/project/AddPersonModal'
 import { supabase } from '../utils/supabase'
-import { Menu, X, PanelLeft, MoreHorizontal, Pencil, Trash2, Share2, ExternalLink, Check, Archive, XCircle, Eye, EyeOff } from 'lucide-react'
+import { Menu, X, PanelLeft, MoreHorizontal, Pencil, Trash2, Share2, ExternalLink, Check, Archive, XCircle, Eye, EyeOff, Users } from 'lucide-react'
 
 export function ProductionView() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { openGlobalMenu } = useOutletContext() || {}
   const {
     getProduction, updateProduction, deleteProduction,
     createRoom, updateRoomName, deleteRoom, getRoomLink, sendRoomInvite,
@@ -244,18 +245,22 @@ export function ProductionView() {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Mobile top bar */}
-        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-white/[0.05] bg-surface-900 flex-shrink-0">
-          <button onClick={() => navigate('/')} className="text-[12px] text-zinc-500 hover:text-zinc-200 transition-colors flex-shrink-0">
-            ← Projects
+        {/* Unified mobile top bar: one menu (global nav), project name, People */}
+        <div className="md:hidden flex items-center gap-2 px-3 py-3 border-b border-white/[0.05] bg-surface-900 flex-shrink-0 safe-top">
+          <button
+            onClick={() => (openGlobalMenu ? openGlobalMenu() : navigate('/'))}
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-300 hover:text-zinc-100 hover:bg-white/5 transition-colors flex-shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu size={19} strokeWidth={1.75} />
           </button>
-          <span className="text-sm font-medium text-zinc-100 flex-1 truncate">{production.name}</span>
+          <span className="text-sm font-semibold text-zinc-100 flex-1 truncate tracking-tight">{production.name}</span>
           <button
             onClick={() => setMobileShowSidebar(true)}
-            className="flex items-center gap-1.5 text-[12px] text-zinc-400 hover:text-zinc-100 transition-colors flex-shrink-0"
+            className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-300 hover:text-zinc-100 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] rounded-full pl-2.5 pr-3 py-1.5 transition-colors flex-shrink-0"
           >
-            <Menu size={15} />
-            <span>People{peopleState.totalPeople > 1 ? ` · ${peopleState.includedCount}/${peopleState.totalPeople}` : ''}</span>
+            <Users size={14} strokeWidth={2} />
+            <span>People{peopleState.totalPeople > 1 ? ` ${peopleState.includedCount}/${peopleState.totalPeople}` : ''}</span>
           </button>
         </div>
 

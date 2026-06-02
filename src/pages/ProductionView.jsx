@@ -265,9 +265,10 @@ export function ProductionView() {
         </div>
 
         {/* Schedule | Tasks toggle — Schedule (the calendar) is the default focus.
-            z-20 so it floats above the full-bleed Board canvas. */}
-        <div className="relative z-20 px-5 sm:px-8 lg:px-12 pt-6 sm:pt-8 flex-shrink-0">
-          <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-xl p-1">
+            On lg it floats over the content (so the canvas + day inspector bleed to
+            the top edge); click-through except the pill. In flow on mobile. */}
+        <div className="relative z-20 lg:absolute lg:inset-x-0 lg:top-0 lg:pointer-events-none px-5 sm:px-8 lg:px-12 pt-6 sm:pt-8 flex-shrink-0">
+          <div className="inline-flex items-center gap-0.5 bg-surface-900/80 lg:backdrop-blur-md border border-white/[0.05] rounded-xl p-1 pointer-events-auto">
             {[['schedule', 'Schedule'], ['tasks', 'Tasks'], ['board', 'Board']].map(([key, label]) => (
               <button key={key} onClick={() => setMainTab(key)}
                 className={`px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ease-ios ${
@@ -296,10 +297,11 @@ export function ProductionView() {
             excluded={peopleState.excluded}
             includedOwner={peopleState.includedOwner}
             totalPeople={peopleState.totalPeople}
+            floatingHeader
           />
         )}
         {mainTab === 'tasks' && (
-          <div className="flex-1 overflow-y-auto no-scrollbar px-5 sm:px-8 lg:px-12 py-6 sm:py-8">
+          <div className="flex-1 overflow-y-auto no-scrollbar px-5 sm:px-8 lg:px-12 py-6 sm:py-8 lg:pt-[88px]">
             <Board
               columns={board.columns}
               tasksByColumn={board.tasksByColumn}

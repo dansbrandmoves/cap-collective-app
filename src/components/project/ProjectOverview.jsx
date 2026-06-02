@@ -39,6 +39,10 @@ export function ProjectOverview({
   loading, dateRequestsByRoom = {}, sharedAvailByRoom = {}, excluded, includedOwner, totalPeople = 0,
   // When a guest views this (RoomView), the "owner" is the host, not "You".
   ownerLabel = OWNER_LABEL, ownerEmail = undefined,
+  // When the parent floats its tab bar over this view (project view), the calendar
+  // column needs top clearance so its heading clears the floating tabs — while the
+  // inspector still bleeds to the very top edge.
+  floatingHeader = false,
 }) {
   const rooms = production.rooms || []
 
@@ -156,8 +160,9 @@ export function ProjectOverview({
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar">
       <div className="lg:flex lg:items-start">
-      {/* Calendar column carries the page padding; the inspector stays flush to the edge */}
-      <div className="flex-1 min-w-0 px-5 sm:px-8 lg:px-12 py-8 sm:py-12">
+      {/* Calendar column carries the page padding; the inspector stays flush to the edge.
+          With a floating header, add lg top clearance so the heading clears the tabs. */}
+      <div className={`flex-1 min-w-0 px-5 sm:px-8 lg:px-12 pb-8 sm:pb-12 pt-8 sm:pt-12 ${floatingHeader ? 'lg:pt-[88px]' : ''}`}>
 
       {/* Schedule a meeting — calm, spacious, one question at a time (booking aesthetic) */}
       {includedKnown > 0 ? (

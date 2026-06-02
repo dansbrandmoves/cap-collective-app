@@ -108,58 +108,34 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect, ownerName, r
 
   if (!configured) return null
 
+  // Compact connect affordance (booking-page style) — a single button + one line,
+  // never a full-area takeover. The calendar shows underneath either way.
   if (guestEvents === null) {
     return (
-      <div className="bg-gradient-to-b from-accent/[0.08] to-transparent border border-accent/20 rounded-2xl px-6 py-7 mb-6 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-accent/15 border border-accent/25 flex items-center justify-center mx-auto mb-4">
-          <CalendarDays size={20} strokeWidth={1.75} className="text-accent" />
-        </div>
-        <p className="text-[17px] font-semibold text-zinc-50 tracking-tight mb-1.5">
-          Connect your calendar — that’s it
-        </p>
-        <p className="text-[13px] text-zinc-400 leading-relaxed max-w-sm mx-auto mb-5">
-          We’ll find the days you’re free and share them with {who} automatically. No form to fill out.
-          Only free/busy is read — never your event titles or details.
-        </p>
+      <div className="mb-4 flex flex-col items-start sm:flex-row sm:items-center gap-2.5">
         <Button
           onClick={handleConnect}
           disabled={!gisReady || loading || !guestName}
-          className="w-full sm:w-auto justify-center px-6"
+          className="justify-center flex-shrink-0"
         >
           <CalendarDays size={15} strokeWidth={1.75} className="mr-2" />
-          Connect Google Calendar
+          {loading ? 'Connecting…' : 'Connect your calendar'}
         </Button>
-        {error && <p className="text-xs text-red-400 mt-3">{error}</p>}
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="border border-surface-700 rounded-xl px-5 py-4 mb-5 text-sm text-zinc-500">
-        Loading your calendar...
+        <p className="text-[12px] text-zinc-500 leading-relaxed max-w-sm">
+          Highlights when you and {who} are both free. Only your free/busy is shared — never event details.
+        </p>
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </div>
     )
   }
 
   return (
-    <div className="bg-green-500/[0.07] border border-green-500/20 rounded-2xl px-5 py-4 mb-6">
-      <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-xl bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <CheckCircle2 size={16} strokeWidth={2} className="text-green-400" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-zinc-100 tracking-tight">Done — we found your free days</p>
-          <p className="text-xs text-zinc-400 leading-relaxed mt-0.5">
-            {who.charAt(0).toUpperCase() + who.slice(1)} can see them now. Your busy times are dimmed below — nothing else to do.
-          </p>
-        </div>
-        <button onClick={onDisconnect}
-          className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors flex-shrink-0">
-          Disconnect
-        </button>
-      </div>
-      {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+    <div className="mb-4 inline-flex items-center gap-2 text-[12px] font-medium text-green-400 bg-green-500/[0.08] border border-green-500/20 rounded-full pl-2.5 pr-2 py-1.5">
+      <CheckCircle2 size={14} strokeWidth={2} />
+      Calendar connected
+      <span className="text-zinc-600">·</span>
+      <button onClick={onDisconnect} className="text-zinc-500 hover:text-zinc-300 transition-colors">Disconnect</button>
+      {error && <span className="text-red-400 ml-1">{error}</span>}
     </div>
   )
 }

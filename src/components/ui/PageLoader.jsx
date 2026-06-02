@@ -3,7 +3,7 @@
 
 export function PageLoader({ full = false, label }) {
   return (
-    <div className={`${full ? 'min-h-screen' : 'min-h-[60vh]'} flex flex-col items-center justify-center gap-3`}>
+    <div className={`${full ? 'min-h-dvh' : 'min-h-[60vh]'} flex flex-col items-center justify-center gap-3`}>
       <img
         src="/coordie-logo.svg"
         alt="Coordie"

@@ -21,7 +21,7 @@ import { PageLoader } from './components/ui/PageLoader'
 
 function LoadingScreen() {
   return (
-    <div className="flex items-center justify-center h-screen bg-surface-950">
+    <div className="flex items-center justify-center h-dvh bg-surface-950">
       <PageLoader />
     </div>
   )

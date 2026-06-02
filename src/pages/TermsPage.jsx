@@ -4,7 +4,7 @@ export function TermsPage() {
   const { theme } = useApp()
 
   return (
-    <div className="min-h-screen bg-surface-950">
+    <div className="min-h-dvh bg-surface-950">
       <nav className="flex items-center justify-between px-6 sm:px-12 py-5 border-b border-surface-700">
         <a href="/">
           <img

@@ -49,7 +49,7 @@ export function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-950 flex flex-col md:flex-row">
+    <div className="min-h-dvh bg-surface-950 flex flex-col md:flex-row">
       {/* Left panel — branding + features */}
       <div className="hidden md:flex flex-col justify-between w-[420px] flex-shrink-0 bg-surface-900 border-r border-surface-700 px-12 py-16">
         <div>

@@ -13,7 +13,7 @@ export function AppShell() {
   const ownsMobileHeader = location.pathname.startsWith('/project/') || location.pathname.startsWith('/room/')
 
   return (
-    <div className="flex min-h-screen bg-surface-950">
+    <div className="flex min-h-dvh bg-surface-950">
       {isOwner && (
         <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
       )}

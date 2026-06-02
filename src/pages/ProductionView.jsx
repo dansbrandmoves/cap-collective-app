@@ -83,13 +83,13 @@ export function ProductionView() {
   if (!production) {
     if (loading) {
       return (
-        <div className="flex items-center justify-center h-screen bg-surface-950">
+        <div className="flex items-center justify-center h-dvh bg-surface-950">
           <PageLoader />
         </div>
       )
     }
     return (
-      <div className="flex items-center justify-center h-screen bg-surface-950">
+      <div className="flex items-center justify-center h-dvh bg-surface-950">
         <div className="text-center">
           <p className="text-zinc-400 mb-2">Project not found</p>
           <Link to="/" className="text-sm text-accent hover:underline">Back to projects</Link>
@@ -140,7 +140,7 @@ export function ProductionView() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-dvh overflow-hidden">
       {/* Mobile backdrop */}
       {mobileShowSidebar && (
         <div

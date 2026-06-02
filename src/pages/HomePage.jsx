@@ -219,7 +219,7 @@ export function HomePage() {
   const logoFilter = 'none'
 
   return (
-    <div className="min-h-screen bg-surface-950 flex flex-col">
+    <div className="min-h-dvh bg-surface-950 flex flex-col">
       {/* Nav */}
       <nav className="flex items-center justify-between px-5 sm:px-8 py-5 border-b border-white/5 sticky top-0 bg-surface-950/80 backdrop-blur-xl z-40">
         <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: logoFilter }} />

@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
+  // hover: styles apply only on devices that actually support hover (mouse/trackpad),
+  // so taps on iPad/touch don't leave buttons stuck in their hover state.
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       fontFamily: {

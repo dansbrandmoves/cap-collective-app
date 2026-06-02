@@ -458,7 +458,7 @@ export function BookingPageView() {
   /* Loading */
   if (loading) {
     return (
-      <div className="min-h-screen bg-surface-950 flex items-center justify-center">
+      <div className="min-h-dvh bg-surface-950 flex items-center justify-center">
         <img src="/coordie-logo.svg" alt="Coordie" className="h-5 animate-pulse" style={{ filter: 'invert(1)' }} />
       </div>
     )
@@ -467,7 +467,7 @@ export function BookingPageView() {
   /* Not Found */
   if (!page) {
     return (
-      <div className="min-h-screen bg-surface-950 ambient-glow flex items-center justify-center px-6">
+      <div className="min-h-dvh bg-surface-950 ambient-glow flex items-center justify-center px-6">
         <div className="text-center max-w-sm animate-fadeIn">
           <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/5 flex items-center justify-center mx-auto mb-5">
             <CalendarDays size={20} strokeWidth={1.5} className="text-zinc-500" />
@@ -482,7 +482,7 @@ export function BookingPageView() {
   /* Success */
   if (done) {
     return (
-      <div className="min-h-screen bg-surface-950 ambient-glow flex items-center justify-center px-6 py-10 safe-top safe-bottom">
+      <div className="min-h-dvh bg-surface-950 ambient-glow flex items-center justify-center px-6 py-10 safe-top safe-bottom">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -561,7 +561,7 @@ export function BookingPageView() {
   )
 
   return (
-    <div className="min-h-screen bg-surface-950 ambient-glow">
+    <div className="min-h-dvh bg-surface-950 ambient-glow">
       <div className="mx-auto max-w-[940px] px-5 sm:px-8 py-8 sm:py-12 safe-top safe-bottom">
 
         {/* On the slot/confirm steps the title sits centered up top; on the date

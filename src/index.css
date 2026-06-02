@@ -50,6 +50,17 @@ html.light {
     @apply transition-all duration-150;
   }
 
+  /* iOS Safari zooms the whole page when a focused input has a font-size below
+     16px. On touch devices, force 16px on inputs/textarea/select so focusing a
+     field never triggers that jarring zoom. Desktop sizing is untouched. */
+  @media (pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    textarea,
+    select {
+      font-size: 16px;
+    }
+  }
+
   /* Fix select dropdown options in dark mode */
   select {
     color-scheme: dark;

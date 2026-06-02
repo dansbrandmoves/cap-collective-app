@@ -462,7 +462,7 @@ export function RoomView() {
 
   const effectiveCalendarEvents = isOwner ? calendarEvents : ownerCalendarEvents
   const effectiveConnectedCalendars = isOwner ? connectedCalendars : ownerConnectedCalendars
-  const ownerDisplay = ownerName || 'Host'
+  const ownerDisplay = ownerName || 'Coordinator'
   const ownerChipLabel = isOwner ? 'You' : ownerDisplay
   const totalPeople = knownGuests.length + 1
   const toggleGuest = (name) => setExcluded(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
@@ -531,7 +531,7 @@ export function RoomView() {
         {/* People filter — toggle who counts toward the overlap */}
         <div className="flex-1 overflow-y-auto px-3 py-4 no-scrollbar">
           <p className="px-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">People</p>
-          {[{ name: ownerChipLabel, active: includedOwner, toggle: () => setIncludedOwner(v => !v), sub: isOwner ? 'you' : 'host' },
+          {[{ name: ownerChipLabel, active: includedOwner, toggle: () => setIncludedOwner(v => !v), sub: (!isOwner && !ownerName) ? null : 'Coordinator' },
             ...knownGuests.map(n => ({ name: n, active: !excluded.has(n), toggle: () => toggleGuest(n), sub: n === guestName ? 'you' : null }))
           ].map((p, i) => (
             <button key={i} onClick={p.toggle}

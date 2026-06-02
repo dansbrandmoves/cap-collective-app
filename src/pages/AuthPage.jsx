@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../utils/supabase'
 import { useApp } from '../contexts/AppContext'
 import { CalendarDays, Users, LayoutGrid, Mail, ArrowRight } from 'lucide-react'
@@ -16,6 +16,13 @@ export function AuthPage() {
   const [emailSent, setEmailSent] = useState(false)
   const [showEmail, setShowEmail] = useState(false)
   const { theme } = useApp()
+
+  // The sign-in page is always light (Arro brand), regardless of the app theme.
+  // Restore the user's theme when leaving the page.
+  useEffect(() => {
+    document.documentElement.classList.add('light')
+    return () => { document.documentElement.classList.toggle('light', theme === 'light') }
+  }, [theme])
 
   async function handleGoogleSignIn() {
     setLoading(true)
@@ -74,7 +81,7 @@ export function AuthPage() {
             src="/coordie-logo.svg"
             alt="Coordie"
             className="h-7 mb-12"
-            style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }}
+            style={{ filter: 'none' }}
           />
           <h2 className="text-2xl font-semibold text-zinc-100 mb-3 leading-snug">
             Coordinate your projects, beautifully.
@@ -109,7 +116,7 @@ export function AuthPage() {
             src="/coordie-logo.svg"
             alt="Coordie"
             className="h-6 mx-auto mb-3"
-            style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }}
+            style={{ filter: 'none' }}
           />
           <p className="text-sm text-zinc-500">Coordinate your projects, beautifully.</p>
         </div>
@@ -135,8 +142,8 @@ export function AuthPage() {
             </div>
           ) : (
             <>
-              <h1 className="text-xl font-semibold text-zinc-100 mb-1">Welcome back</h1>
-              <p className="text-sm text-zinc-500 mb-8">Sign in to manage your projects and rooms.</p>
+              <h1 className="text-xl font-semibold text-zinc-100 mb-1">Welcome to Coordie</h1>
+              <p className="text-sm text-zinc-500 mb-8">Sign in or create your account — it takes seconds.</p>
 
               {error && (
                 <div className="bg-red-900/30 border border-red-700/50 rounded-xl px-4 py-3 mb-5">

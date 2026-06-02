@@ -622,10 +622,12 @@ export function AppProvider({ children }) {
     return Object.values(pendingRequestCounts).reduce((sum, c) => sum + c, 0)
   }, [pendingRequestCounts])
 
-  // Apply theme class. Booking pages manage their OWN theme (light / neutral dark /
-  // match-site) independently of the owner's app theme — don't stomp it here.
+  // Apply theme class. Booking pages, the marketing landing, and the sign-in page
+  // manage their OWN theme (always light / neutral) independently of the owner's
+  // app theme — don't stomp it here.
   useEffect(() => {
-    if (window.location.pathname.startsWith('/book/')) return
+    const p = window.location.pathname
+    if (p.startsWith('/book/') || p === '/signin') return
     document.documentElement.classList.toggle('light', theme === 'light')
   }, [theme])
 

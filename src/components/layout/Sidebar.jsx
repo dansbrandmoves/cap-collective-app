@@ -19,6 +19,27 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
   const panel = useResizablePanel('coordie-nav', { defaultWidth: 224, min: 200, max: 340, side: 'right' })
   const railed = panel.collapsed
 
+  // Split into projects I own vs. projects shared with me (I'm a member, not owner).
+  const ownedProjects = productions.filter(p => p.ownerId === user?.id)
+  const sharedProjects = productions.filter(p => p.ownerId && p.ownerId !== user?.id)
+
+  const projectLink = (p) => (
+    <NavLink
+      key={p.id}
+      to={`/project/${p.id}`}
+      onClick={onMobileClose}
+      className={({ isActive }) =>
+        `block px-3 py-1.5 rounded-lg text-[13px] truncate transition-colors ${
+          isActive
+            ? 'bg-surface-700 text-zinc-100'
+            : 'text-zinc-500 hover:text-zinc-200 hover:bg-surface-800'
+        }`
+      }
+    >
+      {p.name}
+    </NavLink>
+  )
+
   const navItem = ({ to, label, icon: Icon }) => (
     <NavLink
       key={to}
@@ -77,25 +98,19 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
             {PRIMARY_NAV.map(navItem)}
           </div>
 
-          {/* Projects sub-list — hidden when railed (no room for names) */}
+          {/* Projects sub-list — grouped into mine + shared. Hidden when railed. */}
           {!railed && productions.length > 0 && (
             <div className="mt-1.5 ml-3 pl-2 border-l border-surface-700/60 space-y-0.5">
-              {productions.map(p => (
-                <NavLink
-                  key={p.id}
-                  to={`/project/${p.id}`}
-                  onClick={onMobileClose}
-                  className={({ isActive }) =>
-                    `block px-3 py-1.5 rounded-lg text-[13px] truncate transition-colors ${
-                      isActive
-                        ? 'bg-surface-700 text-zinc-100'
-                        : 'text-zinc-500 hover:text-zinc-200 hover:bg-surface-800'
-                    }`
-                  }
-                >
-                  {p.name}
-                </NavLink>
-              ))}
+              {ownedProjects.map(projectLink)}
+
+              {sharedProjects.length > 0 && (
+                <>
+                  <p className="px-3 pt-3 pb-1 text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+                    Shared with me
+                  </p>
+                  {sharedProjects.map(projectLink)}
+                </>
+              )}
             </div>
           )}
 

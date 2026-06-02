@@ -63,7 +63,7 @@ export function PeopleRoster({
                 <span className={`text-[13px] truncate ${inc ? 'text-zinc-100' : 'text-zinc-500'}`}>{name}</span>
                 {(viaCalendar || isOwner) && <CalendarDays size={11} strokeWidth={2} className={`flex-shrink-0 ${inc ? 'text-accent/80' : 'text-zinc-600'}`} />}
                 {isOwner
-                  ? <span className="text-[10px] text-zinc-600 flex-shrink-0">you</span>
+                  ? <span className="text-[10px] text-zinc-600 flex-shrink-0">Coordinator · you</span>
                   : (!responded && <span className="text-[10px] text-zinc-600 italic flex-shrink-0">invited</span>)}
               </button>
               {/* Personal invite link — only useful until their calendar is

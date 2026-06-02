@@ -334,29 +334,29 @@ export function BookingPageView() {
   const [ownerLogo, setOwnerLogo] = useState(null)
   const [ownerLogoDark, setOwnerLogoDark] = useState(true)
   const [ownerGuestCalendarEnabled, setOwnerGuestCalendarEnabled] = useState(true)
-  const [ownerTheme, setOwnerTheme] = useState(null) // 'light' | 'dark' — the owner's app theme
+  const [bookingTheme, setBookingTheme] = useState(null) // owner's booking-page default: 'light' | 'dark' | 'auto'
   const [windowKey, setWindowKey] = useState('any')   // time-of-day slot filter
 
-  // Render the page in the owner's chosen theme. Embed ?theme= overrides:
-  //   light | dark | auto (auto follows the embedding site's color scheme).
-  // Dark uses a NEUTRAL charcoal (the .booking-neutral class), not the app's
-  // tinted slate, so embedded pages sit comfortably on any site.
+  // Booking pages have their OWN theme, independent of the owner's app theme.
+  // Precedence: embed ?theme= override > the owner's bookingTheme default > light.
+  //   light | dark (neutral charcoal, not the app's tinted slate) | auto (follows
+  //   the embedding site's prefers-color-scheme).
+  const mode = themeParam || bookingTheme || 'light'
   const [resolvedTheme, setResolvedTheme] = useState('light')
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
     const compute = () => {
-      let effective = themeParam || ownerTheme || 'light'
-      if (themeParam === 'auto') effective = mq?.matches ? 'dark' : 'light'
+      const effective = mode === 'auto' ? (mq?.matches ? 'dark' : 'light') : mode
       setResolvedTheme(effective)
       document.documentElement.classList.toggle('light', effective === 'light')
     }
     compute()
-    if (themeParam === 'auto' && mq?.addEventListener) {
+    if (mode === 'auto' && mq?.addEventListener) {
       mq.addEventListener('change', compute)
       return () => { mq.removeEventListener('change', compute); document.documentElement.classList.remove('light') }
     }
     return () => document.documentElement.classList.remove('light')
-  }, [themeParam, ownerTheme])
+  }, [mode])
   const [guestEvents, setGuestEvents] = useState(() => {
     try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
   })
@@ -399,7 +399,8 @@ export function BookingPageView() {
         setOwnerLogo(data?.logo_url || null)
         setOwnerLogoDark(data?.logo_is_dark ?? true)
         setOwnerGuestCalendarEnabled(data?.settings?.guestCalendarEnabled ?? true)
-        setOwnerTheme(data?.settings?.theme || null)
+        // Dedicated booking-page theme; default light (not the owner's app theme).
+        setBookingTheme(data?.settings?.bookingTheme || 'light')
       })
   }, [page])
 

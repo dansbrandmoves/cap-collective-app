@@ -17,7 +17,7 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   const [showEmbed, setShowEmbed] = useState(false)
   const [embedHideLogo, setEmbedHideLogo] = useState(false)
   const [embedHideDesc, setEmbedHideDesc] = useState(false)
-  const [embedTheme, setEmbedTheme] = useState('dark')
+  const [embedTheme, setEmbedTheme] = useState('auto')
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuPos, setMenuPos] = useState(null)
   const menuBtnRef = useRef(null)
@@ -40,7 +40,7 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
   const [logoUploading, setLogoUploading] = useState(false)
 
   const link = `${window.location.origin}/book/${page.slug}`
-  const embedParams = [embedHideLogo && 'logo=0', embedHideDesc && 'desc=0', embedTheme === 'light' && 'theme=light'].filter(Boolean).join('&')
+  const embedParams = [embedHideLogo && 'logo=0', embedHideDesc && 'desc=0', `theme=${embedTheme}`].filter(Boolean).join('&')
   const embedSrc = embedParams ? `${link}?${embedParams}` : link
   const embedCode = `<iframe src="${embedSrc}" width="100%" height="800" style="border:none;border-radius:12px;" allowtransparency="true" loading="lazy"></iframe>`
 
@@ -175,14 +175,14 @@ function BookingPageCard({ page, onToggle, onDelete, onEdit, onFetchBookings, on
               </label>
             </div>
             <div className="flex items-center gap-1 bg-surface-800 border border-white/[0.06] rounded-lg p-0.5">
-              {['dark', 'light'].map(t => (
-                <button key={t} onClick={() => setEmbedTheme(t)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors capitalize ${
+              {[['light', 'Light'], ['dark', 'Dark'], ['auto', 'Match site']].map(([t, label]) => (
+                <button key={t} onClick={() => setEmbedTheme(t)} title={t === 'auto' ? "Follows your site's light/dark mode" : undefined}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
                     embedTheme === t
                       ? 'bg-surface-600 text-zinc-100'
                       : 'text-zinc-500 hover:text-zinc-300'
                   }`}>
-                  {t}
+                  {label}
                 </button>
               ))}
             </div>

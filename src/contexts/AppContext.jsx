@@ -622,8 +622,10 @@ export function AppProvider({ children }) {
     return Object.values(pendingRequestCounts).reduce((sum, c) => sum + c, 0)
   }, [pendingRequestCounts])
 
-  // Apply theme class
+  // Apply theme class. Booking pages manage their OWN theme (light / neutral dark /
+  // match-site) independently of the owner's app theme — don't stomp it here.
   useEffect(() => {
+    if (window.location.pathname.startsWith('/book/')) return
     document.documentElement.classList.toggle('light', theme === 'light')
   }, [theme])
 

@@ -119,9 +119,26 @@ export function Whiteboard({ canvas, authorName }) {
   const [linkPoint, setLinkPoint] = useState(null) // current cursor in canvas coords while linking
   const viewportRef = useRef(null)
   const fileRef = useRef(null)
-  const drag = useRef(null) // { mode:'pan'|'move'|'resize'|'link', ... }
+  const drag = useRef(null) // { mode:'pan'|'move'|'resize'|'link'|'pinch', ... }
+  const pointers = useRef(new Map()) // active touch/pen pointers on the canvas (for pinch)
+  const pinchRef = useRef(null)
+  const panRef = useRef(pan)
+  const zoomRef = useRef(zoom)
+  useEffect(() => { panRef.current = pan }, [pan])
+  useEffect(() => { zoomRef.current = zoom }, [zoom])
 
   useEffect(() => { injectFonts() }, [])
+
+  // Zoom toward a viewport point, reading current pan/zoom from refs so it can run
+  // inside long-lived pointer listeners (pinch) without stale-closure issues.
+  const applyZoom = useCallback((nextZoom, px, py) => {
+    const z = Math.min(3, Math.max(0.2, nextZoom))
+    const cp = panRef.current, cz = zoomRef.current
+    const canvasX = (px - cp.x) / cz
+    const canvasY = (py - cp.y) / cz
+    setPan({ x: px - canvasX * z, y: py - canvasY * z })
+    setZoom(z)
+  }, [])
 
   // Image upload: optimize + quota-check + upload happen in the hook; we just place
   // it at the viewport center and surface any error.
@@ -209,18 +226,37 @@ export function Whiteboard({ canvas, authorName }) {
       if (el && tool === 'comment') setEditingId(el.id)
       return
     }
-    // pan
-    setSelectedId(null)
-    setEditingId(null)
-    drag.current = { mode: 'pan', startX: e.clientX, startY: e.clientY, origin: { ...pan } }
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerUp)
+    // Track the pointer (for pinch). One finger = pan; two fingers = pinch-zoom.
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    const first = pointers.current.size === 1
+    if (pointers.current.size >= 2) {
+      const [a, b] = [...pointers.current.values()]
+      pinchRef.current = { startDist: Math.hypot(a.x - b.x, a.y - b.y), startZoom: zoomRef.current }
+      drag.current = { mode: 'pinch' }
+    } else {
+      setSelectedId(null)
+      setEditingId(null)
+      drag.current = { mode: 'pan', startX: e.clientX, startY: e.clientY, origin: { ...panRef.current } }
+    }
+    if (first) {
+      window.addEventListener('pointermove', onPointerMove)
+      window.addEventListener('pointerup', onPointerUp)
+    }
   }
 
   const onPointerMove = useCallback((e) => {
     const d = drag.current
     if (!d) return
-    if (d.mode === 'link') {
+    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (d.mode === 'pinch') {
+      if (pointers.current.size < 2 || !pinchRef.current) return
+      const [a, b] = [...pointers.current.values()]
+      const dist = Math.hypot(a.x - b.x, a.y - b.y)
+      const rect = viewportRef.current.getBoundingClientRect()
+      const mx = (a.x + b.x) / 2 - rect.left
+      const my = (a.y + b.y) / 2 - rect.top
+      applyZoom(pinchRef.current.startZoom * (dist / pinchRef.current.startDist), mx, my)
+    } else if (d.mode === 'link') {
       setLinkPoint(screenToCanvas(e.clientX, e.clientY))
     } else if (d.mode === 'pan') {
       setPan({ x: d.origin.x + (e.clientX - d.startX), y: d.origin.y + (e.clientY - d.startY) })
@@ -250,7 +286,7 @@ export function Whiteboard({ canvas, authorName }) {
       const ny = (c === 'ne' || c === 'nw') ? y + (h - nh) : y
       patchElement(d.id, { x: nx, y: ny, w: nw, h: nh })
     }
-  }, [zoom, patchElement, screenToCanvas])
+  }, [zoom, patchElement, screenToCanvas, applyZoom])
 
   // Topmost non-connector element whose box contains a canvas point (for link drops).
   const elementAt = useCallback((pt, excludeId) => {
@@ -262,6 +298,23 @@ export function Whiteboard({ canvas, authorName }) {
 
   const onPointerUp = useCallback((e) => {
     const d = drag.current
+    // Background pan/pinch use the multi-pointer map: lift one finger to step
+    // pinch→pan, lift the last to end. Listeners stay until all fingers are up.
+    if (d && (d.mode === 'pan' || d.mode === 'pinch')) {
+      pointers.current.delete(e.pointerId)
+      if (pointers.current.size >= 2) return
+      if (pointers.current.size === 1) {
+        const [p] = [...pointers.current.values()]
+        pinchRef.current = null
+        drag.current = { mode: 'pan', startX: p.x, startY: p.y, origin: { ...panRef.current } }
+        return
+      }
+      pinchRef.current = null
+      drag.current = null
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+      return
+    }
     if (d?.mode === 'link') {
       const pt = screenToCanvas(e.clientX, e.clientY)
       const target = elementAt(pt, d.fromId)
@@ -380,6 +433,9 @@ export function Whiteboard({ canvas, authorName }) {
       onWheel={handleWheel}
       style={{
         cursor,
+        // Stop the browser from claiming touch gestures (native scroll/zoom) so our
+        // pointer-driven pan / drag / resize / pinch stay smooth — for every object.
+        touchAction: 'none',
         backgroundImage: showGrid ? `radial-gradient(circle, ${dotColor} 1px, transparent 1px)` : 'none',
         backgroundSize: `${GRID * zoom}px ${GRID * zoom}px`,
         backgroundPosition: `${pan.x}px ${pan.y}px`,

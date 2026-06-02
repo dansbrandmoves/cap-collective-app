@@ -93,6 +93,16 @@ export function useCanvas(projectId, ownerId) {
     })
   }, [])
 
+  // Connector: links two elements with a curved arrow. Recomputes endpoints from
+  // the linked elements at render time, so it tracks them as they move.
+  const addConnector = useCallback((fromId, toId) => {
+    if (!projectId || !fromId || !toId || fromId === toId) return null
+    return addElement({
+      type: 'connector', from_id: fromId, to_id: toId,
+      color: '#94a3b8', w: 0, h: 0, meta: { thickness: 2.5, arrow: 'end' },
+    })
+  }, [projectId, addElement])
+
   // Bring an element to front (highest z).
   const bringToFront = useCallback((id) => {
     const maxZ = elements.reduce((m, e) => Math.max(m, e.z || 0), 0)
@@ -144,5 +154,5 @@ export function useCanvas(projectId, ownerId) {
     return { ok: true, element: el }
   }, [projectId, ownerId, addElement])
 
-  return { elements, loading, addElement, addImage, patchElement, persistElement, deleteElement, bringToFront }
+  return { elements, loading, addElement, addImage, addConnector, patchElement, persistElement, deleteElement, bringToFront }
 }

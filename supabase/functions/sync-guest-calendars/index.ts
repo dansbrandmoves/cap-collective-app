@@ -16,6 +16,9 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const CAL_API = "https://www.googleapis.com/calendar/v3";
 const HORIZON_DAYS = 60;
+// A day only counts as UNAVAILABLE when it's heavily booked. A single short meeting
+// shouldn't zero out someone's whole day (that made busy people contribute nothing).
+const BUSY_DAY_MINUTES = 360; // ~6h of opaque meetings = "can't meet that day"
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -82,45 +85,41 @@ function localDateStr(d: Date, tz: string): string {
 }
 
 // Derive the set of free day-strings in the next HORIZON_DAYS, in the guest's tz.
-// A day is BUSY if any timed/all-day event covers any part of it; otherwise FREE.
-// (Mirrors the client's "a day is free if some slot has no overlapping event",
-// simplified to whole-day granularity which is what guests share.)
+//
+// Rules (so a normal, busy calendar still surfaces meetable days):
+//   - Events marked "Free" in Google (transparency === 'transparent') never block —
+//     birthdays, FYIs, and most all-day items are Free by default.
+//   - An opaque all-day event (vacation / OOO) blocks the whole day(s) it spans.
+//   - Timed "Busy" events accumulate minutes per local day; a day is UNAVAILABLE only
+//     once that total reaches BUSY_DAY_MINUTES. A couple of short meetings still = free.
 function deriveFreeDays(events: any[], tz: string): string[] {
-  // Collect busy local-date strings.
-  const busy = new Set<string>();
+  const busyMinutes = new Map<string, number>(); // local date -> opaque timed minutes
+  const fullDayBlocked = new Set<string>();       // opaque all-day spans
   for (const e of events) {
+    if (e.transparency === "transparent") continue; // "Free" events don't block
     if (e.start?.date) {
-      // All-day event: [start.date, end.date) exclusive end.
+      // All-day, opaque: [start.date, end.date) exclusive end.
       const start = new Date(e.start.date + "T00:00:00Z");
       const end = new Date((e.end?.date || e.start.date) + "T00:00:00Z");
       for (let t = start.getTime(); t < end.getTime(); t += 86400000) {
-        busy.add(localDateStr(new Date(t), tz));
+        fullDayBlocked.add(localDateStr(new Date(t), tz));
       }
     } else if (e.start?.dateTime) {
-      // Timed event: mark each local day it touches.
       const start = new Date(e.start.dateTime);
       const end = new Date(e.end?.dateTime || e.start.dateTime);
-      const startDay = localDateStr(start, tz);
-      const endDay = localDateStr(end, tz);
-      busy.add(startDay);
-      if (endDay !== startDay) {
-        // Walk day by day across the span.
-        let cur = new Date(start);
-        for (let i = 0; i < 366; i++) {
-          const ds = localDateStr(cur, tz);
-          busy.add(ds);
-          if (ds === endDay) break;
-          cur = new Date(cur.getTime() + 86400000);
-        }
-      }
+      let mins = Math.max(0, (end.getTime() - start.getTime()) / 60000);
+      mins = Math.min(mins, 24 * 60); // clamp pathological multi-day timed events
+      const ds = localDateStr(start, tz);
+      busyMinutes.set(ds, (busyMinutes.get(ds) || 0) + mins);
     }
   }
-  // Free = today..+HORIZON not in busy.
   const free: string[] = [];
   const now = new Date();
   for (let i = 0; i < HORIZON_DAYS; i++) {
     const ds = localDateStr(new Date(now.getTime() + i * 86400000), tz);
-    if (!busy.has(ds)) free.push(ds);
+    if (fullDayBlocked.has(ds)) continue;
+    if ((busyMinutes.get(ds) || 0) >= BUSY_DAY_MINUTES) continue;
+    free.push(ds);
   }
   return free;
 }

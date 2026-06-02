@@ -30,6 +30,23 @@ export function AuthPage() {
     }
   }
 
+  async function handleMicrosoftSignIn() {
+    setLoading(true)
+    setError(null)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'azure',
+      options: {
+        // Match the Graph permissions granted on the Azure app registration.
+        scopes: 'openid email profile offline_access User.Read Calendars.Read',
+        redirectTo: window.location.origin,
+      },
+    })
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+    }
+  }
+
   async function handleEmailSignIn(e) {
     e.preventDefault()
     if (!email.trim()) return
@@ -140,6 +157,21 @@ export function AuthPage() {
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
                 {loading ? 'Signing in...' : 'Continue with Google'}
+              </button>
+
+              {/* Microsoft sign-in */}
+              <button
+                onClick={handleMicrosoftSignIn}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-50 text-zinc-900 font-medium text-sm rounded-xl px-4 py-3 transition-all duration-150 disabled:opacity-50 shadow-sm hover:shadow-md mb-3"
+              >
+                <svg width="18" height="18" viewBox="0 0 23 23">
+                  <path fill="#f25022" d="M1 1h10v10H1z"/>
+                  <path fill="#7fba00" d="M12 1h10v10H12z"/>
+                  <path fill="#00a4ef" d="M1 12h10v10H1z"/>
+                  <path fill="#ffb900" d="M12 12h10v10H12z"/>
+                </svg>
+                {loading ? 'Signing in...' : 'Continue with Microsoft'}
               </button>
 
               {/* Divider */}

@@ -98,13 +98,7 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
     <div className="fixed inset-0 bg-surface-950 ambient-glow flex items-center justify-center z-50 px-6">
       <div className="bg-surface-900/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl px-8 py-10 w-full max-w-sm shadow-lift">
         <div className="flex items-center gap-3 mb-8">
-          {ownerLogo ? (
-            <div className={`rounded-xl px-3 py-2 inline-flex ${ownerLogoDark ? 'bg-[#f0f0f0]' : 'bg-[#1a1a1e]'}`}>
-              <img src={ownerLogo} alt="" className="max-h-7 max-w-[120px] object-contain" />
-            </div>
-          ) : (
-            <img src="/coordie-logo.svg" alt="Coordie" className="h-6" style={{ filter: 'invert(1)' }} />
-          )}
+          <img src="/coordie-logo.svg" alt="Coordie" className="h-6" style={{ filter: 'invert(1)' }} />
         </div>
         <h2 className="text-[24px] font-semibold text-zinc-50 tracking-tight leading-tight mb-2">Let’s find a day that works</h2>
         <p className="text-[15px] text-zinc-400 leading-relaxed mb-7">Your name and email — so the team knows whose availability this is and can reach you about the meeting.</p>
@@ -525,11 +519,6 @@ export function RoomView() {
               <button onClick={() => setSidebarCollapsed(true)} title="Collapse panel" className="hidden md:flex text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded p-1"><PanelLeft size={15} strokeWidth={1.75} /></button>
             </div>
           </div>
-          {/* Host's own brand mark, above the project title — shown on a clear
-              background (no opaque chip) so it reads as their brand, not ours. */}
-          {ownerLogo && (
-            <img src={ownerLogo} alt="" className="max-h-8 max-w-[180px] object-contain mb-2.5" />
-          )}
           <h2 className="text-[15px] font-semibold text-zinc-50 leading-snug tracking-tight truncate">{production.name}</h2>
           {room.name && room.name !== production.name && (
             <p className="text-xs text-zinc-500 mt-0.5 truncate">{room.name}</p>

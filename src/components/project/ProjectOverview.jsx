@@ -301,6 +301,8 @@ export function ProjectOverview({
           actionLabel="Schedule meeting"
           ownerLabel={ownerLabel}
           ownerEmail={ownerEmail}
+          windowFilter={windowKey !== 'any' ? win : null}
+          totalKnown={includedKnown}
           onClose={() => setInspected(null)}
         />
       )}

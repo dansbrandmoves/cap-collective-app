@@ -467,7 +467,7 @@ function BestDaysStrip({ slots, calendarEvents, connectedCalendars, prefixRules,
  * Single-room by default. Pass `roomIds` (array) to inspect a whole project — the
  * caller combines every group's date-filtered requests/availability and we pull
  * member emails from all of those rooms. `actionLabel` renames the primary button. */
-export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRequests, sharedAvailability, onClose, actionLabel = 'Schedule meeting', ownerLabel = OWNER_LABEL, ownerEmail: ownerEmailProp }) {
+export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRequests, sharedAvailability, onClose, actionLabel = 'Schedule meeting', ownerLabel = OWNER_LABEL, ownerEmail: ownerEmailProp, windowFilter = null, totalKnown = null }) {
   const { getMembersForRoom, timezone, user } = useApp()
   // Owner's email: explicit override (guest view) wins; else the signed-in owner.
   const ownerEmail = ((ownerEmailProp ?? user?.email) || '').trim() || null
@@ -585,13 +585,19 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
   // Slot picker expansion state
   const [showSlotPicker, setShowSlotPicker] = useState(false)
 
-  // Best slots: top 3 by free count (when guests exist), else top 3 slots for quick-schedule
+  // Best slots: top 3 by free count (when guests exist), else top 3 slots for quick-schedule.
+  // Filtered to the chosen time-of-day window when one is active.
+  const toMin = (t) => { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + m }
   const bestSlots = useMemo(() => {
     if (!slotOverlap.rows.length) return []
-    const sorted = [...slotOverlap.rows].sort((a, b) => b.freeCount - a.freeCount)
+    const windowed = windowFilter
+      ? slotOverlap.rows.filter(({ slot }) => toMin(slot.startTime) < windowFilter.end && toMin(slot.endTime) > windowFilter.start)
+      : slotOverlap.rows
+    const source = windowed.length > 0 ? windowed : slotOverlap.rows
+    const sorted = [...source].sort((a, b) => b.freeCount - a.freeCount)
     const withFree = sorted.filter(r => r.freeCount > 0)
     return (withFree.length > 0 ? withFree : sorted).slice(0, 3)
-  }, [slotOverlap])
+  }, [slotOverlap, windowFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scheduling form state ──
   // Default title from who's selected; user can override.
@@ -718,7 +724,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
               </p>
               <div className="space-y-2">
                 {bestSlots.map(({ slot, freeCount, freeNames }) => {
-                  const total = guestData.length
+                  const total = totalKnown !== null ? totalKnown : guestData.length
                   const isSelected = selectedSlotId === slot.id
                   return (
                     <SlotRow
@@ -748,8 +754,8 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                 })}
               </div>
 
-              {/* Pick a different time — expands full slot list with dim effect */}
-              {slotOverlap.rows.length > 0 && (
+              {/* Pick a different time — expands remaining slots (best slots already shown above) */}
+              {slotOverlap.rows.length > bestSlots.length && (
                 <div className="mt-3">
                   <button
                     onClick={() => setShowSlotPicker(s => !s)}
@@ -761,8 +767,8 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
 
                   {showSlotPicker && (
                     <div className="mt-2 space-y-1.5 animate-fadeIn">
-                      {slotOverlap.rows.map(({ slot, freeCount, freeNames }) => {
-                        const total = guestData.length
+                      {slotOverlap.rows.filter(r => !bestSlots.some(b => b.slot.id === r.slot.id)).map(({ slot, freeCount, freeNames }) => {
+                        const total = totalKnown !== null ? totalKnown : guestData.length
                         const isBusy = total > 0 && freeCount === 0
                         const isAll = total > 0 && freeCount === total
                         const isSelected = selectedSlotId === slot.id

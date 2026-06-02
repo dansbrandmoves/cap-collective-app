@@ -375,7 +375,7 @@ export function CalendarSettings({ embedded = false } = {}) {
       {/* ── Branding ── */}
       <div className="py-5 border-b border-surface-800">
         <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Branding</p>
-        <p className="text-xs text-zinc-600 mb-3">Your logo appears on booking pages and room links instead of Coordie.</p>
+        <p className="text-xs text-zinc-600 mb-3">Your logo appears on booking pages. Projects use the Coordie mark.</p>
         <div className="flex items-center gap-4">
           {logoUrl ? (
             <div className="space-y-3">

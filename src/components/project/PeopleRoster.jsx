@@ -52,9 +52,10 @@ export function PeopleRoster({
               }`}
             >
               <button
-                onClick={() => togglePerson(name)}
-                title={isOwner ? 'Your calendar' : (responded ? (viaCalendar ? 'Shared via Google Calendar' : 'Tapped their free days') : 'Hasn’t responded yet')}
-                className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                onClick={() => (responded || isOwner) ? togglePerson(name) : undefined}
+                disabled={!responded && !isOwner}
+                title={isOwner ? 'Your calendar' : (responded ? (viaCalendar ? 'Shared via Google Calendar' : 'Tapped their free days') : 'Has not shared their calendar yet')}
+                className={`flex items-center gap-2 flex-1 min-w-0 text-left ${!responded && !isOwner ? 'cursor-default' : ''}`}
               >
                 <span className={`w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0 ${inc ? 'bg-accent text-white' : 'border border-white/20'}`}>
                   {inc && <Check size={10} strokeWidth={3} />}

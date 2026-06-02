@@ -526,8 +526,10 @@ export function RoomView() {
               <button onClick={() => setSidebarCollapsed(true)} title="Collapse panel" className="hidden md:flex text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded p-1"><PanelLeft size={15} strokeWidth={1.75} /></button>
             </div>
           </div>
-          <h2 className="text-[15px] font-semibold text-zinc-50 leading-snug tracking-tight truncate">{room.name}</h2>
-          <p className="text-xs text-zinc-500 mt-0.5 truncate">{production.name}</p>
+          <h2 className="text-[15px] font-semibold text-zinc-50 leading-snug tracking-tight truncate">{production.name}</h2>
+          {room.name && room.name !== production.name && (
+            <p className="text-xs text-zinc-500 mt-0.5 truncate">{room.name}</p>
+          )}
           {isOwner && (
             <Link to={`/project/${productionId}`} className="inline-flex items-center gap-1 mt-2 text-[12px] text-zinc-500 hover:text-zinc-200 transition-colors">← Back to project</Link>
           )}
@@ -591,7 +593,7 @@ export function RoomView() {
           <button onClick={() => setSidebarOpen(true)} className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-300 hover:text-zinc-100 hover:bg-white/5 transition-colors" aria-label="Open menu">
             <Menu size={19} strokeWidth={1.75} />
           </button>
-          <span className="text-sm font-semibold text-zinc-100 flex-1 truncate tracking-tight">{room.name}</span>
+          <span className="text-sm font-semibold text-zinc-100 flex-1 truncate tracking-tight">{production.name}</span>
         </div>
 
         {/* Floating tabs (lg) so the calendar + day inspector bleed to the top */}

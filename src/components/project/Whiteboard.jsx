@@ -191,6 +191,20 @@ export function Whiteboard({ canvas, authorName }) {
   const elementsRef = useRef(elements)
   useEffect(() => { elementsRef.current = elements }, [elements])
 
+  // Reliably persist text when editing ends. onBlur alone is lossy: clicking the
+  // canvas clears editingId, which unmounts the textarea before its blur fires, so
+  // the typed text never reaches Supabase. This flushes the element's current text
+  // whenever the edit target changes (or clears), regardless of how it ended.
+  const prevEditingRef = useRef(null)
+  useEffect(() => {
+    const prev = prevEditingRef.current
+    if (prev && prev !== editingId) {
+      const el = elementsRef.current?.find(e => e.id === prev)
+      if (el) persistElement(prev, { text: el.text || '' })
+    }
+    prevEditingRef.current = editingId
+  }, [editingId, persistElement])
+
   function startMove(e, el) {
     if (tool !== 'select') return
     e.stopPropagation()

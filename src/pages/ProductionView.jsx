@@ -244,9 +244,9 @@ export function ProductionView() {
       </div>
 
       {/* Main area */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">
         {/* Unified mobile top bar: one menu (global nav), project name, People */}
-        <div className="md:hidden flex items-center gap-2 px-3 py-3 border-b border-white/[0.05] bg-surface-900 flex-shrink-0 safe-top">
+        <div className="md:hidden relative z-20 flex items-center gap-2 px-3 py-3 border-b border-white/[0.05] bg-surface-900 flex-shrink-0 safe-top">
           <button
             onClick={() => (openGlobalMenu ? openGlobalMenu() : navigate('/'))}
             className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-300 hover:text-zinc-100 hover:bg-white/5 transition-colors flex-shrink-0"
@@ -264,8 +264,9 @@ export function ProductionView() {
           </button>
         </div>
 
-        {/* Schedule | Tasks toggle — Schedule (the calendar) is the default focus */}
-        <div className="px-5 sm:px-8 lg:px-12 pt-6 sm:pt-8 flex-shrink-0">
+        {/* Schedule | Tasks toggle — Schedule (the calendar) is the default focus.
+            z-20 so it floats above the full-bleed Board canvas. */}
+        <div className="relative z-20 px-5 sm:px-8 lg:px-12 pt-6 sm:pt-8 flex-shrink-0">
           <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-xl p-1">
             {[['schedule', 'Schedule'], ['tasks', 'Tasks'], ['board', 'Board']].map(([key, label]) => (
               <button key={key} onClick={() => setMainTab(key)}
@@ -318,7 +319,9 @@ export function ProductionView() {
           </div>
         )}
         {mainTab === 'board' && (
-          <div className="flex-1 min-h-0 mt-4">
+          // Full-bleed: the canvas fills the whole main area (to every edge) while
+          // the tab pill floats above it (z-20).
+          <div className="absolute inset-0 z-0 overflow-hidden">
             <Whiteboard canvas={canvas} authorName={ownerAuthorName} />
           </div>
         )}

@@ -576,7 +576,7 @@ export function RoomView() {
         </div>
       )}
       {roomTab === 'board' && (
-        <div className="flex-1 min-h-0 mt-4">
+        <div className="flex-1 min-h-0 mt-3 overflow-hidden">
           <Whiteboard canvas={canvas} authorName={isOwner ? (ownerName || 'Owner') : guestName} />
         </div>
       )}

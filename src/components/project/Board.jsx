@@ -217,8 +217,8 @@ function TaskCard({ task, dragging, onDragStart, onDragEnd, onDragOverCard, onOp
       onDragEnd={onDragEnd}
       onDragOver={onDragOverCard}
       onClick={onOpen}
-      className={`group rounded-xl border bg-surface-800/80 px-3 py-2.5 cursor-pointer transition-all duration-150 ${
-        dragging ? 'opacity-40 border-accent/40' : 'border-white/[0.07] hover:border-white/[0.18]'
+      className={`group rounded-xl border bg-surface-800/80 px-3 py-2.5 cursor-pointer transition-all duration-150 shadow-sm shadow-black/5 ${
+        dragging ? 'opacity-40 border-accent/40' : 'border-zinc-500/20 hover:border-zinc-500/40'
       }`}
     >
       <p className="text-[13px] leading-snug text-zinc-100 break-words">{task.title}</p>

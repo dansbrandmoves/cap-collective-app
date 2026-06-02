@@ -47,7 +47,13 @@ export function useBoard(projectId) {
 
   useEffect(() => {
     if (!projectId) { setColumns([]); setTasks([]); setLoading(false); return }
-    setLoading(true)
+    // Stale-while-revalidate: paint instantly from the local cache, then refresh.
+    let painted = false
+    try {
+      const cached = JSON.parse(localStorage.getItem(`coordie-board-${projectId}`) || 'null')
+      if (cached) { setColumns(cached.columns || []); setTasks(cached.tasks || []); setLoading(false); painted = true }
+    } catch { /* ignore */ }
+    if (!painted) setLoading(true)
     load()
     // Live collaboration: any change to this project's columns/tasks refetches.
     const channel = supabase
@@ -57,6 +63,12 @@ export function useBoard(projectId) {
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [projectId, load])
+
+  // Keep the local cache fresh so the next open paints instantly.
+  useEffect(() => {
+    if (!projectId || loading) return
+    try { localStorage.setItem(`coordie-board-${projectId}`, JSON.stringify({ columns, tasks })) } catch { /* ignore */ }
+  }, [projectId, loading, columns, tasks])
 
   const sortedColumns = useMemo(
     () => [...columns].sort((a, b) => a.position - b.position),

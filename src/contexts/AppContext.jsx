@@ -8,6 +8,15 @@ import { logEvent, STATUS } from '../utils/diag'
 const AppContext = createContext(null)
 const STORAGE_KEY = 'coordie-app'
 
+// Only fetch calendar events in the window the views actually use (a generous
+// ~4 months), instead of every row ever synced. Keeps sign-in fast and the local
+// cache small. Events overlapping [now-7d, now+120d].
+function calendarWindow() {
+  const s = new Date(); s.setDate(s.getDate() - 7)
+  const e = new Date(); e.setDate(e.getDate() + 120)
+  return { startIso: s.toISOString(), endIso: e.toISOString() }
+}
+
 // owner_calendar_events row → the shape deriveSlotState expects.
 // calendarId must be the googleCalendarId (stable key) — see CLAUDE.md.
 function mapOwnerEventRow(r) {
@@ -194,7 +203,8 @@ export function AppProvider({ children }) {
     setProfileLoaded(true)
     // Load calendar events + trigger sync in background — don't block profile load.
     if (userId) {
-      supabase.from('owner_calendar_events').select('*').eq('owner_id', userId)
+      const { startIso, endIso } = calendarWindow()
+      supabase.from('owner_calendar_events').select('*').eq('owner_id', userId).gte('end_at', startIso).lte('start', endIso)
         .then(({ data: rows }) => {
           if (rows) setCalendarEvents(rows.map(mapOwnerEventRow))
           if (rows?.length) setLastSynced(new Date().toISOString())
@@ -793,7 +803,8 @@ export function AppProvider({ children }) {
       }
       let rowCount = 0
       if (user?.id) {
-        const { data: rows } = await supabase.from('owner_calendar_events').select('*').eq('owner_id', user.id)
+        const { startIso, endIso } = calendarWindow()
+        const { data: rows } = await supabase.from('owner_calendar_events').select('*').eq('owner_id', user.id).gte('end_at', startIso).lte('start', endIso)
         if (rows) { setCalendarEvents(rows.map(mapOwnerEventRow)); rowCount = rows.length }
       }
       setLastSynced(new Date().toISOString())
@@ -813,7 +824,8 @@ export function AppProvider({ children }) {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'owner_calendar_events', filter: `owner_id=eq.${user.id}` },
         () => {
-          supabase.from('owner_calendar_events').select('*').eq('owner_id', user.id)
+          const { startIso, endIso } = calendarWindow()
+          supabase.from('owner_calendar_events').select('*').eq('owner_id', user.id).gte('end_at', startIso).lte('start', endIso)
             .then(({ data }) => { if (data) setCalendarEvents(data.map(mapOwnerEventRow)) })
         })
       .subscribe()

@@ -300,7 +300,11 @@ export function RoomView() {
     if (!production?.ownerId || isOwner) return
     const ownerId = production.ownerId
     const mapRow = e => ({ id: e.google_event_id || e.id, calendarId: e.calendar_id, title: e.title, start: e.start, end: e.end_at, isAllDay: e.is_all_day })
+    // Window to the scheduling horizon so the guest view loads fast (not every row).
+    const ws = new Date(); ws.setDate(ws.getDate() - 7)
+    const we = new Date(); we.setDate(we.getDate() + 120)
     const load = () => supabase.from('owner_calendar_events').select('*').eq('owner_id', ownerId)
+      .gte('end_at', ws.toISOString()).lte('start', we.toISOString())
       .then(({ data }) => setOwnerCalendarEvents((data || []).map(mapRow)))
     load()
     // Live: when the owner's calendar changes (server sync), guests update too.

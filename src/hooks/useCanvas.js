@@ -29,7 +29,13 @@ export function useCanvas(projectId, ownerId) {
 
   useEffect(() => {
     if (!projectId) { setElements([]); setLoading(false); return }
-    setLoading(true)
+    // Stale-while-revalidate: paint the board instantly from cache, then refresh.
+    let painted = false
+    try {
+      const cached = JSON.parse(localStorage.getItem(`coordie-canvas-${projectId}`) || 'null')
+      if (cached) { setElements(cached); setLoading(false); painted = true }
+    } catch { /* ignore */ }
+    if (!painted) setLoading(true)
     load()
     const channel = supabase
       .channel(`canvas-${projectId}`)
@@ -42,6 +48,12 @@ export function useCanvas(projectId, ownerId) {
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [projectId, load])
+
+  // Keep the local cache fresh so the next open paints instantly.
+  useEffect(() => {
+    if (!projectId || loading) return
+    try { localStorage.setItem(`coordie-canvas-${projectId}`, JSON.stringify(elements)) } catch { /* ignore */ }
+  }, [projectId, loading, elements])
 
   // Add a new element. Returns the created element (so the caller can select it).
   const addElement = useCallback((partial) => {

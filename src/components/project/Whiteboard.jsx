@@ -44,24 +44,31 @@ const DEFAULTS = {
 }
 
 // ── Connector geometry ──
-// Point on a box's edge in the direction of (tx,ty) from its center.
-function edgePoint(b, tx, ty) {
+// Snap an endpoint to one of the box's FOUR side dots (the same N/E/S/W handles
+// shown on selection), choosing the side that best faces the target. Anchoring to
+// these fixed points "grounds" the line so its ends never slide along an edge.
+function anchorWithSide(b, tx, ty) {
   const cx = b.x + b.w / 2, cy = b.y + b.h / 2
   const dx = tx - cx, dy = ty - cy
-  if (dx === 0 && dy === 0) return { x: cx, y: cy }
-  const hw = b.w / 2, hh = b.h / 2
-  const sx = dx === 0 ? Infinity : hw / Math.abs(dx)
-  const sy = dy === 0 ? Infinity : hh / Math.abs(dy)
-  const s = Math.min(sx, sy)
-  return { x: cx + dx * s, y: cy + dy * s }
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx >= 0 ? { x: b.x + b.w, y: cy, side: 'right' } : { x: b.x, y: cy, side: 'left' }
+  }
+  return dy >= 0 ? { x: cx, y: b.y + b.h, side: 'bottom' } : { x: cx, y: b.y, side: 'top' }
 }
 
-// A horizontally-biased cubic bezier between two points → a natural curve.
-function curvePath(p1, p2) {
-  const dx = p2.x - p1.x
-  const bend = Math.max(40, Math.abs(dx) * 0.5)
-  const c1 = { x: p1.x + bend, y: p1.y }
-  const c2 = { x: p2.x - bend, y: p2.y }
+function sideNormal(side) {
+  return side === 'right' ? { x: 1, y: 0 } : side === 'left' ? { x: -1, y: 0 }
+    : side === 'top' ? { x: 0, y: -1 } : side === 'bottom' ? { x: 0, y: 1 } : { x: 0, y: 0 }
+}
+
+// Cubic bezier that leaves each anchor perpendicular to its side, so the curve grows
+// straight out of the dot (Miro-like) instead of cutting across the corner.
+function curveAnchored(p1, side1, p2, side2) {
+  const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y)
+  const k = Math.max(38, dist * 0.4)
+  const n1 = sideNormal(side1), n2 = sideNormal(side2)
+  const c1 = { x: p1.x + n1.x * k, y: p1.y + n1.y * k }
+  const c2 = { x: p2.x + n2.x * k, y: p2.y + n2.y * k }
   return { d: `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`, c1, c2 }
 }
 
@@ -227,11 +234,20 @@ export function Whiteboard({ canvas, authorName }) {
       const { x, y, w, h } = d.origin
       const c = d.corner || 'se'
       const minW = 40, minH = 32
-      let nx = x, ny = y, nw = w, nh = h
-      if (c === 'se') { nw = Math.max(minW, w + dx); nh = Math.max(minH, h + dy) }
-      else if (c === 'sw') { nw = Math.max(minW, w - dx); nh = Math.max(minH, h + dy); nx = x + (w - nw) }
-      else if (c === 'ne') { nw = Math.max(minW, w + dx); nh = Math.max(minH, h - dy); ny = y + (h - nh) }
-      else if (c === 'nw') { nw = Math.max(minW, w - dx); nh = Math.max(minH, h - dy); nx = x + (w - nw); ny = y + (h - nh) }
+      const east = c === 'se' || c === 'ne'   // grows with +dx
+      const south = c === 'se' || c === 'sw'  // grows with +dy
+      let nw = Math.max(minW, east ? w + dx : w - dx)
+      let nh
+      if (d.lockAspect) {
+        const aspect = w / h
+        nh = Math.max(minH, nw / aspect)
+        nw = nh * aspect // re-derive so aspect holds even when minH clamps
+      } else {
+        nh = Math.max(minH, south ? h + dy : h - dy)
+      }
+      // Keep the opposite corner fixed.
+      const nx = (c === 'sw' || c === 'nw') ? x + (w - nw) : x
+      const ny = (c === 'ne' || c === 'nw') ? y + (h - nh) : y
       patchElement(d.id, { x: nx, y: ny, w: nw, h: nh })
     }
   }, [zoom, patchElement, screenToCanvas])
@@ -291,7 +307,8 @@ export function Whiteboard({ canvas, authorName }) {
 
   function startResize(e, el, corner = 'se') {
     e.stopPropagation()
-    drag.current = { mode: 'resize', id: el.id, corner, startX: e.clientX, startY: e.clientY, origin: { x: el.x, y: el.y, w: el.w, h: el.h } }
+    // Images resize proportionally (keep aspect) so they scale, not stretch.
+    drag.current = { mode: 'resize', id: el.id, corner, lockAspect: el.type === 'image', startX: e.clientX, startY: e.clientY, origin: { x: el.x, y: el.y, w: el.w, h: el.h } }
     window.addEventListener('pointermove', onPointerMove)
     window.addEventListener('pointerup', onPointerUp)
   }
@@ -333,9 +350,10 @@ export function Whiteboard({ canvas, authorName }) {
       const fb = boxOf(from), tb = boxOf(to)
       const fc = { x: fb.x + fb.w / 2, y: fb.y + fb.h / 2 }
       const tc = { x: tb.x + tb.w / 2, y: tb.y + tb.h / 2 }
-      const p1 = edgePoint(fb, tc.x, tc.y)
-      const p2 = edgePoint(tb, fc.x, fc.y)
-      const { d, c1, c2 } = curvePath(p1, p2)
+      const a1 = anchorWithSide(fb, tc.x, tc.y)
+      const a2 = anchorWithSide(tb, fc.x, fc.y)
+      const p1 = { x: a1.x, y: a1.y }, p2 = { x: a2.x, y: a2.y }
+      const { d, c1, c2 } = curveAnchored(a1, a1.side, a2, a2.side)
       const meta = c.meta || {}
       out.push({
         id: c.id, d, p1, p2,
@@ -349,8 +367,8 @@ export function Whiteboard({ canvas, authorName }) {
   const linkView = useMemo(() => {
     if (!linkFrom || !linkPoint) return null
     const from = elMap.get(linkFrom); if (!from) return null
-    const p1 = edgePoint(boxOf(from), linkPoint.x, linkPoint.y)
-    const { d, c2 } = curvePath(p1, linkPoint)
+    const a1 = anchorWithSide(boxOf(from), linkPoint.x, linkPoint.y)
+    const { d, c2 } = curveAnchored(a1, a1.side, linkPoint, '')
     return { d, head: arrowHead(linkPoint, Math.atan2(linkPoint.y - c2.y, linkPoint.x - c2.x)) }
   }, [linkFrom, linkPoint, elMap])
   const selectedConnector = connectorViews.find(cv => cv.id === selectedId) || null
@@ -549,12 +567,15 @@ function CanvasElement({ el, selected, editing, tool, linking, onPointerDown, on
     )
   }
 
-  // Image element — fills its box; resizes from the four corners.
+  // Image element — fills its box; resizes from the four corners. The image is
+  // clipped by an inner wrapper so the edge/corner handles stay outside and clickable.
   if (el.type === 'image') {
     return (
       <div style={base} onPointerDown={onPointerDown}
-        className={`group overflow-hidden rounded-xl bg-surface-800 ${selected ? 'outline outline-2 outline-accent outline-offset-2' : ''} ${tool === 'select' ? 'cursor-move' : ''}`}>
-        {el.src && <img src={el.src} alt="" draggable={false} className="w-full h-full object-cover pointer-events-none select-none" />}
+        className={`group rounded-xl ${selected ? 'outline outline-2 outline-accent outline-offset-2' : ''} ${tool === 'select' ? 'cursor-move' : ''}`}>
+        <div className="w-full h-full overflow-hidden rounded-xl bg-surface-800">
+          {el.src && <img src={el.src} alt="" draggable={false} className="w-full h-full object-cover pointer-events-none select-none" />}
+        </div>
         <ResizeHandles show={selected && tool === 'select'} onStart={onStartResize} />
         <SideHandles show={selected && tool === 'select'} onStart={onStartLink} />
       </div>

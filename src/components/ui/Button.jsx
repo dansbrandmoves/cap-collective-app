@@ -1,6 +1,6 @@
 export function Button({ children, variant = 'primary', size = 'md', onClick, disabled, className = '', type = 'button' }) {
   const variants = {
-    primary: 'bg-accent hover:bg-accent-hover text-white font-semibold shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/25',
+    primary: 'bg-accent hover:bg-accent-hover text-accent-fg font-semibold shadow-sm shadow-accent/20 hover:shadow-md hover:shadow-accent/25',
     secondary: 'bg-surface-700 hover:bg-surface-600 text-zinc-200 font-medium',
     ghost: 'hover:bg-surface-800 text-zinc-400 hover:text-zinc-100 font-medium',
     danger: 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/20 font-medium',

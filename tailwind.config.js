@@ -28,9 +28,12 @@ export default {
         },
         // Arro/erro brand teal — calm, muted sea-green. Replaces the old violet accent
         // app-wide (buttons, tabs, rings, badges, availability). See project_arro_theme.
+        // Channel-based so context can re-theme it (booking pages: neutral or the
+        // host's brand color). Defaults resolve to the same Coordie teal app-wide.
         accent: {
-          DEFAULT: '#5e9c8c',
-          hover: '#4f8d7c',
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+          hover: 'rgb(var(--accent-hover) / <alpha-value>)',
+          fg: 'rgb(var(--accent-fg) / <alpha-value>)',
           muted: '#2f4f48',
         },
       },

@@ -316,13 +316,29 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
   )
 }
 
+// Turn a #hex into "r g b" channels + pick a readable foreground. Used to apply a
+// host's brand color to the booking page's buttons/accents (overriding the neutral
+// default). Returns null for anything unparseable so we fall back to neutral.
+function brandVars(hex) {
+  if (!hex) return null
+  const h = String(hex).replace('#', '')
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h
+  if (!/^[0-9a-fA-F]{6}$/.test(full)) return null
+  const n = parseInt(full, 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const fg = (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '24 24 27' : '255 255 255'
+  const hov = [r, g, b].map(c => Math.round(c * 0.88)).join(' ')
+  return { '--accent': `${r} ${g} ${b}`, '--accent-hover': hov, '--accent-fg': fg }
+}
+
 /* ── Main Component ── */
 export function BookingPageView() {
   const { slug } = useParams()
   const [searchParams] = useSearchParams()
   const hideLogo = searchParams.get('logo') === '0'
   const hideDesc = searchParams.get('desc') === '0'
-  const themeParam = searchParams.get('theme') // 'light' | 'dark' — embed override
+  const themeParam = searchParams.get('theme') // 'light' | 'dark' | 'auto' — embed override
+  const accentParam = searchParams.get('accent') // hex (no #) — embed brand-color override
   const { resolveBookingSlug, createBooking } = useApp()
 
   const [page, setPage] = useState(null)
@@ -335,6 +351,7 @@ export function BookingPageView() {
   const [ownerLogoDark, setOwnerLogoDark] = useState(true)
   const [ownerGuestCalendarEnabled, setOwnerGuestCalendarEnabled] = useState(true)
   const [bookingTheme, setBookingTheme] = useState(null) // owner's booking-page default: 'light' | 'dark' | 'auto'
+  const [brandColor, setBrandColor] = useState(null) // owner's brand color (#hex) or null = neutral
   const [windowKey, setWindowKey] = useState('any')   // time-of-day slot filter
 
   // Booking pages have their OWN theme, independent of the owner's app theme.
@@ -401,6 +418,7 @@ export function BookingPageView() {
         setOwnerGuestCalendarEnabled(data?.settings?.guestCalendarEnabled ?? true)
         // Dedicated booking-page theme; default light (not the owner's app theme).
         setBookingTheme(data?.settings?.bookingTheme || 'light')
+        setBrandColor(data?.settings?.brandColor || null)
       })
   }, [page])
 
@@ -575,7 +593,7 @@ export function BookingPageView() {
   )
 
   return (
-    <div className="booking-neutral min-h-dvh bg-surface-950 ambient-glow">
+    <div className="booking-neutral min-h-dvh bg-surface-950 ambient-glow" style={brandVars(accentParam || brandColor) || undefined}>
       <div className="mx-auto max-w-[940px] px-5 sm:px-8 py-8 sm:py-12 safe-top safe-bottom">
 
         {/* On the slot/confirm steps the title sits centered up top; on the date

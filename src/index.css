@@ -9,6 +9,12 @@
   --surface-800: #303841;
   --surface-700: #3c454e;
   --surface-600: #4a545e;
+
+  /* Accent as RGB channels so it can be themed per-context (e.g. booking pages).
+     Default = Coordie teal; the whole app inherits this unchanged. */
+  --accent: 94 156 140;        /* #5e9c8c */
+  --accent-hover: 79 141 124;  /* #4f8d7c */
+  --accent-fg: 255 255 255;    /* text/icon color on accent surfaces */
 }
 
 html.light {
@@ -27,6 +33,12 @@ html.light {
   --surface-800: #2c2c31;
   --surface-700: #3a3a40;
   --surface-600: #4a4a51;
+  /* Neutral monochrome accent by default so the page never clashes with (or
+     mimics) anyone's brand. Dark page → light button with dark text. A host's
+     brandColor / embed ?accent= overrides these via inline style. */
+  --accent: 244 244 245;       /* zinc-100 */
+  --accent-hover: 228 228 231; /* zinc-200 */
+  --accent-fg: 24 24 27;       /* zinc-900 text on the light button */
 }
 html.light .booking-neutral {
   --surface-950: #ffffff;
@@ -34,6 +46,9 @@ html.light .booking-neutral {
   --surface-800: #f0f0f1;
   --surface-700: #e4e4e6;
   --surface-600: #d4d4d6;
+  --accent: 24 24 27;          /* near-black button on light page */
+  --accent-hover: 39 39 42;
+  --accent-fg: 255 255 255;
 }
 
 @layer base {

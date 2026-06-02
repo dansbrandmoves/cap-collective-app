@@ -4,6 +4,10 @@ import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
+import { Board } from '../components/project/Board'
+import { Whiteboard } from '../components/project/Whiteboard'
+import { useBoard } from '../hooks/useBoard'
+import { useCanvas } from '../hooks/useCanvas'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured, connectGuestCalendarOffline, triggerGuestSync, disconnectGuestCalendar as disconnectGuestCalendarServer } from '../utils/googleCalendar'
 import { CalendarDays, CheckCircle2 } from 'lucide-react'
@@ -265,7 +269,8 @@ function AvailabilityTab({ isOwner, availabilityRules, roomId, guestName, slots,
 
 export function RoomView() {
   const { token } = useParams()
-  const { getProduction, getRoom, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions } = useApp()
+  const { getProduction, getRoom, getMembersForRoom, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions } = useApp()
+  const [roomTab, setRoomTab] = useState('schedule') // 'schedule' | 'board'
   const [resolved, setResolved] = useState(null)
   const [resolving, setResolving] = useState(true)
   const [guestName, setGuestName] = useState(null)
@@ -285,6 +290,14 @@ export function RoomView() {
   }, [token, loading, resolveToken])
 
   const production = resolved ? getProduction(resolved.productionId) : null
+  // Project-level board (shared by everyone on the project). Hook runs every render
+  // with a possibly-null id so the hook count stays stable before the early returns.
+  const board = useBoard(resolved?.productionId)
+  const canvas = useCanvas(resolved?.productionId)
+  const boardPeople = useMemo(
+    () => (resolved?.roomId ? getMembersForRoom(resolved.roomId) : []),
+    [resolved?.roomId, getMembersForRoom]
+  )
   // "Preview as guest" (?preview=guest) lets the signed-in owner see the exact
   // guest experience — force guest mode even though they own the project.
   const [searchParams] = useSearchParams()
@@ -449,20 +462,61 @@ export function RoomView() {
         )}
       </div>
 
-      <AvailabilityTab
-        isOwner={isOwner}
-        availabilityRules={availabilityRules}
-        roomId={roomId}
-        guestName={guestName}
-        slots={slots}
-        projectBusinessHours={production?.availability_config?.businessHours}
-        guestSlotSelection={production?.availability_config?.guestSlotSelection || false}
-        ownerCalendarEvents={ownerCalendarEvents}
-        ownerConnectedCalendars={ownerConnectedCalendars}
-        ownerId={production?.ownerId}
-        ownerName={ownerName}
-        guestCalendarEnabled={ownerGuestCalendarEnabled}
-      />
+      {/* Schedule | Tasks | Board tabs — Tasks + Board are shared by everyone on the project */}
+      <div className="px-5 sm:px-8 pt-4 flex-shrink-0">
+        <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-xl p-1">
+          {[['schedule', 'Schedule'], ['tasks', 'Tasks'], ['board', 'Board']].map(([key, label]) => (
+            <button key={key} onClick={() => setRoomTab(key)}
+              className={`px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                roomTab === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
+              }`}>
+              {label}
+              {key === 'tasks' && board.tasks.length > 0 && (
+                <span className="ml-1.5 text-[11px] text-zinc-500 tabular-nums">{board.tasks.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {roomTab === 'schedule' && (
+        <AvailabilityTab
+          isOwner={isOwner}
+          availabilityRules={availabilityRules}
+          roomId={roomId}
+          guestName={guestName}
+          slots={slots}
+          projectBusinessHours={production?.availability_config?.businessHours}
+          guestSlotSelection={production?.availability_config?.guestSlotSelection || false}
+          ownerCalendarEvents={ownerCalendarEvents}
+          ownerConnectedCalendars={ownerConnectedCalendars}
+          ownerId={production?.ownerId}
+          ownerName={ownerName}
+          guestCalendarEnabled={ownerGuestCalendarEnabled}
+        />
+      )}
+      {roomTab === 'tasks' && (
+        <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-4 sm:py-6">
+          <Board
+            columns={board.columns}
+            tasksByColumn={board.tasksByColumn}
+            people={boardPeople}
+            addColumn={board.addColumn}
+            renameColumn={board.renameColumn}
+            deleteColumn={board.deleteColumn}
+            moveColumn={board.moveColumn}
+            addTask={board.addTask}
+            updateTask={board.updateTask}
+            moveTask={board.moveTask}
+            deleteTask={board.deleteTask}
+          />
+        </div>
+      )}
+      {roomTab === 'board' && (
+        <div className="flex-1 min-h-0 mt-4">
+          <Whiteboard canvas={canvas} authorName={isOwner ? (ownerName || 'Owner') : guestName} />
+        </div>
+      )}
 
       {/* Footer */}
       {!isOwner && (

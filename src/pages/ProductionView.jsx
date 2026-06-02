@@ -8,10 +8,12 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { ProjectOverview } from '../components/project/ProjectOverview'
 import { PeopleRoster } from '../components/project/PeopleRoster'
-import { TasksBoard } from '../components/project/TasksBoard'
+import { Board } from '../components/project/Board'
+import { Whiteboard } from '../components/project/Whiteboard'
 import { useProjectAvailability } from '../hooks/useProjectAvailability'
 import { useProjectPeople } from '../hooks/useProjectPeople'
-import { useProjectTasks } from '../hooks/useProjectTasks'
+import { useBoard } from '../hooks/useBoard'
+import { useCanvas } from '../hooks/useCanvas'
 import { useResizablePanel, ResizeHandle } from '../hooks/useResizablePanel'
 import { projectSlotsFromConfig } from '../utils/availability'
 import { PageLoader } from '../components/ui/PageLoader'
@@ -27,13 +29,14 @@ export function ProductionView() {
     createRoom, updateRoomName, deleteRoom, getRoomLink, sendRoomInvite,
     effectiveSlots, calendarEvents, connectedCalendars, availabilityRules,
     prefixRules, slotStates, canAddRoom, FREE_ROOM_LIMIT, pendingRequestCounts,
-    availabilityMode, blockDuration, businessHours, loading,
+    availabilityMode, blockDuration, businessHours, loading, user,
   } = useApp()
 
+  const ownerAuthorName = user?.user_metadata?.name || user?.settings?.displayName || (user?.email ? user.email.split('@')[0] : 'Owner')
   const production = getProduction(id)
   const [activeRoomId, setActiveRoomId] = useState(null)
   const [activeView, setActiveView] = useState('overview') // 'overview' | 'room'
-  const [mainTab, setMainTab] = useState('schedule') // 'schedule' | 'tasks'
+  const [mainTab, setMainTab] = useState('schedule') // 'schedule' | 'tasks' | 'board'
   const [mobileShowSidebar, setMobileShowSidebar] = useState(false)
   const [showNewRoom, setShowNewRoom] = useState(false)
   const [newRoomName, setNewRoomName] = useState('')
@@ -71,7 +74,8 @@ export function ProductionView() {
   })
   const sidePanel = useResizablePanel('coordie-project-panel', { defaultWidth: 288, min: 240, max: 420, side: 'right' })
   const PANEL_RAIL = 48
-  const projectTasks = useProjectTasks(id)
+  const board = useBoard(id)
+  const canvas = useCanvas(id)
 
   // Early return AFTER all hooks. Distinguish "still loading" from "truly missing":
   // during initial load productions is empty, so show a spinner, not "not found".
@@ -258,21 +262,21 @@ export function ProductionView() {
         {/* Schedule | Tasks toggle — Schedule (the calendar) is the default focus */}
         <div className="px-5 sm:px-8 lg:px-12 pt-6 sm:pt-8 flex-shrink-0">
           <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-xl p-1">
-            {[['schedule', 'Schedule'], ['tasks', 'Tasks']].map(([key, label]) => (
+            {[['schedule', 'Schedule'], ['tasks', 'Tasks'], ['board', 'Board']].map(([key, label]) => (
               <button key={key} onClick={() => setMainTab(key)}
                 className={`px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ease-ios ${
                   mainTab === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
                 }`}>
                 {label}
-                {key === 'tasks' && projectTasks.tasks.length > 0 && (
-                  <span className="ml-1.5 text-[11px] text-zinc-500 tabular-nums">{projectTasks.tasks.length}</span>
+                {key === 'tasks' && board.tasks.length > 0 && (
+                  <span className="ml-1.5 text-[11px] text-zinc-500 tabular-nums">{board.tasks.length}</span>
                 )}
               </button>
             ))}
           </div>
         </div>
 
-        {mainTab === 'schedule' ? (
+        {mainTab === 'schedule' && (
           <ProjectOverview
             production={production}
             slots={projectSlots}
@@ -287,16 +291,27 @@ export function ProductionView() {
             includedOwner={peopleState.includedOwner}
             totalPeople={peopleState.totalPeople}
           />
-        ) : (
+        )}
+        {mainTab === 'tasks' && (
           <div className="flex-1 overflow-y-auto no-scrollbar px-5 sm:px-8 lg:px-12 py-6 sm:py-8">
-            <TasksBoard
-              byColumn={projectTasks.byColumn}
+            <Board
+              columns={board.columns}
+              tasksByColumn={board.tasksByColumn}
               people={peopleState.people}
-              addTask={projectTasks.addTask}
-              updateTask={projectTasks.updateTask}
-              moveTask={projectTasks.moveTask}
-              deleteTask={projectTasks.deleteTask}
+              addColumn={board.addColumn}
+              renameColumn={board.renameColumn}
+              deleteColumn={board.deleteColumn}
+              moveColumn={board.moveColumn}
+              addTask={board.addTask}
+              updateTask={board.updateTask}
+              moveTask={board.moveTask}
+              deleteTask={board.deleteTask}
             />
+          </div>
+        )}
+        {mainTab === 'board' && (
+          <div className="flex-1 min-h-0 mt-4">
+            <Whiteboard canvas={canvas} authorName={ownerAuthorName} />
           </div>
         )}
       </div>

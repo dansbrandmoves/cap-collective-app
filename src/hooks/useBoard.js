@@ -148,6 +148,31 @@ export function useBoard(projectId) {
       .then(({ error }) => { if (error) console.error('moveTask:', error) })
   }, [tasks])
 
+  // Reorder: drop `id` into `columnId` at `targetIndex` (Trello-style precise drop).
+  // Renumbers the affected column and persists only the rows whose position changed.
+  const reorderTask = useCallback((id, columnId, targetIndex) => {
+    setTasks(prev => {
+      const moving = prev.find(t => t.id === id)
+      if (!moving) return prev
+      const col = prev
+        .filter(t => t.column_id === columnId && t.id !== id)
+        .sort((a, b) => a.position - b.position)
+      const idx = Math.max(0, Math.min(targetIndex, col.length))
+      col.splice(idx, 0, { ...moving, column_id: columnId })
+      const repositioned = new Map(col.map((t, i) => [t.id, i + 1]))
+      // Persist every row in the target column whose (column_id, position) changed.
+      col.forEach(t => {
+        const newPos = repositioned.get(t.id)
+        const old = prev.find(p => p.id === t.id)
+        if (!old || old.position !== newPos || old.column_id !== columnId) {
+          supabase.from('tasks').update({ column_id: columnId, position: newPos }).eq('id', t.id)
+            .then(({ error }) => { if (error) console.error('reorderTask:', error) })
+        }
+      })
+      return prev.map(t => repositioned.has(t.id) ? { ...t, column_id: columnId, position: repositioned.get(t.id) } : t)
+    })
+  }, [])
+
   const deleteTask = useCallback((id) => {
     setTasks(prev => prev.filter(t => t.id !== id))
     supabase.from('tasks').delete().eq('id', id)
@@ -157,6 +182,6 @@ export function useBoard(projectId) {
   return {
     columns: sortedColumns, tasks, tasksByColumn, loading,
     addColumn, renameColumn, deleteColumn, moveColumn,
-    addTask, updateTask, moveTask, deleteTask,
+    addTask, updateTask, moveTask, reorderTask, deleteTask,
   }
 }

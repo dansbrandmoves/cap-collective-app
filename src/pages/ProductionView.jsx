@@ -298,6 +298,8 @@ export function ProductionView() {
               columns={board.columns}
               tasksByColumn={board.tasksByColumn}
               people={peopleState.people}
+              projectId={id}
+              authorName={ownerAuthorName}
               addColumn={board.addColumn}
               renameColumn={board.renameColumn}
               deleteColumn={board.deleteColumn}
@@ -305,6 +307,7 @@ export function ProductionView() {
               addTask={board.addTask}
               updateTask={board.updateTask}
               moveTask={board.moveTask}
+              reorderTask={board.reorderTask}
               deleteTask={board.deleteTask}
             />
           </div>

@@ -501,6 +501,8 @@ export function RoomView() {
             columns={board.columns}
             tasksByColumn={board.tasksByColumn}
             people={boardPeople}
+            projectId={resolved?.productionId}
+            authorName={isOwner ? (ownerName || 'Owner') : guestName}
             addColumn={board.addColumn}
             renameColumn={board.renameColumn}
             deleteColumn={board.deleteColumn}
@@ -508,6 +510,7 @@ export function RoomView() {
             addTask={board.addTask}
             updateTask={board.updateTask}
             moveTask={board.moveTask}
+            reorderTask={board.reorderTask}
             deleteTask={board.deleteTask}
           />
         </div>

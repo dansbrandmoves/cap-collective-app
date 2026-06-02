@@ -1,62 +1,99 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, X, Check, UserPlus, MoreHorizontal, Pencil, Trash2, GripVertical } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import {
+  Plus, X, Check, MoreHorizontal, Pencil, Trash2, GripVertical,
+  AlignLeft, MessageSquare, UserPlus,
+} from 'lucide-react'
+import { useTaskComments } from '../../hooks/useTaskComments'
 
-// A real board — Trello-style. Horizontally scrolling columns you can add, rename,
-// delete, and reorder; cards drag between columns and carry an optional assignee
-// from the project's people. Matches the calendar's visual language (teal accents,
-// surface cards, calm borders). No decorative backgrounds — just the work.
+// A real board — Trello-style. Horizontally scrolling lists you can add, rename,
+// delete, and reorder; cards drag between and within lists with a precise drop
+// position; clean card tiles open a rich detail panel (description, members,
+// comments). Matches the calendar's visual language. Collaborative + realtime.
 export function Board({
-  columns = [], tasksByColumn = {}, people = [],
+  columns = [], tasksByColumn = {}, people = [], projectId, authorName,
   addColumn, renameColumn, deleteColumn, moveColumn,
-  addTask, updateTask, moveTask, deleteTask,
+  addTask, updateTask, moveTask, reorderTask, deleteTask,
 }) {
-  // drag = { type: 'card' | 'column', id }
-  const [drag, setDrag] = useState(null)
-  const [overCol, setOverCol] = useState(null)      // column id a card is hovering
-  const [overColIdx, setOverColIdx] = useState(null) // index a column is hovering
+  const [drag, setDrag] = useState(null)         // { type:'card'|'column', id }
+  const [overCol, setOverCol] = useState(null)   // column id a card hovers
+  const [overIndex, setOverIndex] = useState(null) // insertion index within that column
+  const [overColIdx, setOverColIdx] = useState(null) // index a column hovers
+  const [openTaskId, setOpenTaskId] = useState(null)
 
   function onCardDrop(colId) {
-    if (drag?.type === 'card') moveTask(drag.id, colId)
-    setDrag(null); setOverCol(null)
+    if (drag?.type === 'card') {
+      const idx = overIndex == null ? (tasksByColumn[colId]?.length || 0) : overIndex
+      reorderTask(drag.id, colId, idx)
+    }
+    setDrag(null); setOverCol(null); setOverIndex(null)
   }
   function onColumnDrop(targetIdx) {
     if (drag?.type === 'column') moveColumn(drag.id, targetIdx)
     setDrag(null); setOverColIdx(null)
   }
 
+  const openTask = openTaskId
+    ? Object.values(tasksByColumn).flat().find(t => t.id === openTaskId)
+    : null
+
   return (
-    <div className="flex items-start gap-4 overflow-x-auto pb-4 -mx-1 px-1 no-scrollbar">
-      {columns.map((col, idx) => (
-        <Column
-          key={col.id}
-          column={col}
-          index={idx}
-          tasks={tasksByColumn[col.id] || []}
+    <>
+      <div className="flex items-start gap-4 overflow-x-auto pb-4 -mx-1 px-1 no-scrollbar">
+        {columns.map((col, idx) => (
+          <Column
+            key={col.id}
+            column={col}
+            index={idx}
+            tasks={tasksByColumn[col.id] || []}
+            drag={drag}
+            overCol={overCol}
+            overIndex={overIndex}
+            isColOver={overColIdx === idx}
+            setDrag={setDrag}
+            setOverCol={setOverCol}
+            setOverIndex={setOverIndex}
+            setOverColIdx={setOverColIdx}
+            onCardDrop={onCardDrop}
+            onColumnDrop={onColumnDrop}
+            onRename={(title) => renameColumn(col.id, title)}
+            onDelete={() => deleteColumn(col.id)}
+            onAddTask={(title) => addTask(col.id, title)}
+            onOpenTask={setOpenTaskId}
+          />
+        ))}
+        <AddColumn onAdd={addColumn} />
+      </div>
+
+      {openTask && (
+        <TaskDetailModal
+          task={openTask}
           people={people}
-          drag={drag}
-          isCardOver={overCol === col.id}
-          isColOver={overColIdx === idx}
-          setDrag={setDrag}
-          setOverCol={setOverCol}
-          setOverColIdx={setOverColIdx}
-          onCardDrop={onCardDrop}
-          onColumnDrop={onColumnDrop}
-          onRename={(title) => renameColumn(col.id, title)}
-          onDelete={() => deleteColumn(col.id)}
-          onAddTask={(title) => addTask(col.id, title)}
-          updateTask={updateTask}
-          deleteTask={deleteTask}
+          projectId={projectId}
+          authorName={authorName}
+          onClose={() => setOpenTaskId(null)}
+          onUpdate={(updates) => updateTask(openTask.id, updates)}
+          onDelete={() => { deleteTask(openTask.id); setOpenTaskId(null) }}
         />
-      ))}
-      <AddColumn onAdd={addColumn} />
-    </div>
+      )}
+    </>
+  )
+}
+
+function Avatar({ name, size = 20 }) {
+  if (!name) return null
+  return (
+    <span className="rounded-full bg-accent/25 text-accent flex items-center justify-center font-bold flex-shrink-0"
+      style={{ width: size, height: size, fontSize: size * 0.45 }} title={name}>
+      {name[0]?.toUpperCase()}
+    </span>
   )
 }
 
 function Column({
-  column, index, tasks, people, drag, isCardOver, isColOver,
-  setDrag, setOverCol, setOverColIdx, onCardDrop, onColumnDrop,
-  onRename, onDelete, onAddTask, updateTask, deleteTask,
+  column, index, tasks, drag, overCol, overIndex, isColOver,
+  setDrag, setOverCol, setOverIndex, setOverColIdx, onCardDrop, onColumnDrop,
+  onRename, onDelete, onAddTask, onOpenTask,
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -66,6 +103,7 @@ function Column({
   const draggingThisCol = drag?.type === 'column' && drag.id === column.id
   const cardDragActive = drag?.type === 'card'
   const colDragActive = drag?.type === 'column'
+  const showLineAt = (i) => cardDragActive && overCol === column.id && overIndex === i
 
   function commitRename() {
     const v = title.trim()
@@ -76,7 +114,6 @@ function Column({
 
   return (
     <div
-      // Column-reorder drop target (active only while dragging a column)
       onDragOver={(e) => { if (colDragActive) { e.preventDefault(); if (!isColOver) setOverColIdx(index) } }}
       onDrop={(e) => { if (colDragActive) { e.preventDefault(); onColumnDrop(index) } }}
       className={`w-[300px] flex-shrink-0 flex flex-col rounded-2xl bg-surface-900/50 border transition-colors duration-150 ${
@@ -96,19 +133,16 @@ function Column({
         </button>
         {editing ? (
           <input
-            autoFocus
-            value={title}
+            autoFocus value={title}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={commitRename}
             onKeyDown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') { setTitle(column.title); setEditing(false) } }}
             className="flex-1 min-w-0 bg-surface-800 border border-accent/50 rounded-md px-2 py-1 text-[13px] font-semibold text-zinc-100 focus:outline-none"
           />
         ) : (
-          <button
-            onClick={() => setEditing(true)}
+          <button onClick={() => setEditing(true)}
             className="flex-1 min-w-0 text-left text-[13px] font-semibold text-zinc-200 truncate px-1 py-1 rounded-md hover:bg-white/[0.04] transition-colors"
-            title="Click to rename"
-          >
+            title="Click to rename">
             {column.title}
           </button>
         )}
@@ -136,27 +170,34 @@ function Column({
         </div>
       </div>
 
-      {/* Cards + card-drop target */}
+      {/* Cards + drop target. Card dragover sets a precise insertion index; the
+          container fallback drops at the end. */}
       <div
-        onDragOver={(e) => { if (cardDragActive) { e.preventDefault(); if (!isCardOver) setOverCol(column.id) } }}
-        onDragLeave={(e) => { if (cardDragActive && !e.currentTarget.contains(e.relatedTarget)) setOverCol(null) }}
+        onDragOver={(e) => { if (cardDragActive) { e.preventDefault(); if (overCol !== column.id || overIndex !== tasks.length) { setOverCol(column.id); setOverIndex(tasks.length) } } }}
         onDrop={(e) => { if (cardDragActive) { e.preventDefault(); onCardDrop(column.id) } }}
-        className={`flex-1 min-h-[12px] px-2.5 pb-1 space-y-2 rounded-xl transition-colors ${
-          isCardOver && cardDragActive ? 'bg-accent/[0.05]' : ''
-        }`}
+        className="flex-1 min-h-[12px] px-2.5 pb-1"
       >
-        {tasks.map(t => (
-          <TaskCard
-            key={t.id}
-            task={t}
-            people={people}
-            dragging={drag?.type === 'card' && drag.id === t.id}
-            onDragStart={() => setDrag({ type: 'card', id: t.id })}
-            onDragEnd={() => { setDrag(null); setOverCol(null) }}
-            onAssign={(name) => updateTask(t.id, { assignee: name })}
-            onDelete={() => deleteTask(t.id)}
-          />
+        {tasks.map((t, i) => (
+          <div key={t.id}>
+            <DropLine show={showLineAt(i)} />
+            <TaskCard
+              task={t}
+              dragging={drag?.type === 'card' && drag.id === t.id}
+              onDragStart={() => setDrag({ type: 'card', id: t.id })}
+              onDragEnd={() => { setDrag(null); setOverCol(null); setOverIndex(null) }}
+              onDragOverCard={(e) => {
+                if (!cardDragActive) return
+                e.preventDefault(); e.stopPropagation()
+                const rect = e.currentTarget.getBoundingClientRect()
+                const after = e.clientY > rect.top + rect.height / 2
+                const idx = i + (after ? 1 : 0)
+                if (overCol !== column.id || overIndex !== idx) { setOverCol(column.id); setOverIndex(idx) }
+              }}
+              onOpen={() => onOpenTask(t.id)}
+            />
+          </div>
         ))}
+        <DropLine show={showLineAt(tasks.length)} />
       </div>
 
       <AddTask onAdd={onAddTask} />
@@ -164,84 +205,27 @@ function Column({
   )
 }
 
-function TaskCard({ task, people, dragging, onDragStart, onDragEnd, onAssign, onDelete }) {
+function DropLine({ show }) {
+  return <div className={`h-0.5 rounded-full my-1 transition-colors ${show ? 'bg-accent' : 'bg-transparent'}`} />
+}
+
+function TaskCard({ task, dragging, onDragStart, onDragEnd, onDragOverCard, onOpen }) {
   return (
     <div
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      className={`group relative rounded-xl border bg-surface-800/80 px-3 py-2.5 cursor-grab active:cursor-grabbing transition-all duration-150 ${
-        dragging ? 'opacity-40 border-accent/40' : 'border-white/[0.07] hover:border-white/[0.16]'
+      onDragOver={onDragOverCard}
+      onClick={onOpen}
+      className={`group rounded-xl border bg-surface-800/80 px-3 py-2.5 cursor-pointer transition-all duration-150 ${
+        dragging ? 'opacity-40 border-accent/40' : 'border-white/[0.07] hover:border-white/[0.18]'
       }`}
     >
-      <div className="flex items-start gap-2">
-        <p className="flex-1 text-[13px] leading-snug text-zinc-100 break-words">{task.title}</p>
-        <button
-          onClick={onDelete}
-          className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all flex-shrink-0 -mr-0.5 -mt-0.5"
-          title="Delete card"
-        >
-          <X size={13} strokeWidth={2} />
-        </button>
+      <p className="text-[13px] leading-snug text-zinc-100 break-words">{task.title}</p>
+      <div className="flex items-center gap-2 mt-2 empty:hidden">
+        {task.description && <AlignLeft size={13} strokeWidth={2} className="text-zinc-500" />}
+        {task.assignee && <span className="ml-auto"><Avatar name={task.assignee} size={20} /></span>}
       </div>
-      <div className="mt-2">
-        <AssigneePicker current={task.assignee} people={people} onAssign={onAssign} />
-      </div>
-    </div>
-  )
-}
-
-function AssigneePicker({ current, people, onAssign }) {
-  const [open, setOpen] = useState(false)
-  const names = people.map(p => p.name)
-  return (
-    <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className={`inline-flex items-center gap-1.5 rounded-full text-[11px] font-medium transition-colors ${
-          current
-            ? 'pl-1 pr-2 py-0.5 bg-accent/15 text-accent border border-accent/25'
-            : 'px-2 py-0.5 text-zinc-500 border border-dashed border-white/15 hover:text-zinc-300 hover:border-white/25'
-        }`}
-      >
-        {current ? (
-          <>
-            <span className="w-4 h-4 rounded-full bg-accent/25 text-accent flex items-center justify-center text-[9px] font-bold">
-              {current[0]?.toUpperCase()}
-            </span>
-            {current}
-          </>
-        ) : (
-          <><UserPlus size={11} strokeWidth={2} /> Assign</>
-        )}
-      </button>
-
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1 z-20 w-44 max-h-56 overflow-y-auto no-scrollbar bg-surface-800 border border-white/[0.08] rounded-xl shadow-xl shadow-black/40 py-1 animate-fadeIn">
-            {current && (
-              <button onClick={() => { onAssign(null); setOpen(false) }}
-                className="w-full text-left px-3 py-1.5 text-[12px] text-zinc-500 hover:bg-white/[0.05] transition-colors">
-                Unassign
-              </button>
-            )}
-            {names.length === 0 && (
-              <p className="px-3 py-1.5 text-[12px] text-zinc-600">Add people to the project first.</p>
-            )}
-            {names.map(name => (
-              <button key={name} onClick={() => { onAssign(name); setOpen(false) }}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-zinc-200 hover:bg-white/[0.05] transition-colors">
-                <span className="w-4 h-4 rounded-full bg-white/[0.06] text-zinc-300 flex items-center justify-center text-[9px] font-bold flex-shrink-0">
-                  {name[0]?.toUpperCase()}
-                </span>
-                <span className="truncate">{name}</span>
-                {current === name && <Check size={12} strokeWidth={2.5} className="text-accent ml-auto flex-shrink-0" />}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   )
 }
@@ -254,26 +238,20 @@ function AddTask({ onAdd }) {
     e?.preventDefault()
     const v = val.trim()
     if (!v) { setAdding(false); return }
-    onAdd(v)
-    setVal('')
-    // keep open for rapid entry
+    onAdd(v); setVal('')
   }
 
   if (!adding) {
     return (
-      <button
-        onClick={() => setAdding(true)}
-        className="m-2 mt-1 flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[12px] text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] transition-colors"
-      >
+      <button onClick={() => setAdding(true)}
+        className="m-2 mt-1 flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[12px] text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] transition-colors">
         <Plus size={13} strokeWidth={2} /> Add a card
       </button>
     )
   }
   return (
     <form onSubmit={submit} className="m-2 mt-1">
-      <input
-        autoFocus
-        value={val}
+      <input autoFocus value={val}
         onChange={(e) => setVal(e.target.value)}
         onBlur={submit}
         onKeyDown={(e) => { if (e.key === 'Escape') { setAdding(false); setVal('') } }}
@@ -292,25 +270,20 @@ function AddColumn({ onAdd }) {
     e?.preventDefault()
     const v = val.trim()
     if (v) onAdd(v)
-    setVal('')
-    setAdding(false)
+    setVal(''); setAdding(false)
   }
 
   if (!adding) {
     return (
-      <button
-        onClick={() => setAdding(true)}
-        className="w-[280px] flex-shrink-0 flex items-center gap-1.5 px-4 py-3 rounded-2xl border border-dashed border-white/[0.1] text-[13px] text-zinc-500 hover:text-zinc-200 hover:border-white/20 hover:bg-white/[0.02] transition-colors"
-      >
+      <button onClick={() => setAdding(true)}
+        className="w-[280px] flex-shrink-0 flex items-center gap-1.5 px-4 py-3 rounded-2xl border border-dashed border-white/[0.1] text-[13px] text-zinc-500 hover:text-zinc-200 hover:border-white/20 hover:bg-white/[0.02] transition-colors">
         <Plus size={15} strokeWidth={2} /> Add list
       </button>
     )
   }
   return (
     <form onSubmit={submit} className="w-[300px] flex-shrink-0 rounded-2xl bg-surface-900/50 border border-white/[0.06] p-2.5">
-      <input
-        autoFocus
-        value={val}
+      <input autoFocus value={val}
         onChange={(e) => setVal(e.target.value)}
         onBlur={submit}
         onKeyDown={(e) => { if (e.key === 'Escape') { setAdding(false); setVal('') } }}
@@ -319,4 +292,162 @@ function AddColumn({ onAdd }) {
       />
     </form>
   )
+}
+
+// ── Card detail (Trello-style): title, description, members, comments/activity ──
+function TaskDetailModal({ task, people = [], projectId, authorName, onClose, onUpdate, onDelete }) {
+  const { items, addComment, deleteComment } = useTaskComments(task.id, projectId)
+  const [title, setTitle] = useState(task.title)
+  const [desc, setDesc] = useState(task.description || '')
+  const [comment, setComment] = useState('')
+  const [membersOpen, setMembersOpen] = useState(false)
+
+  useEffect(() => { setTitle(task.title); setDesc(task.description || '') }, [task.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  function commitTitle() { const v = title.trim(); if (v && v !== task.title) onUpdate({ title: v }); else setTitle(task.title) }
+  function commitDesc() { if ((task.description || '') !== desc) onUpdate({ description: desc }) }
+  function submitComment(e) {
+    e?.preventDefault()
+    const v = comment.trim(); if (!v) return
+    addComment(v, authorName); setComment('')
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-8" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-3xl my-4 bg-surface-900 border border-white/[0.08] rounded-2xl shadow-lift animate-fadeIn">
+        {/* Header */}
+        <div className="flex items-start gap-3 px-5 sm:px-6 py-4 border-b border-white/[0.06]">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={commitTitle}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+            className="flex-1 bg-transparent text-[19px] font-semibold text-zinc-50 tracking-tight focus:outline-none focus:bg-white/[0.03] rounded-md px-1 -mx-1"
+          />
+          <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors flex-shrink-0">
+            <X size={17} strokeWidth={1.75} />
+          </button>
+        </div>
+
+        <div className="grid sm:grid-cols-[1fr_300px] gap-0">
+          {/* Left: members + description */}
+          <div className="px-5 sm:px-6 py-5 space-y-6 sm:border-r border-white/[0.06]">
+            {/* Members */}
+            <div>
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Members</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {task.assignee && (
+                  <span className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full bg-accent/15 text-accent border border-accent/25 text-[12px] font-medium">
+                    <Avatar name={task.assignee} size={18} /> {task.assignee}
+                  </span>
+                )}
+                <div className="relative">
+                  <button onClick={() => setMembersOpen(o => !o)}
+                    className="w-7 h-7 flex items-center justify-center rounded-full border border-dashed border-white/20 text-zinc-400 hover:text-zinc-100 hover:border-white/40 transition-colors">
+                    <UserPlus size={13} strokeWidth={2} />
+                  </button>
+                  {membersOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setMembersOpen(false)} />
+                      <div className="absolute left-0 top-full mt-1 z-20 w-48 max-h-56 overflow-y-auto no-scrollbar bg-surface-800 border border-white/[0.08] rounded-xl shadow-xl shadow-black/40 py-1 animate-fadeIn">
+                        {task.assignee && (
+                          <button onClick={() => { onUpdate({ assignee: null }); setMembersOpen(false) }}
+                            className="w-full text-left px-3 py-1.5 text-[12px] text-zinc-500 hover:bg-white/[0.05] transition-colors">Unassign</button>
+                        )}
+                        {people.length === 0 && <p className="px-3 py-1.5 text-[12px] text-zinc-600">Add people to the project first.</p>}
+                        {people.map(p => (
+                          <button key={p.name} onClick={() => { onUpdate({ assignee: p.name }); setMembersOpen(false) }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-zinc-200 hover:bg-white/[0.05] transition-colors">
+                            <Avatar name={p.name} size={18} /> <span className="truncate">{p.name}</span>
+                            {task.assignee === p.name && <Check size={12} strokeWidth={2.5} className="text-accent ml-auto" />}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <AlignLeft size={14} strokeWidth={2} className="text-zinc-400" />
+                <p className="text-[13px] font-semibold text-zinc-200">Description</p>
+              </div>
+              <textarea
+                value={desc}
+                onChange={(e) => setDesc(e.target.value)}
+                onBlur={commitDesc}
+                placeholder="Add a more detailed description…"
+                className="w-full min-h-[120px] bg-surface-800/60 border border-white/[0.07] rounded-xl px-3 py-2.5 text-[13px] text-zinc-100 placeholder-zinc-600 leading-relaxed resize-y focus:outline-none focus:border-accent/50 transition-colors"
+              />
+            </div>
+
+            <button onClick={onDelete}
+              className="flex items-center gap-1.5 text-[12px] text-zinc-500 hover:text-red-400 transition-colors">
+              <Trash2 size={13} strokeWidth={1.75} /> Delete card
+            </button>
+          </div>
+
+          {/* Right: comments + activity */}
+          <div className="px-5 sm:px-6 py-5">
+            <div className="flex items-center gap-2 mb-3">
+              <MessageSquare size={14} strokeWidth={2} className="text-zinc-400" />
+              <p className="text-[13px] font-semibold text-zinc-200">Comments &amp; activity</p>
+            </div>
+            <form onSubmit={submitComment} className="mb-4">
+              <input
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Write a comment…"
+                className="w-full bg-surface-800/60 border border-white/[0.07] rounded-xl px-3 py-2 text-[13px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/50 transition-colors"
+              />
+            </form>
+            <div className="space-y-3 max-h-[40vh] overflow-y-auto no-scrollbar">
+              {items.map(c => (
+                <div key={c.id} className="group flex gap-2.5">
+                  <Avatar name={c.author || '?'} size={24} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[12px] font-semibold text-zinc-200 truncate">{c.author || 'Someone'}</span>
+                      <span className="text-[10px] text-zinc-600 flex-shrink-0">{relTime(c.created_at)}</span>
+                      <button onClick={() => deleteComment(c.id)}
+                        className="opacity-0 group-hover:opacity-100 ml-auto text-zinc-600 hover:text-red-400 transition-all flex-shrink-0" title="Delete">
+                        <X size={11} strokeWidth={2} />
+                      </button>
+                    </div>
+                    <p className="text-[13px] text-zinc-300 leading-snug break-words mt-0.5">{c.text}</p>
+                  </div>
+                </div>
+              ))}
+              {/* synthetic activity line */}
+              <div className="flex gap-2.5 pt-1">
+                <span className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0">
+                  <Plus size={12} strokeWidth={2} className="text-zinc-500" />
+                </span>
+                <p className="text-[12px] text-zinc-500 leading-snug">Card created <span className="text-zinc-600">· {relTime(task.created_at)}</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+function relTime(iso) {
+  if (!iso) return ''
+  const d = new Date(iso); if (isNaN(d)) return ''
+  const now = new Date()
+  const sameDay = d.toDateString() === now.toDateString()
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  return sameDay ? time : `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${time}`
 }

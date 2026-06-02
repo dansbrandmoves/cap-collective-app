@@ -3,6 +3,7 @@ import {
   MousePointer2, StickyNote, Square, Circle, Type, MessageSquare,
   Grid3x3, Minus, Plus, Maximize, Trash2,
 } from 'lucide-react'
+import { useApp } from '../../contexts/AppContext'
 
 // A slimmed-down infinite canvas (think Miro, minus the bloat). Pan by dragging
 // empty space, zoom with the wheel or the toolbar, drop stickies / shapes / text /
@@ -65,6 +66,9 @@ function injectFonts() {
 }
 
 export function Whiteboard({ canvas, authorName }) {
+  const { theme } = useApp()
+  const isLight = theme === 'light'
+  const dotColor = isLight ? 'rgba(15,23,42,0.16)' : 'rgba(255,255,255,0.10)'
   const { elements, addElement, patchElement, persistElement, deleteElement, bringToFront } = canvas
   const [tool, setTool] = useState('select')
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -133,11 +137,13 @@ export function Whiteboard({ canvas, authorName }) {
     if (tool !== 'select') {
       const pt = screenToCanvas(e.clientX, e.clientY)
       const d = DEFAULTS[tool]
+      // Text sits on the (theme-adaptive) canvas, so its default ink must contrast.
+      const color = tool === 'text' ? (isLight ? '#1a1a1e' : '#e5e7eb') : d.color
       const el = addElement({
         type: tool,
         x: tool === 'comment' ? pt.x : pt.x - d.w / 2,
         y: tool === 'comment' ? pt.y : pt.y - d.h / 2,
-        w: d.w, h: d.h, color: d.color, font: d.font, text: d.text,
+        w: d.w, h: d.h, color, font: d.font, text: d.text,
         author: authorName || null,
       })
       setTool('select')
@@ -225,7 +231,7 @@ export function Whiteboard({ canvas, authorName }) {
       onWheel={handleWheel}
       style={{
         cursor,
-        backgroundImage: showGrid ? 'radial-gradient(circle, rgba(255,255,255,0.10) 1px, transparent 1px)' : 'none',
+        backgroundImage: showGrid ? `radial-gradient(circle, ${dotColor} 1px, transparent 1px)` : 'none',
         backgroundSize: `${GRID * zoom}px ${GRID * zoom}px`,
         backgroundPosition: `${pan.x}px ${pan.y}px`,
       }}

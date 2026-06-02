@@ -27,15 +27,32 @@ export function useProjectAvailability(production) {
   useEffect(() => {
     if (!roomIds.length) { setAllDateRequests([]); setAllSharedAvail([]); setLoading(false); return }
     let cancelled = false
-    setLoading(true)
+
+    // Stale-while-revalidate: paint the project's last-known availability from cache
+    // immediately, then refresh from the server. Avoids a blank/loading calendar on
+    // every refresh once the data has been seen once this session.
+    const cacheKey = `coordie-projavail-${roomKey}`
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null')
+      if (cached) {
+        setAllDateRequests(cached.dateRequests || [])
+        setAllSharedAvail(cached.sharedAvailability || [])
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
+    } catch { setLoading(true) }
+
+    const latest = { dateRequests: [], sharedAvailability: [] }
+    const writeCache = () => { try { sessionStorage.setItem(cacheKey, JSON.stringify(latest)) } catch { /* full */ } }
 
     function loadRequests() {
       return supabase.from('date_requests').select('*').in('room_id', roomIds)
-        .then(({ data }) => { if (!cancelled) setAllDateRequests(data || []) })
+        .then(({ data }) => { if (!cancelled) { latest.dateRequests = data || []; setAllDateRequests(latest.dateRequests); writeCache() } })
     }
     function loadAvail() {
       return supabase.from('shared_availability').select('*').eq('is_available', true).in('room_id', roomIds)
-        .then(({ data }) => { if (!cancelled) setAllSharedAvail(data || []) })
+        .then(({ data }) => { if (!cancelled) { latest.sharedAvailability = data || []; setAllSharedAvail(latest.sharedAvailability); writeCache() } })
     }
 
     Promise.all([loadRequests(), loadAvail()]).then(() => { if (!cancelled) setLoading(false) })

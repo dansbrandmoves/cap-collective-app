@@ -289,6 +289,7 @@ export function RoomView() {
   // ── Schedule data + people-select (lifted so the left sidebar owns the People filter) ──
   const [dateRequests, setDateRequests] = useState([])
   const [sharedAvailability, setSharedAvailability] = useState([])
+  const [schedLoading, setSchedLoading] = useState(true)     // people/availability still loading
   const [excluded, setExcluded] = useState(() => new Set())
   const [includedOwner, setIncludedOwner] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)      // mobile drawer
@@ -297,9 +298,29 @@ export function RoomView() {
   useEffect(() => {
     const rid = resolved?.roomId
     if (!rid) return
-    const loadReq = () => supabase.from('date_requests').select('*').eq('room_id', rid).then(({ data }) => setDateRequests(data || []))
-    const loadAvail = () => supabase.from('shared_availability').select('*').eq('room_id', rid).then(({ data }) => setSharedAvailability(data || []))
-    loadReq(); loadAvail()
+    const cacheKey = `coordie-sched-${rid}`
+    // Stale-while-revalidate: paint last-known schedule instantly from cache, then
+    // refresh from the server in the background. A refresh no longer shows an empty
+    // sidebar while the network round-trips.
+    const latest = { dateRequests: [], sharedAvailability: [] }
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null')
+      if (cached) {
+        latest.dateRequests = cached.dateRequests || []
+        latest.sharedAvailability = cached.sharedAvailability || []
+        setDateRequests(latest.dateRequests)
+        setSharedAvailability(latest.sharedAvailability)
+        setSchedLoading(false)   // we have something to show immediately
+      } else {
+        setSchedLoading(true)
+      }
+    } catch { setSchedLoading(true) }
+    const writeCache = () => { try { sessionStorage.setItem(cacheKey, JSON.stringify(latest)) } catch { /* full */ } }
+    const loadReq = () => supabase.from('date_requests').select('*').eq('room_id', rid)
+      .then(({ data }) => { latest.dateRequests = data || []; setDateRequests(latest.dateRequests); writeCache() })
+    const loadAvail = () => supabase.from('shared_availability').select('*').eq('room_id', rid)
+      .then(({ data }) => { latest.sharedAvailability = data || []; setSharedAvailability(latest.sharedAvailability); writeCache() })
+    Promise.all([loadReq(), loadAvail()]).finally(() => setSchedLoading(false))
     const channel = supabase
       .channel(`room-overlap-${rid}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'date_requests', filter: `room_id=eq.${rid}` }, loadReq)
@@ -364,12 +385,23 @@ export function RoomView() {
     if (!production?.ownerId || isOwner) return
     const ownerId = production.ownerId
     const mapRow = e => ({ id: e.google_event_id || e.id, calendarId: e.calendar_id, title: e.title, start: e.start, end: e.end_at, isAllDay: e.is_all_day })
+    // Stale-while-revalidate: paint the owner's last-known calendar from cache so the
+    // overlap renders instantly on refresh, then revalidate against the server.
+    const cacheKey = `coordie-ownercal-${ownerId}`
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null')
+      if (Array.isArray(cached)) setOwnerCalendarEvents(cached)
+    } catch { /* ignore */ }
     // Window to the scheduling horizon so the guest view loads fast (not every row).
     const ws = new Date(); ws.setDate(ws.getDate() - 7)
     const we = new Date(); we.setDate(we.getDate() + 120)
     const load = () => supabase.from('owner_calendar_events').select('*').eq('owner_id', ownerId)
       .gte('end_at', ws.toISOString()).lte('start', we.toISOString())
-      .then(({ data }) => setOwnerCalendarEvents((data || []).map(mapRow)))
+      .then(({ data }) => {
+        const mapped = (data || []).map(mapRow)
+        setOwnerCalendarEvents(mapped)
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(mapped)) } catch { /* full */ }
+      })
     load()
     // Live: when the owner's calendar changes (server sync), guests update too.
     const ch = supabase
@@ -531,25 +563,44 @@ export function RoomView() {
         {/* People filter — toggle who counts toward the overlap */}
         <div className="flex-1 overflow-y-auto px-3 py-4 no-scrollbar">
           <p className="px-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">People</p>
-          {[{ name: ownerChipLabel, active: includedOwner, toggle: () => setIncludedOwner(v => !v), sub: (!isOwner && !ownerName) ? null : 'Coordinator' },
-            ...knownGuests.map(n => ({ name: n, active: !excluded.has(n), toggle: () => toggleGuest(n), sub: n === guestName ? 'you' : null }))
-          ].map((p, i) => (
-            <button key={i} onClick={p.toggle}
-              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/[0.04] transition-colors text-left">
-              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${p.active ? 'bg-accent/20 text-accent' : 'bg-white/[0.05] text-zinc-500'}`}>
-                {p.name[0]?.toUpperCase()}
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className={`block text-[13px] truncate ${p.active ? 'text-zinc-100' : 'text-zinc-500'}`}>{p.name}</span>
-                {p.sub && <span className="block text-[11px] text-zinc-600">{p.sub}</span>}
-              </span>
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${p.active ? 'bg-accent border-accent text-white' : 'border-white/15 text-transparent'}`}>
-                <Check size={12} strokeWidth={3} />
-              </span>
-            </button>
-          ))}
-          {knownGuests.length === 0 && (
-            <p className="px-2 mt-1 text-[12px] text-zinc-600 leading-relaxed">As people connect their calendars, they’ll appear here.</p>
+          {schedLoading ? (
+            /* Loading: pulse skeleton rows until calendar data resolves — don't
+               show people pre-checked before we actually know who's free. */
+            <div className="space-y-1" aria-busy="true">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="flex items-center gap-2.5 px-2 py-2 animate-pulse">
+                  <span className="w-7 h-7 rounded-full bg-white/[0.06] flex-shrink-0" />
+                  <span className="flex-1 min-w-0">
+                    <span className="block h-3 rounded bg-white/[0.06]" style={{ width: `${70 - i * 12}%` }} />
+                  </span>
+                  <span className="w-5 h-5 rounded-full bg-white/[0.05] flex-shrink-0" />
+                </div>
+              ))}
+              <p className="px-2 mt-1 text-[12px] text-zinc-600 leading-relaxed">Loading calendars…</p>
+            </div>
+          ) : (
+            <>
+              {[{ name: ownerChipLabel, active: includedOwner, toggle: () => setIncludedOwner(v => !v), sub: (!isOwner && !ownerName) ? null : 'Coordinator' },
+                ...knownGuests.map(n => ({ name: n, active: !excluded.has(n), toggle: () => toggleGuest(n), sub: n === guestName ? 'you' : null }))
+              ].map((p, i) => (
+                <button key={i} onClick={p.toggle}
+                  className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/[0.04] transition-colors text-left">
+                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${p.active ? 'bg-accent/20 text-accent' : 'bg-white/[0.05] text-zinc-500'}`}>
+                    {p.name[0]?.toUpperCase()}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className={`block text-[13px] truncate ${p.active ? 'text-zinc-100' : 'text-zinc-500'}`}>{p.name}</span>
+                    {p.sub && <span className="block text-[11px] text-zinc-600">{p.sub}</span>}
+                  </span>
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${p.active ? 'bg-accent border-accent text-white' : 'border-white/15 text-transparent'}`}>
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                </button>
+              ))}
+              {knownGuests.length === 0 && (
+                <p className="px-2 mt-1 text-[12px] text-zinc-600 leading-relaxed">As people connect their calendars, they’ll appear here.</p>
+              )}
+            </>
           )}
         </div>
 

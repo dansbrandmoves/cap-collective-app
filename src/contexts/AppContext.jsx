@@ -176,6 +176,40 @@ async function fetchAll(ownerId, userEmail) {
   return { prods, rms, notes, msgs, members, memberProds }
 }
 
+// Growth loop: a guest who taps "Create your free Coordie — keep this project"
+// stores a pending join (the room they were in). On their first signed-in load we
+// attach their NEW account email to that room as a member, so the project follows
+// them into their own dashboard — even if the email they signed up with differs
+// from anything they typed as a guest.
+async function claimPendingJoin(userEmail) {
+  if (!userEmail) return
+  let raw = null
+  try { raw = localStorage.getItem('coordie-pending-join') } catch { return }
+  if (!raw) return
+  let pending = null
+  try { pending = JSON.parse(raw) } catch { /* corrupt */ }
+  const roomId = pending?.roomId
+  if (!roomId) { try { localStorage.removeItem('coordie-pending-join') } catch {} ; return }
+  const email = userEmail.toLowerCase()
+  try {
+    const { data: existing } = await supabase
+      .from('room_members').select('id').eq('room_id', roomId).ilike('email', email).limit(1)
+    if (!existing?.length) {
+      await supabase.from('room_members').insert({
+        id: `mem-${Date.now()}`,
+        room_id: roomId,
+        name: pending?.name || userEmail.split('@')[0],
+        email: userEmail,
+        invite_token: nanoid(8),
+      })
+    }
+  } catch (e) {
+    console.error('[Coordie] claimPendingJoin failed:', e)
+  } finally {
+    try { localStorage.removeItem('coordie-pending-join') } catch {}
+  }
+}
+
 export function AppProvider({ children }) {
   const stored = loadFromStorage()
 
@@ -618,8 +652,9 @@ export function AppProvider({ children }) {
       setLoading(false)
     }, 12000)
 
-    // Fetch everything in parallel (productions + booking pages)
-    const dataPromise = fetchAll(ownerId, user?.email)
+    // Fetch everything in parallel (productions + booking pages). Claim any
+    // pending guest→signup join first so the project shows up on this very load.
+    const dataPromise = claimPendingJoin(user?.email).then(() => fetchAll(ownerId, user?.email))
     const bookingPromise = ownerId
       ? supabase.from('booking_pages').select('*').eq('owner_id', ownerId).order('created_at')
       : Promise.resolve({ data: [] })

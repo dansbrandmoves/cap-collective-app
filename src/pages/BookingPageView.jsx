@@ -575,34 +575,38 @@ export function BookingPageView() {
               transition={{ duration: 0.24, ease: IOS_EASE }}
               className="md:flex md:gap-8 lg:gap-12 md:items-start">
 
-              {/* LEFT — title + controls + top picks, left-aligned */}
-              <div className="md:w-[300px] md:flex-shrink-0 mb-8 md:mb-0">
-                {titleBlock}
+              {/* LEFT — title + controls + top picks. Centered on mobile, left-aligned at md+ */}
+              <div className="md:w-[300px] md:flex-shrink-0 mb-8 md:mb-0 text-center md:text-left">
+                <div className="flex justify-center md:justify-start">{titleBlock}</div>
 
                 {ownerGuestCalendarEnabled && (
                   <div className="mt-6">
                     {guestEvents === null && (
-                      <p className="text-[12px] text-zinc-500 mb-2 leading-relaxed">
+                      <p className="text-[12px] text-zinc-500 mb-2 leading-relaxed max-w-xs mx-auto md:mx-0">
                         Connect your calendar to get recommended times you&rsquo;re both free.
                       </p>
                     )}
-                    <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
+                    <div className="flex justify-center md:justify-start">
+                      <GuestCalendarPanel guestEvents={guestEvents} onConnect={connectGuestCalendar} onDisconnect={disconnectGuestCalendar} />
+                    </div>
 
                     {guestEvents !== null && (
                       <>
-                        <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5 mt-4">
-                          {WINDOW_ORDER.map(key => (
-                            <button key={key} onClick={() => setWindowKey(key)}
-                              className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all duration-150 ${
-                                windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
-                              }`}>
-                              {WINDOWS[key].label}
-                            </button>
-                          ))}
+                        <div className="flex justify-center md:justify-start mt-4">
+                          <div className="inline-flex items-center gap-0.5 bg-white/[0.04] border border-white/[0.05] rounded-lg p-0.5">
+                            {WINDOW_ORDER.map(key => (
+                              <button key={key} onClick={() => setWindowKey(key)}
+                                className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all duration-150 ${
+                                  windowKey === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
+                                }`}>
+                                {WINDOWS[key].label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
                         {topPicks.length > 0 && (
-                          <div className="mt-5">
+                          <div className="mt-5 max-w-xs mx-auto md:mx-0">
                             <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Top picks</p>
                             <div className="space-y-1.5">
                               {topPicks.map(ds => {

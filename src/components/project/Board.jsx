@@ -3,9 +3,11 @@ import { createPortal } from 'react-dom'
 import {
   Plus, X, Check, MoreHorizontal, Pencil, Trash2, GripVertical,
   AlignLeft, MessageSquare, UserPlus, Tag, CalendarDays, CheckSquare, Square,
+  Paperclip, Link2, ExternalLink, Upload, FileText,
 } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useTaskComments } from '../../hooks/useTaskComments'
+import { useTaskAttachments } from '../../hooks/useTaskAttachments'
 
 // Calm, Coordie-forward label palette (teal first).
 const LABEL_PALETTE = [
@@ -344,6 +346,8 @@ function AddColumn({ onAdd }) {
 // ── Card detail (Trello-style): title, description, members, comments/activity ──
 function TaskDetailModal({ task, people = [], projectId, authorName, onClose, onUpdate, onDelete }) {
   const { items, addComment, deleteComment } = useTaskComments(task.id, projectId)
+  const { items: attachments, addLink, addFile, removeAttachment } = useTaskAttachments(task.id, projectId)
+  const [attUrl, setAttUrl] = useState('')
   const [title, setTitle] = useState(task.title)
   const [desc, setDesc] = useState(task.description || '')
   const [comment, setComment] = useState('')
@@ -524,6 +528,39 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
                   placeholder="Add an item…"
                   className="w-full bg-surface-800/60 border border-white/[0.07] rounded-lg px-2.5 py-1.5 text-[12px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/50 transition-colors" />
               </form>
+            </div>
+
+            {/* Attachments */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Paperclip size={14} strokeWidth={2} className="text-zinc-400" />
+                <p className="text-[13px] font-semibold text-zinc-200">Attachments</p>
+              </div>
+              <div className="space-y-1.5">
+                {attachments.map(a => (
+                  <div key={a.id} className="group/at flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-surface-800/40 px-2.5 py-2">
+                    <span className="flex-shrink-0 text-zinc-500">
+                      {a.kind === 'file' ? <FileText size={14} strokeWidth={2} /> : <Link2 size={14} strokeWidth={2} />}
+                    </span>
+                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 text-[12px] text-zinc-200 hover:text-accent truncate transition-colors" title={a.name || a.url}>
+                      {a.name || a.url}
+                    </a>
+                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 text-zinc-600 hover:text-zinc-200 transition-colors"><ExternalLink size={12} strokeWidth={2} /></a>
+                    <button onClick={() => removeAttachment(a)} className="opacity-0 group-hover/at:opacity-100 text-zinc-600 hover:text-red-400 transition-all flex-shrink-0"><X size={12} strokeWidth={2} /></button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <form onSubmit={(e) => { e.preventDefault(); addLink(attUrl, '', authorName); setAttUrl('') }} className="flex-1">
+                  <input value={attUrl} onChange={(e) => setAttUrl(e.target.value)}
+                    placeholder="Paste a link — Google Drive, doc, URL…"
+                    className="w-full bg-surface-800/60 border border-white/[0.07] rounded-lg px-2.5 py-1.5 text-[12px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/50 transition-colors" />
+                </form>
+                <label className="flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/[0.1] text-[12px] text-zinc-300 hover:text-zinc-100 hover:border-white/20 cursor-pointer transition-colors" title="Upload a file">
+                  <Upload size={13} strokeWidth={2} /> Upload
+                  <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) addFile(f, authorName); e.target.value = '' }} />
+                </label>
+              </div>
             </div>
 
             <button onClick={onDelete}

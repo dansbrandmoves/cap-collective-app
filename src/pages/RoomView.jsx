@@ -128,7 +128,7 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
 
 // Guest calendar panel — connects guest's Google Calendar so they can see their busy/free overlay in the views.
 // `compact` drops the caption so it can live in the toolbar/tabs row without blocking the calendar.
-function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect, ownerName, roomId, guestName, compact = false }) {
+function GuestCalendarPanel({ guestEvents, connected = false, onConnect, onDisconnect, ownerName, roomId, guestName, compact = false }) {
   const who = ownerName ? ownerName.split(' ')[0] : 'the team'
   const [gisReady, setGisReady] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -168,8 +168,10 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect, ownerName, r
   if (!configured) return null
 
   // Connect affordance — compact (button only, for the toolbar) keeps it out of the
-  // calendar's way; non-compact adds a one-line explainer.
-  if (guestEvents === null) {
+  // calendar's way; non-compact adds a one-line explainer. `connected` reflects
+  // server truth (this guest has synced availability), so a refresh that cleared the
+  // local session still shows the connected state instead of re-prompting.
+  if (!connected) {
     return (
       <div className={compact ? 'inline-flex' : 'mb-4 flex flex-col items-start sm:flex-row sm:items-center gap-2.5'}>
         <Button
@@ -501,12 +503,18 @@ export function RoomView() {
   const totalPeople = knownGuests.length + 1
   const toggleGuest = (name) => setExcluded(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
 
+  // Connected state is server truth (synced availability for this guest), not just
+  // the local session — so a refresh doesn't wrongly re-prompt "Connect calendar".
+  const guestCalendarConnected = guestEvents !== null
+    || (!!guestName && sharedAvailability.some(a => a.guest_name === guestName))
+
   // Connect-first: the calendar column leads with the connect prompt (or, once
   // connected, a subtle disconnect pill). People filtering lives in the left sidebar.
   const connectSlot = (!isOwner && ownerGuestCalendarEnabled) ? (
     <div className="mb-6">
       <GuestCalendarPanel
         guestEvents={guestEvents}
+        connected={guestCalendarConnected}
         onConnect={connectGuestCalendar}
         onDisconnect={disconnectGuestCalendar}
         ownerName={ownerName}

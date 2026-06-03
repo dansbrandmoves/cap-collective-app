@@ -247,6 +247,7 @@ export function AppProvider({ children }) {
       if (s.brandColor !== undefined) setBrandColor(s.brandColor)
       if (s.bookingTheme) setBookingTheme(s.bookingTheme)
       if (s.logoMode) setLogoMode(s.logoMode)
+      if (s.displayName) setDisplayName(s.displayName)
     }
     // Restore connected calendars from Supabase (cross-device sync)
     if (data?.connected_calendars?.length) {
@@ -396,6 +397,9 @@ export function AppProvider({ children }) {
   const [brandColor, setBrandColor] = useState(() => stored?.brandColor ?? null)
   const [bookingTheme, setBookingTheme] = useState(() => stored?.bookingTheme ?? 'light')
   const [logoMode, setLogoMode] = useState(() => stored?.logoMode ?? 'logo')
+  // The owner's display name shown to guests/members (e.g. "Dave" instead of the
+  // generic "Coordinator" fallback). Backfilled from auth metadata if never set.
+  const [displayName, setDisplayName] = useState(() => stored?.displayName ?? null)
   const [slotStateCustomizations, setSlotStateCustomizations] = useState(() => stored?.slotStateCustomizations ?? {})
   const [businessHours, setBusinessHours] = useState(() => {
     const saved = stored?.businessHours
@@ -715,13 +719,13 @@ export function AppProvider({ children }) {
       googleAccessToken, googleTokenExpiresAt, lastSynced,
       theme, slotStateCustomizations, businessHours, guestCalendarEnabled,
       availabilityMode, blockDuration, timezone,
-      brandColor, bookingTheme, logoMode,
+      brandColor, bookingTheme, logoMode, displayName,
     })
   }, [productions, roomMembers, bookingPages,
       slots, connectedCalendars, calendarEvents, availabilityRules, prefixRules,
       googleAccessToken, googleTokenExpiresAt, lastSynced, theme, slotStateCustomizations,
       businessHours, guestCalendarEnabled, availabilityMode, blockDuration, timezone,
-      brandColor, bookingTheme, logoMode])
+      brandColor, bookingTheme, logoMode, displayName])
 
   // --- Slots ---
   const createSlot = useCallback((data) => {
@@ -818,14 +822,24 @@ export function AppProvider({ children }) {
       .then(({ error }) => { if (error) console.error('Sync calendars:', error) })
   }, [connectedCalendars, user?.id, profileLoaded])
 
+  // Backfill the owner's display name from auth metadata if it was never set, so
+  // guests see a real name (e.g. "Dave") instead of the generic "Coordinator"
+  // fallback. Only runs when empty — never overrides a name the user chose.
+  useEffect(() => {
+    if (!user?.id || !profileLoaded || displayName) return
+    const fromAuth = user.user_metadata?.full_name || user.user_metadata?.name
+      || (user.email ? user.email.split('@')[0] : null)
+    if (fromAuth) setDisplayName(fromAuth)
+  }, [user?.id, profileLoaded, displayName]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sync all owner settings to Supabase so they persist cross-device and are readable by guests
   useEffect(() => {
     if (!user?.id || !profileLoaded) return
     supabase.from('profiles').update({
-      settings: { guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules, brandColor, bookingTheme, logoMode }
+      settings: { guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules, brandColor, bookingTheme, logoMode, displayName }
     }).eq('id', user.id)
       .then(({ error }) => { if (error) console.error('Sync settings:', error) })
-  }, [guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules, brandColor, bookingTheme, logoMode, user?.id, profileLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules, brandColor, bookingTheme, logoMode, displayName, user?.id, profileLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const replaceCalendarEvents = useCallback(async (newEvents) => {
     setCalendarEvents(newEvents)

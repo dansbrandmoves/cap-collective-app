@@ -609,6 +609,15 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
     return (withFree.length > 0 ? withFree : sorted).slice(0, 3)
   }, [slotOverlap, windowFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Remaining OWNER-AVAILABLE slots not already shown in bestSlots. We never list
+  // owner-busy slots — only times that actually work get shown under
+  // "Pick a different time".
+  const otherSlots = useMemo(
+    () => slotOverlap.rows.filter(r => !r.ownerBusy && !bestSlots.some(b => b.slot.id === r.slot.id)),
+    [slotOverlap, bestSlots]
+  )
+  const hasAnyAvailable = bestSlots.length > 0 || otherSlots.length > 0
+
   // ── Scheduling form state ──
   // Default title from who's selected; user can override.
   const defaultTitle = useMemo(() => {
@@ -734,9 +743,9 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                 busy all day, the full slot list so they can see why ── */}
           {slotOverlap.rows.length > 0 && (
             <div className="mb-5">
-              {bestSlots.length === 0 && (
+              {!hasAnyAvailable && (
                 <p className="text-[12px] text-zinc-500 mb-3 leading-relaxed">
-                  You&rsquo;re busy across your calendar this day — every slot below is blocked by an event.
+                  No open times on your calendar this day.
                 </p>
               )}
               {bestSlots.length > 0 && (
@@ -778,9 +787,10 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
               </>
               )}
 
-              {/* Pick a different time — expands remaining slots (best slots already shown above).
-                  When the owner is busy all day (no best slots), show the full list inline. */}
-              {slotOverlap.rows.length > bestSlots.length && (
+              {/* Pick a different time — the rest of the owner's AVAILABLE slots.
+                  Busy slots are never listed. When there are no best slots (e.g. no
+                  guests yet), show the available list inline. */}
+              {otherSlots.length > 0 && (
                 <div className={bestSlots.length > 0 ? 'mt-3' : ''}>
                   {bestSlots.length > 0 && (
                   <button
@@ -794,31 +804,23 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
 
                   {(showSlotPicker || bestSlots.length === 0) && (
                     <div className="mt-2 space-y-1.5 animate-fadeIn">
-                      {slotOverlap.rows.filter(r => !bestSlots.some(b => b.slot.id === r.slot.id)).map(({ slot, freeCount, freeNames, ownerBusy }) => {
+                      {otherSlots.map(({ slot, freeCount, freeNames }) => {
                         const total = totalKnown !== null ? totalKnown : guestData.length
-                        // Owner busy → busy regardless of guest counts (can't meet then).
-                        const isBusy = ownerBusy || (total > 0 && freeCount === 0)
-                        const isAll = !ownerBusy && total > 0 && freeCount === total
+                        const isAll = total > 0 && freeCount === total
                         const isSelected = selectedSlotId === slot.id
                         return (
                           <SlotRow
                             key={slot.id}
-                            state={isSelected ? 'selected' : isBusy ? 'busy' : 'available'}
-                            barColor={isBusy ? '#52525b' : (slot.color || '#5e9c8c')}
+                            state={isSelected ? 'selected' : 'available'}
+                            barColor={slot.color || '#5e9c8c'}
                             name={slot.name}
                             time={`${slot.startTime} – ${slot.endTime}`}
                             onClick={() => selectSlot(slot)}
-                            hint={ownerBusy ? "You're busy this time" : (freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined)}
-                            trailing={(ownerBusy || total > 0) ? (
-                              isBusy ? (
-                                <span className="flex items-center gap-1 text-[10px] text-zinc-700 flex-shrink-0">
-                                  <span className="w-1 h-1 rounded-full bg-zinc-700" /> busy
-                                </span>
-                              ) : (
-                                <span className={`text-[11px] font-semibold tabular-nums flex-shrink-0 ${isAll ? 'text-accent' : 'text-zinc-400'}`}>
-                                  {freeCount}/{total}
-                                </span>
-                              )
+                            hint={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
+                            trailing={total > 0 ? (
+                              <span className={`text-[11px] font-semibold tabular-nums flex-shrink-0 ${isAll ? 'text-accent' : 'text-zinc-400'}`}>
+                                {freeCount}/{total}
+                              </span>
                             ) : null}
                           />
                         )

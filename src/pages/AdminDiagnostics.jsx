@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { supabase } from '../utils/supabase'
 import { RefreshCw, ChevronRight, Activity, AlertCircle, CheckCircle2, MinusCircle, Info } from 'lucide-react'
+import { AvailabilityInspector } from '../components/diagnostics/AvailabilityInspector'
 
 // n8n-style executions view over the `diagnostics` table. Each row is one
 // execution record; click to expand into full step-by-step detail + payload.
@@ -127,6 +128,7 @@ export function AdminDiagnostics({ embedded = false }) {
   const [flowFilter, setFlowFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [mode, setMode] = useState('log') // 'log' | 'availability'
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -178,13 +180,43 @@ export function AdminDiagnostics({ embedded = false }) {
             {!embedded && <Activity size={20} strokeWidth={1.75} className="text-accent" />}
             <h1 className="text-[20px] font-semibold text-zinc-50 tracking-tight">{embedded ? 'Execution log' : 'Diagnostics'}</h1>
           </div>
-          <button
-            onClick={load}
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-zinc-400 hover:text-zinc-100 border border-white/[0.08] hover:bg-white/[0.04] rounded-lg px-3 py-2 transition-colors"
-          >
-            <RefreshCw size={14} strokeWidth={2} className={loading ? 'animate-spin' : ''} /> Refresh
-          </button>
+          {mode === 'log' && (
+            <button
+              onClick={load}
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium text-zinc-400 hover:text-zinc-100 border border-white/[0.08] hover:bg-white/[0.04] rounded-lg px-3 py-2 transition-colors"
+            >
+              <RefreshCw size={14} strokeWidth={2} className={loading ? 'animate-spin' : ''} /> Refresh
+            </button>
+          )}
         </div>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-1 mb-5 mt-2">
+          {[['log', 'Execution log'], ['availability', 'Availability inspector']].map(([k, label]) => (
+            <button key={k} onClick={() => setMode(k)}
+              className={`text-[13px] font-medium px-3 py-1.5 rounded-lg transition-colors ${mode === k ? 'bg-accent/15 text-accent' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'availability' ? <AvailabilityInspector /> : LogView()}
+      </>
+  )
+
+  if (embedded) return body
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
+        {body}
+      </div>
+    </div>
+  )
+
+  function LogView() {
+    return (
+      <>
         <p className="text-[13px] text-zinc-500 mb-6">Execution log across guests, owners, and background jobs. Newest first.</p>
 
         {/* Filters */}
@@ -223,16 +255,7 @@ export function AdminDiagnostics({ embedded = false }) {
             filtered.map(r => <Row key={r.id} row={r} />)
           )}
         </div>
-    </>
-  )
-
-  if (embedded) return body
-
-  return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
-        {body}
-      </div>
-    </div>
-  )
+      </>
+    )
+  }
 }

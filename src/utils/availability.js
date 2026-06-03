@@ -164,6 +164,108 @@ export function deriveSlotState(date, slot, calendarEvents, connectedCalendars, 
   return { state: bestState, drivingEvent }
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * explainSlotState — the diagnostics "eyes" on derivation.
+ *
+ * Same logic as deriveSlotState, but instead of just returning the answer it
+ * records EVERY decision: which calendar each event belongs to, whether that
+ * calendar governs, the event's stored (UTC) time vs. the local-time minutes the
+ * overlap math actually uses, whether it overlapped, the rule/tier it resolved
+ * to, and which event ended up driving the state. This is what makes a bug like
+ * "owner shows free at 11am despite an overlapping event" instantly diagnosable:
+ * you can see at a glance whether the event was missing, on a non-governing
+ * calendar, or simply interpreted in the wrong timezone.
+ *
+ * The authoritative overlap decision still comes from eventOverlapsSlot(), so the
+ * trace can never disagree with the real engine. (Parity asserted in tests.)
+ * ────────────────────────────────────────────────────────────────────────── */
+export function explainSlotState(date, slot, calendarEvents, connectedCalendars, prefixRules = [], businessHours = null, timeZone = null) {
+  const trace = { slotId: slot.id, slotName: slot.name, slotTime: `${slot.startTime}–${slot.endTime}` }
+  const slotStart = timeToMinutes(slot.startTime)
+  const slotEnd = timeToMinutes(slot.endTime)
+  trace.slotMinutes = { start: slotStart, end: slotEnd }
+
+  // Business-hours gate (mirrors deriveSlotState exactly)
+  if (businessHours && businessHours.enabled !== false && businessHours.schedule) {
+    const dayConfig = businessHours.schedule[date.getDay()]
+    if (!dayConfig) {
+      return { state: 'blocked', drivingEvent: null, trace: { ...trace, businessHours: { applied: true, reason: 'day-off' }, events: [] } }
+    }
+    const dayStart = timeToMinutes(dayConfig.start)
+    const dayEnd = timeToMinutes(dayConfig.end)
+    if (slotEnd <= dayStart || slotStart >= dayEnd) {
+      return { state: 'blocked', drivingEvent: null, trace: { ...trace, businessHours: { applied: true, reason: 'outside-hours', dayConfig }, events: [] } }
+    }
+    trace.businessHours = { applied: true, reason: null, dayConfig }
+  } else {
+    trace.businessHours = { applied: false }
+  }
+
+  const defaultState = slot.defaultState || 'available'
+  trace.defaultState = defaultState
+  let bestState = defaultState
+  let drivingEvent = null
+
+  const calendarMap = Object.fromEntries(connectedCalendars.map(c => [c.googleCalendarId, c]))
+  const fmtLocal = (iso) => {
+    if (!iso) return null
+    try { return new Date(iso).toLocaleString('en-US', timeZone ? { timeZone, hour12: true, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' } : { hour12: true, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) }
+    catch { return iso }
+  }
+
+  const events = []
+  for (const event of calendarEvents) {
+    const calendar = calendarMap[event.calendarId]
+    const row = {
+      title: event.title || '(untitled)',
+      calendarId: event.calendarId,
+      provider: calendar?.provider || (String(event.calendarId || '').startsWith('ms:') ? 'microsoft' : 'google'),
+      calendarName: calendar?.name || null,
+      calendarKnown: !!calendar,
+      role: calendar?.role || null,
+      isAllDay: !!event.isAllDay,
+      rawStart: event.start,
+      rawEnd: event.end,
+      localStart: fmtLocal(event.start),
+      localEnd: fmtLocal(event.end),
+    }
+
+    if (!calendar) { row.skippedReason = 'unknown-calendar'; events.push(row); continue }
+    if (calendar.role !== 'governs') { row.skippedReason = calendar.role || 'non-governing'; events.push(row); continue }
+
+    // Minutes-of-day the overlap math uses (browser-local) — exposes tz bugs.
+    if (!event.isAllDay) {
+      const evStart = new Date(event.start)
+      const evEnd = new Date(event.end)
+      row.evMinutes = {
+        start: evStart.getDate() === date.getDate() ? evStart.getHours() * 60 + evStart.getMinutes() : 0,
+        end: evEnd.getDate() === date.getDate() ? evEnd.getHours() * 60 + evEnd.getMinutes() : 23 * 60 + 59,
+      }
+    }
+
+    const overlaps = eventOverlapsSlot(date, slot, event)
+    row.overlaps = overlaps
+    if (!overlaps) { row.skippedReason = 'no-overlap'; events.push(row); continue }
+
+    const title = event.title || ''
+    const matchedRule = prefixRules.find(r => r.prefix && title.startsWith(r.prefix))
+    const eventState = matchedRule ? matchedRule.state : (calendar.defaultState || 'booked')
+    row.matchedRule = matchedRule?.prefix || null
+    row.eventState = eventState
+
+    if (PRIORITY[eventState] > PRIORITY[bestState]) {
+      bestState = eventState
+      drivingEvent = { ...event, calendarName: calendar.name }
+      row.becameDriving = true
+    }
+    events.push(row)
+  }
+
+  trace.events = events
+  trace.finalState = bestState
+  return { state: bestState, drivingEvent, trace }
+}
+
 /**
  * Derive availability for a range of dates across all slots.
  * Returns: { [dateStr]: { [slotId]: { state, drivingEvent } } }

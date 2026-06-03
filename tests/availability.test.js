@@ -5,7 +5,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  dateToStr, eventOverlapsSlot, deriveSlotState, projectSlotsFromConfig,
+  dateToStr, eventOverlapsSlot, deriveSlotState, explainSlotState, projectSlotsFromConfig,
   aggregateProjectDay, projectDaySignal, projectKnownPeople, getMonthGrid,
 } from '../src/utils/availability.js'
 
@@ -103,4 +103,38 @@ test('getMonthGrid returns 42 cells with 30 in-month for June 2026', () => {
   const grid = getMonthGrid(2026, 5)
   assert.equal(grid.length, 42)
   assert.equal(grid.filter(c => c.inMonth).length, 30)
+})
+
+test('explainSlotState mirrors deriveSlotState exactly (parity) + emits trace', () => {
+  const ev = t => ([{ calendarId: 'primary', title: t, start: '2026-06-10T09:30:00', end: '2026-06-10T09:45:00', isAllDay: false }])
+  const cases = [
+    [[], GOVERNS, PREFIX, null],
+    [ev('Standup'), GOVERNS, PREFIX, null],
+    [ev('*Closed'), GOVERNS, PREFIX, null],
+    [ev('^Maybe'), GOVERNS, PREFIX, null],
+    [ev('Standup'), [{ googleCalendarId: 'primary', role: 'ignored', name: 'P' }], PREFIX, null],
+  ]
+  for (const [events, cals, prefix, bh] of cases) {
+    const truth = deriveSlotState(JUN10, SLOT, events, cals, prefix, bh)
+    const explained = explainSlotState(JUN10, SLOT, events, cals, prefix, bh)
+    assert.equal(explained.state, truth.state)
+    assert.ok(Array.isArray(explained.trace.events))
+  }
+})
+
+test('explainSlotState trace surfaces a non-overlapping governing event with reason', () => {
+  const evt = [{ calendarId: 'primary', title: 'Later', start: '2026-06-10T11:00:00', end: '2026-06-10T12:00:00', isAllDay: false }]
+  const { state, trace } = explainSlotState(JUN10, SLOT, evt, GOVERNS, PREFIX, null)
+  assert.equal(state, 'available')          // 11am event doesn't touch the 9–10 slot
+  assert.equal(trace.events.length, 1)
+  assert.equal(trace.events[0].overlaps, false)
+  assert.equal(trace.events[0].skippedReason, 'no-overlap')
+})
+
+test('explainSlotState flags an event on an unknown (not-connected) calendar', () => {
+  const evt = [{ calendarId: 'ms:abc', title: 'Outlook thing', start: '2026-06-10T09:30:00', end: '2026-06-10T09:45:00', isAllDay: false }]
+  const { trace } = explainSlotState(JUN10, SLOT, evt, GOVERNS, PREFIX, null) // GOVERNS only has 'primary'
+  assert.equal(trace.events[0].calendarKnown, false)
+  assert.equal(trace.events[0].skippedReason, 'unknown-calendar')
+  assert.equal(trace.events[0].provider, 'microsoft')
 })

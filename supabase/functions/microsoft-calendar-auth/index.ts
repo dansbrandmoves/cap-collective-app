@@ -64,11 +64,14 @@ Deno.serve(async (req: Request) => {
       }
       if (tokens.error) {
         console.error("MS token exchange error:", tokens);
+        await supabase.from("diagnostics").insert({ event: "ms_calendar_auth", detail: { action: "exchange", status: "error", redirectUri, error: tokens.error, error_description: tokens.error_description } }).then(() => {}, () => {});
         return jsonRes({ error: tokens.error_description || tokens.error }, 400);
       }
       if (!tokens.refresh_token) {
+        await supabase.from("diagnostics").insert({ event: "ms_calendar_auth", detail: { action: "exchange", status: "no_refresh_token", redirectUri } }).then(() => {}, () => {});
         return jsonRes({ error: "Microsoft didn't return a refresh token. Try reconnecting.", noRefreshToken: true }, 400);
       }
+      await supabase.from("diagnostics").insert({ event: "ms_calendar_auth", detail: { action: "exchange", status: "ok", redirectUri } }).then(() => {}, () => {});
       const expiresAt = Date.now() + ((tokens.expires_in || 3600) * 1000);
       await supabase.from("profiles").update({
         ms_access_token: tokens.access_token,

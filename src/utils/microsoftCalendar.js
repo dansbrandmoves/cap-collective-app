@@ -65,6 +65,12 @@ export async function disconnectMicrosoft() {
   await supabase.functions.invoke('microsoft-calendar-auth', { body: { action: 'disconnect' } })
 }
 
+// Trigger an immediate server-side sync of the owner's Microsoft calendars.
+// The owner's in-memory events refresh from owner_calendar_events via realtime.
+export async function triggerMicrosoftSync() {
+  return supabase.functions.invoke('sync-ms-calendar', { body: {} })
+}
+
 export async function isMicrosoftConnected() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false

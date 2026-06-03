@@ -16,7 +16,7 @@ import {
 } from '../utils/googleCalendar'
 import {
   isMsConfigured, startMicrosoftAuth, disconnectMicrosoft, isMicrosoftConnected,
-  getValidMsAccessToken, fetchMsCalendarList,
+  getValidMsAccessToken, fetchMsCalendarList, triggerMicrosoftSync,
 } from '../utils/microsoftCalendar'
 import { RefreshCw, Plug, Unplug, Plus, Trash2, Sun, Moon, Globe } from 'lucide-react'
 
@@ -138,6 +138,7 @@ export function CalendarSettings({ embedded = false } = {}) {
   const [connected, setConnected] = useState(false)
   const msConfigured = isMsConfigured()
   const [msConnected, setMsConnected] = useState(false)
+  const [msSyncing, setMsSyncing] = useState(false)
 
   // Check connection status + handle post-connect calendar picker
   useEffect(() => {
@@ -217,12 +218,24 @@ export function CalendarSettings({ embedded = false } = {}) {
   }
 
   function handleSaveRoles() {
+    const hasMs = pendingCals.some(c => c.provider === 'microsoft')
     pendingCals.forEach(cal => {
       addConnectedCalendar({ ...cal, role: assigningRoles[cal.googleCalendarId] ?? 'governs' })
     })
     setShowRoleModal(false)
     setPendingCals([])
     pendingSyncRef.current = true
+    // MS: kick a sync once the connected_calendars write has landed in the profile
+    // (the cron also picks it up; this is just immediate feedback).
+    if (hasMs) {
+      setMsSyncing(true)
+      setTimeout(() => { triggerMicrosoftSync().finally(() => setMsSyncing(false)) }, 3000)
+    }
+  }
+
+  async function handleMsSync() {
+    setMsSyncing(true)
+    try { await triggerMicrosoftSync() } finally { setMsSyncing(false) }
   }
 
   useEffect(() => {
@@ -340,6 +353,10 @@ export function CalendarSettings({ embedded = false } = {}) {
             <div className="flex items-center gap-2 flex-shrink-0">
               {msConnected ? (
                 <>
+                  <button onClick={handleMsSync} disabled={msSyncing} title="Sync now"
+                    className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors disabled:opacity-50">
+                    <RefreshCw size={14} strokeWidth={1.75} className={msSyncing ? 'animate-spin' : ''} />
+                  </button>
                   <button onClick={handleMsConnect} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Reconnect</button>
                   <Button variant="secondary" size="sm" onClick={handleMsDisconnect}>Disconnect</Button>
                 </>

@@ -573,10 +573,16 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
       })
       sharedAvailability.forEach(a => { if (a.guest_name) free.add(a.guest_name) })
       free.delete(undefined); free.delete(null); free.delete('')
-      return { slot, freeCount: free.size, freeNames: [...free] }
+      // Subtract the OWNER's own calendar: a slot the owner is busy for is not a
+      // real candidate, no matter how many guests are free. This is what makes
+      // "we have the calendar data → show what's left" actually true. (For guests,
+      // calendarEvents is empty so deriveSlotState returns 'available' → no effect.)
+      const ownerState = deriveSlotState(dateObj, slot, calendarEvents || [], connectedCalendars || [], prefixRules, businessHours).state
+      const ownerBusy = ownerState !== 'available'
+      return { slot, freeCount: free.size, freeNames: [...free], ownerBusy, ownerState }
     })
     return { rows: perSlot, anySlotData }
-  }, [slots, dateRequests, sharedAvailability, dateStr])
+  }, [slots, dateRequests, sharedAvailability, dateStr, dateObj, calendarEvents, connectedCalendars, prefixRules, businessHours])
 
   const selectedEmails = useMemo(
     () => [...selectedNames].map(n => emailByName.get(n)).filter(Boolean),
@@ -590,10 +596,14 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
   // Filtered to the chosen time-of-day window when one is active.
   const bestSlots = useMemo(() => {
     if (!slotOverlap.rows.length) return []
+    // Only the owner's free slots can be "best times" — never suggest a slot the
+    // owner is busy for.
+    const ownerFreeRows = slotOverlap.rows.filter(r => !r.ownerBusy)
+    if (!ownerFreeRows.length) return []
     const windowed = windowFilter
-      ? slotOverlap.rows.filter(({ slot }) => slotOverlapsWindow(slot, windowFilter))
-      : slotOverlap.rows
-    const source = windowed.length > 0 ? windowed : slotOverlap.rows
+      ? ownerFreeRows.filter(({ slot }) => slotOverlapsWindow(slot, windowFilter))
+      : ownerFreeRows
+    const source = windowed.length > 0 ? windowed : ownerFreeRows
     const sorted = [...source].sort((a, b) => b.freeCount - a.freeCount)
     const withFree = sorted.filter(r => r.freeCount > 0)
     return (withFree.length > 0 ? withFree : sorted).slice(0, 3)
@@ -615,7 +625,11 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
   // Prefill the time window from the best-overlap slot, else 2–3pm.
   const bestSlot = useMemo(() => {
     if (!slotOverlap.rows.length) return null
-    return [...slotOverlap.rows].sort((a, b) => b.freeCount - a.freeCount)[0]?.slot || null
+    // Prefer an owner-free slot to prefill; only fall back to a busy one if the
+    // owner has nothing open that day.
+    const ownerFreeRows = slotOverlap.rows.filter(r => !r.ownerBusy)
+    const pool = ownerFreeRows.length ? ownerFreeRows : slotOverlap.rows
+    return [...pool].sort((a, b) => b.freeCount - a.freeCount)[0]?.slot || null
   }, [slotOverlap])
   const [startTime, setStartTime] = useState(bestSlot?.startTime || '14:00')
   const [endTime, setEndTime] = useState(bestSlot?.endTime || '15:00')
@@ -716,9 +730,17 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
         {/* Content */}
         <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-6">
 
-          {/* ── Best times for everyone ── */}
-          {bestSlots.length > 0 && (
+          {/* ── Best times for everyone (owner-free slots) — or, if the owner is
+                busy all day, the full slot list so they can see why ── */}
+          {slotOverlap.rows.length > 0 && (
             <div className="mb-5">
+              {bestSlots.length === 0 && (
+                <p className="text-[12px] text-zinc-500 mb-3 leading-relaxed">
+                  You&rsquo;re busy across your calendar this day — every slot below is blocked by an event.
+                </p>
+              )}
+              {bestSlots.length > 0 && (
+              <>
               <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-3">
                 {guestData.length > 0 ? 'Best times for everyone' : 'Quick schedule'}
               </p>
@@ -753,10 +775,14 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                   )
                 })}
               </div>
+              </>
+              )}
 
-              {/* Pick a different time — expands remaining slots (best slots already shown above) */}
+              {/* Pick a different time — expands remaining slots (best slots already shown above).
+                  When the owner is busy all day (no best slots), show the full list inline. */}
               {slotOverlap.rows.length > bestSlots.length && (
-                <div className="mt-3">
+                <div className={bestSlots.length > 0 ? 'mt-3' : ''}>
+                  {bestSlots.length > 0 && (
                   <button
                     onClick={() => setShowSlotPicker(s => !s)}
                     className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03] transition-all duration-150"
@@ -764,13 +790,15 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                     <span>Pick a different time</span>
                     <span className="text-zinc-600 transition-transform duration-200" style={{ display: 'inline-block', transform: showSlotPicker ? 'rotate(180deg)' : 'rotate(0deg)' }}>↓</span>
                   </button>
+                  )}
 
-                  {showSlotPicker && (
+                  {(showSlotPicker || bestSlots.length === 0) && (
                     <div className="mt-2 space-y-1.5 animate-fadeIn">
-                      {slotOverlap.rows.filter(r => !bestSlots.some(b => b.slot.id === r.slot.id)).map(({ slot, freeCount, freeNames }) => {
+                      {slotOverlap.rows.filter(r => !bestSlots.some(b => b.slot.id === r.slot.id)).map(({ slot, freeCount, freeNames, ownerBusy }) => {
                         const total = totalKnown !== null ? totalKnown : guestData.length
-                        const isBusy = total > 0 && freeCount === 0
-                        const isAll = total > 0 && freeCount === total
+                        // Owner busy → busy regardless of guest counts (can't meet then).
+                        const isBusy = ownerBusy || (total > 0 && freeCount === 0)
+                        const isAll = !ownerBusy && total > 0 && freeCount === total
                         const isSelected = selectedSlotId === slot.id
                         return (
                           <SlotRow
@@ -780,8 +808,8 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                             name={slot.name}
                             time={`${slot.startTime} – ${slot.endTime}`}
                             onClick={() => selectSlot(slot)}
-                            hint={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
-                            trailing={total > 0 ? (
+                            hint={ownerBusy ? "You're busy this time" : (freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined)}
+                            trailing={(ownerBusy || total > 0) ? (
                               isBusy ? (
                                 <span className="flex items-center gap-1 text-[10px] text-zinc-700 flex-shrink-0">
                                   <span className="w-1 h-1 rounded-full bg-zinc-700" /> busy

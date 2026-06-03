@@ -8,6 +8,7 @@ import { AvailabilityCalendar } from '../components/availability/AvailabilityCal
 import { Board } from '../components/project/Board'
 import { Whiteboard } from '../components/project/Whiteboard'
 import { ProjectOverview } from '../components/project/ProjectOverview'
+import { WorkspaceTabs } from '../components/project/WorkspaceTabs'
 import { useBoard } from '../hooks/useBoard'
 import { useCanvas } from '../hooks/useCanvas'
 import { useResizablePanel, ResizeHandle } from '../hooks/useResizablePanel'
@@ -652,21 +653,8 @@ export function RoomView() {
         </div>
 
         {/* Floating tabs (lg) so the calendar + day inspector bleed to the top */}
-        <div className="relative z-20 lg:absolute lg:inset-x-0 lg:top-0 lg:pointer-events-none px-5 sm:px-8 pt-4 sm:pt-5 flex-shrink-0">
-          <div className="inline-flex items-center gap-0.5 bg-surface-900/80 lg:backdrop-blur-md border border-white/[0.05] rounded-xl p-1 pointer-events-auto">
-            {[['schedule', 'Schedule'], ['tasks', 'Tasks'], ['board', 'Board']].map(([key, label]) => (
-              <button key={key} onClick={() => setRoomTab(key)}
-                className={`px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                  roomTab === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
-                }`}>
-                {label}
-                {key === 'tasks' && board.tasks.length > 0 && (
-                  <span className="ml-1.5 text-[11px] text-zinc-500 tabular-nums">{board.tasks.length}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        <WorkspaceTabs active={roomTab} onChange={setRoomTab} taskCount={board.tasks.length}
+          className="px-5 sm:px-8 pt-4 sm:pt-5" />
 
         {roomTab === 'schedule' && (
           <ProjectOverview

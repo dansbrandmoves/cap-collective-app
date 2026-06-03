@@ -9,6 +9,7 @@ import { AvailabilityCalendar } from '../components/availability/AvailabilityCal
 import { ProjectOverview } from '../components/project/ProjectOverview'
 import { PeopleRoster } from '../components/project/PeopleRoster'
 import { Board } from '../components/project/Board'
+import { WorkspaceTabs } from '../components/project/WorkspaceTabs'
 import { Whiteboard } from '../components/project/Whiteboard'
 import { useProjectAvailability } from '../hooks/useProjectAvailability'
 import { useProjectPeople } from '../hooks/useProjectPeople'
@@ -279,24 +280,10 @@ export function ProductionView() {
           </button>
         </div>
 
-        {/* Schedule | Tasks toggle — Schedule (the calendar) is the default focus.
-            On lg it floats over the content (so the canvas + day inspector bleed to
-            the top edge); click-through except the pill. In flow on mobile. */}
-        <div className="relative z-20 lg:absolute lg:inset-x-0 lg:top-0 lg:pointer-events-none px-5 sm:px-8 lg:px-12 pt-6 sm:pt-8 flex-shrink-0">
-          <div className="inline-flex items-center gap-0.5 bg-surface-900/80 lg:backdrop-blur-md border border-white/[0.05] rounded-xl p-1 pointer-events-auto">
-            {[['schedule', 'Schedule'], ['tasks', 'Tasks'], ['board', 'Board']].map(([key, label]) => (
-              <button key={key} onClick={() => setMainTab(key)}
-                className={`px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150 ease-ios ${
-                  mainTab === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
-                }`}>
-                {label}
-                {key === 'tasks' && board.tasks.length > 0 && (
-                  <span className="ml-1.5 text-[11px] text-zinc-500 tabular-nums">{board.tasks.length}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Schedule | Tasks | Board toggle — floats over content on lg so the canvas
+            + day inspector bleed to the top edge; in flow on mobile. */}
+        <WorkspaceTabs active={mainTab} onChange={setMainTab} taskCount={board.tasks.length}
+          className="px-5 sm:px-8 lg:px-12 pt-6 sm:pt-8" />
 
         {mainTab === 'schedule' && (
           <ProjectOverview

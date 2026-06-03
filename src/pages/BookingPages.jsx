@@ -467,7 +467,7 @@ export function BookingPages() {
       {showUpgrade && (
         <UpgradeModal
           onClose={() => setShowUpgrade(false)}
-          reason={`Free plan includes ${FREE_BOOKING_PAGE_LIMIT} booking page. Upgrade to Pro to create unlimited booking pages.`}
+          reason={`Free plan includes ${FREE_BOOKING_PAGE_LIMIT} booking pages. Upgrade to Pro to create unlimited booking pages.`}
         />
       )}
 

@@ -224,8 +224,8 @@ export function AppProvider({ children }) {
   // Generous free tier — a founder should be able to explore real work before
   // ever seeing an upgrade prompt. Pro lifts these to unlimited.
   const FREE_PROJECT_LIMIT = 3
-  const FREE_ROOM_LIMIT = 5
-  const FREE_BOOKING_PAGE_LIMIT = 3
+  const FREE_ROOM_LIMIT = 5 // legacy/internal — projects are single-space now; not surfaced as a plan limit
+  const FREE_BOOKING_PAGE_LIMIT = 10
 
   const [profileLoaded, setProfileLoaded] = useState(false)
 

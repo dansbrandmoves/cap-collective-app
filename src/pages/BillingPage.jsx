@@ -5,7 +5,7 @@ import { useApp } from '../contexts/AppContext'
 import { supabase } from '../utils/supabase'
 
 export function BillingPage({ embedded = false } = {}) {
-  const { plan, isProPlan, user, FREE_PROJECT_LIMIT, FREE_ROOM_LIMIT } = useApp()
+  const { plan, isProPlan, user, FREE_PROJECT_LIMIT, FREE_BOOKING_PAGE_LIMIT } = useApp()
   const [loading, setLoading] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -154,7 +154,7 @@ export function BillingPage({ embedded = false } = {}) {
             </div>
             <div className="flex items-center gap-2 text-sm text-zinc-400">
               <Check size={14} strokeWidth={2.5} className="text-accent flex-shrink-0" />
-              Unlimited rooms
+              Unlimited booking pages
             </div>
             <div className="flex items-center gap-2 text-sm text-zinc-400">
               <Check size={14} strokeWidth={2.5} className="text-accent flex-shrink-0" />
@@ -165,11 +165,11 @@ export function BillingPage({ embedded = false } = {}) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-surface-700">
             <div className="flex items-center gap-2 text-sm text-zinc-500">
               <Check size={14} strokeWidth={2} className="text-zinc-600 flex-shrink-0" />
-              {FREE_PROJECT_LIMIT} project
+              Up to {FREE_PROJECT_LIMIT} projects
             </div>
             <div className="flex items-center gap-2 text-sm text-zinc-500">
               <Check size={14} strokeWidth={2} className="text-zinc-600 flex-shrink-0" />
-              {FREE_ROOM_LIMIT} rooms per project
+              {FREE_BOOKING_PAGE_LIMIT} booking pages
             </div>
             <div className="flex items-center gap-2 text-sm text-zinc-500">
               <Check size={14} strokeWidth={2} className="text-zinc-600 flex-shrink-0" />
@@ -196,12 +196,12 @@ export function BillingPage({ embedded = false } = {}) {
             <div className="flex-1">
               <h2 className="font-semibold text-zinc-100 mb-1">Upgrade to Pro</h2>
               <p className="text-sm text-zinc-400 mb-4">
-                Unlock unlimited projects and rooms. Run as many productions simultaneously as you need.
+                Unlock unlimited projects and booking pages. Run as many at once as you need.
               </p>
               <ul className="space-y-2 mb-5">
                 {[
                   'Unlimited projects',
-                  'Unlimited rooms per project',
+                  'Unlimited booking pages',
                   'Priority support',
                 ].map(f => (
                   <li key={f} className="flex items-center gap-2 text-sm text-zinc-300">

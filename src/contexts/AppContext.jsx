@@ -340,6 +340,17 @@ export function AppProvider({ children }) {
         // Navigate to settings to complete calendar setup
         window.location.href = '/calendars?connected=1'
       }).catch(() => setGoogleAuthPending(false))
+    } else if (params.get('state') === 'microsoft-calendar' && params.get('code') && user) {
+      // Microsoft Graph calendar connect — exchange the code for a refresh token,
+      // then land on the calendars tab to pick which calendars to sync.
+      setGoogleAuthPending(true)
+      window.history.replaceState({}, '', window.location.pathname)
+      supabase.functions.invoke('microsoft-calendar-auth', {
+        body: { action: 'exchange', code: params.get('code'), redirectUri: window.location.origin, userId: user.id },
+      }).then(() => {
+        setGoogleAuthPending(false)
+        window.location.href = '/calendars?ms_connected=1'
+      }).catch(() => setGoogleAuthPending(false))
     }
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -803,7 +814,7 @@ export function AppProvider({ children }) {
   const addConnectedCalendar = useCallback((calData) => {
     setConnectedCalendars(prev => {
       const id = `gcal-${Date.now()}-${prev.length}`
-      const cal = { id, googleCalendarId: calData.googleCalendarId, name: calData.name, color: calData.color || '#6b7280', role: calData.role || 'governs' }
+      const cal = { id, googleCalendarId: calData.googleCalendarId, name: calData.name, color: calData.color || '#6b7280', role: calData.role || 'governs', provider: calData.provider || 'google' }
       const exists = prev.find(c => c.googleCalendarId === cal.googleCalendarId)
       if (exists) return prev.map(c => c.googleCalendarId === cal.googleCalendarId ? { ...c, ...cal, id: c.id } : c)
       return [...prev, cal]

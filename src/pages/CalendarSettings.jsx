@@ -14,6 +14,10 @@ import {
   fetchAllGoverningEvents,
   isConfigured,
 } from '../utils/googleCalendar'
+import {
+  isMsConfigured, startMicrosoftAuth, disconnectMicrosoft, isMicrosoftConnected,
+  getValidMsAccessToken, fetchMsCalendarList,
+} from '../utils/microsoftCalendar'
 import { RefreshCw, Plug, Unplug, Plus, Trash2, Sun, Moon, Globe } from 'lucide-react'
 
 const TIMEZONES = [
@@ -132,6 +136,8 @@ export function CalendarSettings({ embedded = false } = {}) {
 
   const configured = isConfigured()
   const [connected, setConnected] = useState(false)
+  const msConfigured = isMsConfigured()
+  const [msConnected, setMsConnected] = useState(false)
 
   // Check connection status + handle post-connect calendar picker
   useEffect(() => {
@@ -162,6 +168,34 @@ export function CalendarSettings({ embedded = false } = {}) {
     }
     init()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Microsoft: connection status + post-connect calendar picker (reuses the role modal).
+  useEffect(() => {
+    if (!msConfigured) return
+    isMicrosoftConnected().then(setMsConnected)
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('ms_connected') === '1') {
+      window.history.replaceState({}, '', window.location.pathname)
+      getValidMsAccessToken().then(async (token) => {
+        if (!token) return
+        try {
+          const cals = await fetchMsCalendarList(token)
+          const roles = {}
+          cals.forEach(cal => {
+            const existing = connectedCalendars.find(c => c.googleCalendarId === cal.googleCalendarId)
+            roles[cal.googleCalendarId] = existing?.role ?? 'governs'
+          })
+          setAssigningRoles(roles)
+          setPendingCals(cals)
+          setShowRoleModal(true)
+          setMsConnected(true)
+        } catch (err) { setAuthError(`Failed to fetch Microsoft calendars: ${err.message}`) }
+      })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleMsConnect() { setAuthError(null); startMicrosoftAuth() }
+  async function handleMsDisconnect() { await disconnectMicrosoft(); setMsConnected(false) }
 
   // Freshen on open. The server cron + realtime handle ongoing updates, so no
   // client-side polling interval is needed here anymore.
@@ -290,6 +324,32 @@ export function CalendarSettings({ embedded = false } = {}) {
           </div>
         </div>
       </div>
+
+      {/* ── Microsoft Calendar ── (hidden until VITE_MS_CLIENT_ID is set) */}
+      {msConfigured && (
+        <div className="py-5 border-b border-surface-800">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-zinc-200">Microsoft / Outlook Calendar</p>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                {msConnected
+                  ? 'Connected · busy times count toward your availability.'
+                  : 'Connect to add your Outlook calendar busy times alongside Google.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {msConnected ? (
+                <>
+                  <button onClick={handleMsConnect} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Reconnect</button>
+                  <Button variant="secondary" size="sm" onClick={handleMsDisconnect}>Disconnect</Button>
+                </>
+              ) : (
+                <Button size="sm" onClick={handleMsConnect}>Connect</Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Appearance ── */}
       <div className="py-5 border-b border-surface-800">
@@ -426,6 +486,9 @@ export function CalendarSettings({ embedded = false } = {}) {
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
                   <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cal.color }} />
                   <p className="text-sm text-zinc-300 truncate">{cal.name}</p>
+                  <span className={`text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded flex-shrink-0 ${cal.provider === 'microsoft' ? 'bg-[#0078d4]/15 text-[#4aa3e0]' : 'bg-white/[0.06] text-zinc-500'}`}>
+                    {cal.provider === 'microsoft' ? 'Outlook' : 'Google'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <select value={cal.role} onChange={e => updateCalendarRole(cal.googleCalendarId, e.target.value)}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate, Link, useOutletContext } from 'react-router-dom'
+import { useParams, useNavigate, Link, Navigate, useOutletContext } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
@@ -30,7 +30,7 @@ export function ProductionView() {
     createRoom, updateRoomName, deleteRoom, getRoomLink, sendRoomInvite,
     effectiveSlots, calendarEvents, connectedCalendars, availabilityRules,
     prefixRules, slotStates, canAddRoom, FREE_ROOM_LIMIT, pendingRequestCounts,
-    availabilityMode, blockDuration, businessHours, loading, user,
+    availabilityMode, blockDuration, businessHours, loading, user, roomMembers,
   } = useApp()
 
   const ownerAuthorName = user?.user_metadata?.name || user?.settings?.displayName || (user?.email ? user.email.split('@')[0] : 'Owner')
@@ -96,6 +96,19 @@ export function ProductionView() {
         </div>
       </div>
     )
+  }
+
+  // Permissions: only the project owner gets the admin console. Members (people the
+  // project was shared with) are sent to their room — the participant view — where
+  // they can see availability and collaborate but can't manage people or the project.
+  const isProjectOwner = !!user && production.ownerId === user.id
+  if (!isProjectOwner) {
+    const email = (user?.email || '').toLowerCase()
+    const memberRoom = production.rooms?.find(r =>
+      roomMembers.some(m => (m.room_id || m.roomId) === r.id && (m.email || '').toLowerCase() === email)
+    ) || production.rooms?.[0]
+    const token = memberRoom?.openToken
+    return <Navigate to={token ? `/room/${token}` : '/'} replace />
   }
 
   function openAddRoom() {
@@ -238,6 +251,8 @@ export function ProductionView() {
               inviteLink={peopleState.inviteLink}
               canAdd={!!primaryRoom}
               onAdd={() => setShowAddPerson(true)}
+              canManage={isProjectOwner}
+              ownerDisplayName={ownerAuthorName}
             />
           </div>
         </div>

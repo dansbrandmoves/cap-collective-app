@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog'
 export function PeopleRoster({
   people, excluded, totalPeople, includedCount,
   togglePerson, removePerson, inviteLink, canAdd, onAdd,
+  canManage = true, ownerDisplayName,
 }) {
   const [copiedToken, setCopiedToken] = useState(null)
   const [confirmPerson, setConfirmPerson] = useState(null)
@@ -52,18 +53,17 @@ export function PeopleRoster({
               }`}
             >
               <button
-                onClick={() => (responded || isOwner) ? togglePerson(name) : undefined}
-                disabled={!responded && !isOwner}
-                title={isOwner ? 'Your calendar' : (responded ? (viaCalendar ? 'Shared via Google Calendar' : 'Tapped their free days') : 'Has not shared their calendar yet')}
-                className={`flex items-center gap-2 flex-1 min-w-0 text-left ${!responded && !isOwner ? 'cursor-default' : ''}`}
+                onClick={() => togglePerson(name)}
+                title={isOwner ? 'Your calendar' : (responded ? (viaCalendar ? 'Shared via Google Calendar' : 'Tapped their free days') : 'Hasn’t shared their calendar yet — include or exclude as you like')}
+                className="flex items-center gap-2 flex-1 min-w-0 text-left"
               >
                 <span className={`w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0 ${inc ? 'bg-accent text-white' : 'border border-white/20'}`}>
                   {inc && <Check size={10} strokeWidth={3} />}
                 </span>
-                <span className={`text-[13px] truncate ${inc ? 'text-zinc-100' : 'text-zinc-500'}`}>{name}</span>
+                <span className={`text-[13px] truncate ${inc ? 'text-zinc-100' : 'text-zinc-500'}`}>{isOwner ? (ownerDisplayName || name) : name}</span>
                 {(viaCalendar || isOwner) && <CalendarDays size={11} strokeWidth={2} className={`flex-shrink-0 ${inc ? 'text-accent/80' : 'text-zinc-600'}`} />}
                 {isOwner
-                  ? <span className="text-[10px] text-zinc-600 flex-shrink-0">Coordinator · you</span>
+                  ? <span className="text-[10px] text-zinc-600 flex-shrink-0">Coordinator</span>
                   : (!responded && <span className="text-[10px] text-zinc-600 italic flex-shrink-0">invited</span>)}
               </button>
               {/* Personal invite link — only useful until their calendar is
@@ -74,7 +74,7 @@ export function PeopleRoster({
                   {copiedToken === inviteToken ? <Check size={12} strokeWidth={3} className="text-green-400" /> : <Copy size={12} strokeWidth={2} />}
                 </button>
               )}
-              {!isOwner && (
+              {!isOwner && canManage && (
                 <button onClick={() => setConfirmPerson(person)} title="Remove person"
                   className="text-zinc-600 hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100">
                   <X size={12} strokeWidth={2.5} />
@@ -85,13 +85,15 @@ export function PeopleRoster({
         })}
       </div>
 
-      <button
-        onClick={onAdd}
-        disabled={!canAdd}
-        className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-accent hover:text-accent/80 transition-colors disabled:opacity-40"
-      >
-        <UserPlus size={14} strokeWidth={2} /> Add person
-      </button>
+      {canManage && (
+        <button
+          onClick={onAdd}
+          disabled={!canAdd}
+          className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-accent hover:text-accent/80 transition-colors disabled:opacity-40"
+        >
+          <UserPlus size={14} strokeWidth={2} /> Add person
+        </button>
+      )}
 
       <ConfirmDialog
         isOpen={!!confirmPerson}

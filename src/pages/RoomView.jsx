@@ -494,8 +494,10 @@ export function RoomView() {
 
   const effectiveCalendarEvents = isOwner ? calendarEvents : ownerCalendarEvents
   const effectiveConnectedCalendars = isOwner ? connectedCalendars : ownerConnectedCalendars
+  const selfName = user?.user_metadata?.full_name || user?.user_metadata?.name || (user?.email ? user.email.split('@')[0] : 'You')
   const ownerDisplay = ownerName || 'Coordinator'
-  const ownerChipLabel = isOwner ? 'You' : ownerDisplay
+  // Show the real name as the primary label; "Coordinator" is a subtle subtitle, not a name.
+  const ownerChipLabel = isOwner ? selfName : ownerDisplay
   const totalPeople = knownGuests.length + 1
   const toggleGuest = (name) => setExcluded(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
 
@@ -580,7 +582,7 @@ export function RoomView() {
             </div>
           ) : (
             <>
-              {[{ name: ownerChipLabel, active: includedOwner, toggle: () => setIncludedOwner(v => !v), sub: (!isOwner && !ownerName) ? null : 'Coordinator' },
+              {[{ name: ownerChipLabel, active: includedOwner, toggle: () => setIncludedOwner(v => !v), sub: (!isOwner && !ownerName) ? null : (isOwner ? 'Coordinator · you' : 'Coordinator') },
                 ...knownGuests.map(n => ({ name: n, active: !excluded.has(n), toggle: () => toggleGuest(n), sub: n === guestName ? 'you' : null }))
               ].map((p, i) => (
                 <button key={i} onClick={p.toggle}

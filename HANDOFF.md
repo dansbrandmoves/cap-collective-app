@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `afab663` — "Microsoft Calendar — phase 1 foundation (auth edge fn + token columns)"
+**Last pushed commit:** `9708cd4` — "Microsoft Calendar phase 2a — connect flow + calendar picker (gated)"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -181,20 +181,30 @@ twice — but keep genuinely-different models separate (don't over-unify).
   tenant `common` (work + personal). Secrets MS_CLIENT_ID/SECRET/TENANT_ID already in Supabase.
   Mirrors `google-calendar-auth`. Nothing calls it yet → zero live impact.
 
-**Phase 2 (next) — client connect + sync + UI:**
-- Client `microsoftCalendar.js`: popup/redirect OAuth (authorize → app origin with `?code` →
-  invoke `microsoft-calendar-auth` exchange). Mirror the Google owner connect in `googleCalendar.js`.
-- `sync-ms-calendar` edge fn + 15-min cron: Graph `/me/calendarView` (windowed) → write to
-  `owner_calendar_events` (same table), tagged provider='microsoft'. Mirror `sync-calendar`.
-- Account → Calendars: "Connect Microsoft" button; connected_calendars get a `provider` field +
-  provider badge; merge MS events into `deriveSlotState` (no engine change — same internal shape).
-- Primary-calendar marker once ≥2 calendars; `schedulingProvider` for default event creation.
+**Phase 2a DONE (`9708cd4`) — connect + calendar picker, GATED behind VITE_MS_CLIENT_ID:**
+- `src/utils/microsoftCalendar.js`: redirect OAuth, token refresh, disconnect, Graph calendar-list
+  + events. AppContext handles the `microsoft-calendar` OAuth return → `/calendars?ms_connected=1`.
+- `connected_calendars[].provider` ('google' default | 'microsoft'); MS ids namespaced `ms:<id>`.
+- Account → Calendars: "Microsoft / Outlook Calendar" connect section + post-connect role picker
+  (reuses the modal) + Outlook/Google badges. Entra redirect URIs added (coordie.com + localhost). ✅
+- **No event sync yet** — connecting + picking calendars stores them but doesn't block availability
+  until 2b. This is the OAuth + calendar-list slice for testing.
 
-**⚠️ NEEDS DANIEL (before Phase 2 can be tested):**
-- Entra → app → Authentication → Web → Redirect URIs: add `https://www.coordie.com` and
-  `http://localhost:5173` (app origins, for the calendar connect return). Sign-in's Supabase
-  callback is separate and stays.
-- Live OAuth/Graph testing (agent can't — no MS account in sandbox).
+**⚠️ NEEDS DANIEL to test 2a:** add **`VITE_MS_CLIENT_ID`** (the app registration's Application/client
+ID) to `.env` AND Vercel (Production) → redeploy. Until then the whole MS UI is hidden. Then:
+Account → Calendars → Connect (Microsoft) → consent → should land back showing your Outlook
+calendars in the role picker, then listed with an "Outlook" badge.
+
+**Phase 2b (after 2a confirmed) — event sync + coexistence (the careful part):**
+- Migration: `owner_calendar_events.provider` (default 'google') so each provider's sync only
+  manages its own rows. ⚠️ AUDIT FIRST: `sync-calendar` (Google) + client `replaceCalendarEvents`
+  (does `delete().eq('owner_id')` — wipes ALL) must be scoped to provider='google' or they'll nuke
+  MS rows. This is the main risk — get coexistence right.
+- `sync-ms-calendar` edge fn + 15-min cron: read profiles.connected_calendars (provider=microsoft,
+  role=governs) → Graph calendarView → write provider='microsoft' rows. Owner's `calendarEvents`
+  already refreshes from `owner_calendar_events` via realtime, so MS events flow in automatically.
+- Trigger immediate sync after connect; manual sync button.
+- Then: primary-calendar marker + `schedulingProvider` for default event creation.
 
 ### 🔜 (folded into the above) — multi-provider / "connect another account" / primary calendar
 **This is also the answer to "connect another calendar account" + "pick a primary calendar."**

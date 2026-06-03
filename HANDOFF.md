@@ -76,17 +76,28 @@ Commits: `0413bc5`, `67f8ed8`, `6622778`, `dd9c551` (all on `master`, prod).
 ### 🧱 Refactor debt (Dave's note — guest & owner pages should share code)
 Dave flagged that the **guest project page (RoomView) and owner project page (ProductionView)** do
 many of the same things and should share more code to cut duplication + bug surface. Already shared:
-`ProjectOverview`, `DayInspectorPanel`, `useProjectAvailability`, `Board`, `Whiteboard`. Still
-duplicated and worth unifying in a dedicated refactor pass (do it separately from feature work):
-- **People roster/filter:** RoomView has an inline people-checkbox list; ProductionView uses
-  `PeopleRoster` (+ `useProjectPeople`). Two renderings of the same "people with include/exclude"
-  idea → unify into one component + hook used by both.
-- **GuestCalendarPanel exists twice** (RoomView + BookingPageView) with different connect flows →
-  extract one component (or at least one connect hook).
-- **SWR cache logic** is hand-rolled in 4 places (RoomView schedule, owner-cal, useProjectAvailability,
-  useBoard/useCanvas) → a tiny `useCachedQuery(key, fetcher)` helper would DRY it.
+`ProjectOverview`, `DayInspectorPanel`, `useProjectAvailability`, `Board`, `Whiteboard`.
+
+**Done (`1cffd26`, no behavior change):**
+- ✅ **`utils/timeWindows.js`** — one source for `WINDOWS`/`WINDOW_ORDER`/`toMin`. Exports BOTH
+  predicates by distinct names: `slotOverlapsWindow` (project + day inspector) and
+  `slotStartsInWindow` (booking list). They intentionally differ — DON'T merge them.
+- ✅ **`utils/cache.js`** — `readCache`/`writeCache`/`clearCache` replace the hand-rolled
+  sessionStorage try/catch across RoomView, useProjectAvailability, BookingPageView.
+
+**Still open (design-first; do separately from feature work):**
+- **People roster/filter — DEFERRED ON PURPOSE.** RoomView's inline list and ProductionView's
+  `PeopleRoster`/`useProjectPeople` look similar but the data/identity model genuinely differs:
+  `useProjectPeople` is **owner-centric** (owner = "You", first, with add/remove/invite), while the
+  guest room frames "who's the owner" as someone else. Unifying needs a shared *presentational*
+  list that each page feeds a normalized `{name, sub, active, onToggle, trailing}[]` — NOT a forced
+  shared hook. Worth doing, but design it first; touches core overlap selection on a live app.
+- **GuestCalendarPanel exists twice** (RoomView offline-code-client flow + BookingPageView flow) →
+  extract one component or at least one connect hook. Medium risk (different connect logic).
+- **`useBoard`/`useCanvas`** still have their own localStorage SWR (different store + shape) — could
+  adopt a `useCachedQuery` helper later, lower priority.
 Principle going forward: build project features once, parameterized by `isOwner`/`canManage`, not
-twice.
+twice — but keep genuinely-different models separate (don't over-unify).
 
 ### 🔜 Next big build (designed, greenlit, NOT started) — Microsoft Calendar / multi-provider
 Answers both Daniel's "primary calendar type" question AND founder feedback ("Calendars section

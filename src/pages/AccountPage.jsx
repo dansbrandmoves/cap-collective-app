@@ -22,7 +22,8 @@ export function AccountPage() {
   const tab = TABS.some(t => t.key === params.get('tab')) ? params.get('tab') : 'calendars'
   const setTab = (key) => setParams(key === 'calendars' ? {} : { tab: key }, { replace: true })
 
-  const name = user.user_metadata?.full_name || user.email
+  const fullName = user.user_metadata?.full_name
+  const name = fullName || user.email
 
   return (
     <div className="px-5 sm:px-8 lg:px-14 py-8 sm:py-12">
@@ -36,10 +37,17 @@ export function AccountPage() {
           </div>
         )}
         <div className="min-w-0">
-          <h1 className="text-[24px] sm:text-[28px] font-semibold text-zinc-50 tracking-tight leading-tight truncate">Account</h1>
-          <p className="text-[13px] text-zinc-500 truncate">{name}</p>
+          <h1 className="text-[24px] sm:text-[28px] font-semibold text-zinc-50 tracking-tight leading-tight truncate">
+            {fullName || 'Account'}
+          </h1>
+          {/* The email is where all notifications + booking emails are sent. */}
+          <p className="text-[13px] text-zinc-500 truncate">{user.email}</p>
         </div>
       </div>
+
+      <p className="text-[12px] text-zinc-600 mb-6 -mt-2">
+        Notifications and booking emails are sent to <span className="text-zinc-400">{user.email}</span>.
+      </p>
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-surface-800 mb-8 -mx-1 px-1 overflow-x-auto">

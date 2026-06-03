@@ -770,6 +770,7 @@ export function AppProvider({ children }) {
   }, [])
 
   const resetAllSettings = useCallback(() => {
+    // Availability baseline
     setSlots(SEED_DATA.slots)
     setPrefixRules(SEED_DATA.prefixRules)
     setSlotStateCustomizations({})
@@ -786,8 +787,16 @@ export function AppProvider({ children }) {
         6: null,
       }
     })
-    setGuestCalendarEnabled(false)
+    // Preferences (kept current with the settings the UI actually exposes today)
     setTheme('dark')
+    setTimezone('America/New_York')
+    setGuestCalendarEnabled(true)   // guest calendar connect is on by default now
+    // Booking-page branding
+    setBrandColor(null)
+    setBookingTheme('light')
+    setLogoMode('logo')
+    // Note: does NOT touch displayName, connected calendars, logo, projects, or
+    // booking pages — only resets preferences.
   }, [])
 
   // --- Connected Calendars ---

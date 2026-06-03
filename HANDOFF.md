@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `43d27da` — "card complete-toggle, minimal card + Add-to-card, bigger empty drop zone"
+**Last pushed commit:** `14ffb62` — "drop sidebar logo + powered-by for app users; roster matches guest aesthetic"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -94,6 +94,19 @@ Commits: `0413bc5`, `67f8ed8`, `6622778`, `dd9c551` (all on `master`, prod).
 - **Follow-ups:** native **Google Drive Picker** (browse/pick, not just paste a share link) — needs
   Drive API key + OAuth creds Daniel will set up; phase 2. Optional: attachment-count badge on the
   card face (skipped to avoid loading all attachments for the board).
+
+**Sidebar / branding / roster polish (`14ffb62`):**
+- **No Coordie logo** at the top of the project sidebar (RoomView) anymore.
+- **"Powered by Coordie" removed for actual app users.** It lives only on landing + booking pages
+  (promo to prospects). Guest project pages use the not-signed-in "Create your free Coordie" nudge
+  instead — that's the guest signup method, not a powered-by badge.
+- **Project roster now matches the guest sidebar aesthetic** (avatar left, name + subtle subtitle,
+  checkbox right, no calendar-icon clutter) — `PeopleRoster` restyled. Owner keeps copy-invite +
+  **remove-from-project** (the X, gated by `canManage`) — the one thing the guest view doesn't have.
+  This is the lightweight "improve it a bit" version of the roster unification, not a hook merge.
+- **"Coordinator" is a subtitle, never a name.** Backfilled `profiles.settings.displayName` from auth
+  metadata (full_name → name → email local-part) so existing owners show their real name to guests;
+  the owner backfill-on-load also keeps new owners covered.
 
 ### 🧱 Refactor debt (Dave's note — guest & owner pages should share code)
 Dave flagged that the **guest project page (RoomView) and owner project page (ProductionView)** do

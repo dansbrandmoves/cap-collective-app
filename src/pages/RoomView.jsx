@@ -547,13 +547,10 @@ export function RoomView() {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         ${sidebarCollapsed ? 'md:hidden' : ''}`}>
         <div className="px-5 py-5 border-b border-white/[0.05]">
-          <div className="flex items-center justify-between mb-3 gap-2">
-            <img src="/coordie-logo.svg" alt="Coordie" className="h-5" style={{ filter: theme === 'dark' ? 'invert(1)' : 'none' }} />
-            <div className="flex items-center gap-1">
-              {isOwner && <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">Owner</span>}
-              <button onClick={() => setSidebarOpen(false)} className="md:hidden text-zinc-500 hover:text-zinc-200 p-1"><X size={16} /></button>
-              <button onClick={() => setSidebarCollapsed(true)} title="Collapse panel" className="hidden md:flex text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded p-1"><PanelLeft size={15} strokeWidth={1.75} /></button>
-            </div>
+          <div className="flex items-center justify-end mb-3 gap-2 min-h-[20px]">
+            {isOwner && <span className="mr-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">Owner</span>}
+            <button onClick={() => setSidebarOpen(false)} className="md:hidden text-zinc-500 hover:text-zinc-200 p-1"><X size={16} /></button>
+            <button onClick={() => setSidebarCollapsed(true)} title="Collapse panel" className="hidden md:flex text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded p-1"><PanelLeft size={15} strokeWidth={1.75} /></button>
           </div>
           <h2 className="text-[15px] font-semibold text-zinc-50 leading-snug tracking-tight truncate">{production.name}</h2>
           {room.name && room.name !== production.name && (
@@ -608,10 +605,11 @@ export function RoomView() {
           )}
         </div>
 
-        {/* Bottom of sidebar: a soft growth nudge for not-signed-in guests (the project
-            follows them in when they sign up); just "Powered by Coordie" once signed in. */}
-        <div className="px-5 py-3 border-t border-white/[0.05]">
-          {!user ? (
+        {/* Bottom of sidebar: a soft growth nudge for NOT-signed-in guests only (the
+            project follows them in when they sign up). No "Powered by Coordie" for
+            actual app users — that promo lives on the landing/booking pages only. */}
+        {!user && (
+          <div className="px-5 py-3 border-t border-white/[0.05]">
             <button
               type="button"
               onClick={() => setJoinOpen(true)}
@@ -624,14 +622,8 @@ export function RoomView() {
                 <span className="block text-[11px] text-zinc-500 leading-tight">Keep this project — and start your own.</span>
               </span>
             </button>
-          ) : (
-            <a href="https://coordie.com" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors">
-              <img src="/coordie-logo.svg" alt="" className="h-2.5" style={{ filter: 'invert(0.4)' }} />
-              Powered by Coordie
-            </a>
-          )}
-        </div>
+          </div>
+        )}
       </aside>
 
       {/* Main */}

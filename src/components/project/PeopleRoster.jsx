@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Users, CalendarDays, Check, UserPlus, Copy, X } from 'lucide-react'
+import { Users, Check, UserPlus, Copy, X } from 'lucide-react'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 
 // The roster UI — lives in the project left panel. Add people (opens the Add
@@ -45,41 +45,48 @@ export function PeopleRoster({
           const inc = !excluded.has(name)
           const viaCalendar = sources.includes('calendar')
           const responded = sources.length > 0
+          const display = isOwner ? (ownerDisplayName || name) : name
+          const sub = isOwner ? 'Coordinator · you' : (!responded ? 'invited' : null)
           return (
             <div
               key={name}
-              className={`group flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${
-                inc ? 'hover:bg-white/[0.04]' : 'opacity-50 hover:bg-white/[0.03]'
+              className={`group flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors ${
+                inc ? 'hover:bg-white/[0.04]' : 'opacity-60 hover:bg-white/[0.03]'
               }`}
             >
+              {/* avatar + name (left) — tapping toggles include/exclude */}
               <button
                 onClick={() => togglePerson(name)}
-                title={isOwner ? 'Your calendar' : (responded ? (viaCalendar ? 'Shared via Google Calendar' : 'Tapped their free days') : 'Hasn’t shared their calendar yet — include or exclude as you like')}
-                className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                title={isOwner ? 'You (Coordinator)' : (responded ? (viaCalendar ? 'Shared via Google Calendar' : 'Tapped their free days') : 'Hasn’t shared their calendar yet — include or exclude as you like')}
+                className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
               >
-                <span className={`w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0 ${inc ? 'bg-accent text-white' : 'border border-white/20'}`}>
-                  {inc && <Check size={10} strokeWidth={3} />}
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${inc ? 'bg-accent/20 text-accent' : 'bg-white/[0.05] text-zinc-500'}`}>
+                  {display[0]?.toUpperCase()}
                 </span>
-                <span className={`text-[13px] truncate ${inc ? 'text-zinc-100' : 'text-zinc-500'}`}>{isOwner ? (ownerDisplayName || name) : name}</span>
-                {(viaCalendar || isOwner) && <CalendarDays size={11} strokeWidth={2} className={`flex-shrink-0 ${inc ? 'text-accent/80' : 'text-zinc-600'}`} />}
-                {isOwner
-                  ? <span className="text-[10px] text-zinc-600 flex-shrink-0">Coordinator</span>
-                  : (!responded && <span className="text-[10px] text-zinc-600 italic flex-shrink-0">invited</span>)}
+                <span className="flex-1 min-w-0">
+                  <span className={`block text-[13px] truncate ${inc ? 'text-zinc-100' : 'text-zinc-500'}`}>{display}</span>
+                  {sub && <span className={`block text-[11px] truncate text-zinc-600 ${sub === 'invited' ? 'italic' : ''}`}>{sub}</span>}
+                </span>
               </button>
-              {/* Personal invite link — only useful until their calendar is
-                  synced. Once they're in, drop it (they don't need it anymore). */}
+              {/* Personal invite link — only useful until their calendar is synced. */}
               {inviteToken && !viaCalendar && (
                 <button onClick={() => copy(inviteToken)} title="Copy invite link"
-                  className="text-zinc-600 hover:text-accent transition-colors flex-shrink-0">
-                  {copiedToken === inviteToken ? <Check size={12} strokeWidth={3} className="text-green-400" /> : <Copy size={12} strokeWidth={2} />}
+                  className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-accent transition-all flex-shrink-0">
+                  {copiedToken === inviteToken ? <Check size={13} strokeWidth={3} className="text-green-400" /> : <Copy size={13} strokeWidth={2} />}
                 </button>
               )}
+              {/* Owner-only: remove someone from the project */}
               {!isOwner && canManage && (
-                <button onClick={() => setConfirmPerson(person)} title="Remove person"
-                  className="text-zinc-600 hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100">
-                  <X size={12} strokeWidth={2.5} />
+                <button onClick={() => setConfirmPerson(person)} title="Remove from project"
+                  className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all flex-shrink-0">
+                  <X size={13} strokeWidth={2.5} />
                 </button>
               )}
+              {/* checkbox (right) */}
+              <button onClick={() => togglePerson(name)} title={inc ? 'Counted in availability' : 'Excluded'}
+                className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border transition-colors ${inc ? 'bg-accent border-accent text-white' : 'border-white/15 text-transparent hover:border-white/30'}`}>
+                <Check size={12} strokeWidth={3} />
+              </button>
             </div>
           )
         })}

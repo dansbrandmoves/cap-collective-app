@@ -73,6 +73,7 @@ export function ProductionView() {
   const peopleState = useProjectPeople(production, {
     dateRequestsByRoom: availability.dateRequestsByRoom,
     sharedAvailByRoom: availability.sharedAvailByRoom,
+    removeLocal: availability.removePersonLocal,
   })
   const sidePanel = useResizablePanel('coordie-project-panel', { defaultWidth: 288, min: 240, max: 420, side: 'right' })
   const PANEL_RAIL = 48

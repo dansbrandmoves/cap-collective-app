@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { supabase } from '../utils/supabase'
 import { readCache, writeCache } from '../utils/cache'
 
@@ -82,5 +82,21 @@ export function useProjectAvailability(production) {
     return map
   }, [allSharedAvail])
 
-  return { loading, allDateRequests, allSharedAvail, dateRequestsByRoom, sharedAvailByRoom }
+  // Optimistically drop a person from the local signals (used when an owner
+  // removes someone) so the roster updates instantly instead of waiting on the
+  // realtime DELETE. Also rewrites the SWR cache so a quick remount won't
+  // resurrect them before the server refetch lands.
+  const removePersonLocal = useCallback((name) => {
+    if (!name) return
+    setAllDateRequests(prev => prev.filter(r => r.requester_name !== name))
+    setAllSharedAvail(prev => prev.filter(a => a.guest_name !== name))
+    const cacheKey = `coordie-projavail-${roomKey}`
+    const cached = readCache(cacheKey)
+    if (cached) writeCache(cacheKey, {
+      dateRequests: (cached.dateRequests || []).filter(r => r.requester_name !== name),
+      sharedAvailability: (cached.sharedAvailability || []).filter(a => a.guest_name !== name),
+    })
+  }, [roomKey])
+
+  return { loading, allDateRequests, allSharedAvail, dateRequestsByRoom, sharedAvailByRoom, removePersonLocal }
 }

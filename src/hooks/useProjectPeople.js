@@ -9,7 +9,7 @@ import { useApp } from '../contexts/AppContext'
 export const OWNER_LABEL = 'You'
 const isActiveReq = r => r.status !== 'declined' && r.status !== 'archived'
 
-export function useProjectPeople(production, { dateRequestsByRoom = {}, sharedAvailByRoom = {} } = {}) {
+export function useProjectPeople(production, { dateRequestsByRoom = {}, sharedAvailByRoom = {}, removeLocal } = {}) {
   const { roomMembers, addRoomMember, removePersonEverywhere, getRoomLink } = useApp()
   const rooms = production?.rooms || []
   const primaryRoom = rooms[0] || null
@@ -69,8 +69,14 @@ export function useProjectPeople(production, { dateRequestsByRoom = {}, sharedAv
   // date requests across the project's rooms, so they actually disappear.
   const removePerson = useCallback((person) => {
     const roomIds = (production?.rooms || []).map(r => r.id)
+    // Optimistically clear the person from the availability signals too — the
+    // roster merges roomMembers + date_requests + shared_availability, so clearing
+    // only the member row (inside removePersonEverywhere) left them visible until
+    // a realtime DELETE arrived. Also drop them from the excluded set for hygiene.
+    removeLocal?.(person?.name)
+    setExcluded(prev => { if (!prev.has(person?.name)) return prev; const n = new Set(prev); n.delete(person.name); return n })
     return removePersonEverywhere({ roomIds, name: person?.name, memberId: person?.memberId })
-  }, [production, removePersonEverywhere])
+  }, [production, removePersonEverywhere, removeLocal])
 
   const inviteLink = useCallback((token) => (token ? getRoomLink(token) : null), [getRoomLink])
 

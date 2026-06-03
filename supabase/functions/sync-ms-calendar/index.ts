@@ -12,7 +12,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const MS_CLIENT_ID = Deno.env.get("MS_CLIENT_ID")!;
 const MS_CLIENT_SECRET = Deno.env.get("MS_CLIENT_SECRET")!;
-const MS_TENANT = Deno.env.get("MS_TENANT_ID") || "common";
+// Always "common" — a tenant GUID rejects personal Microsoft accounts (AADSTS70000121).
+const MS_TENANT = "common";
 const TOKEN_URL = `https://login.microsoftonline.com/${MS_TENANT}/oauth2/v2.0/token`;
 const SCOPE = "offline_access Calendars.Read User.Read openid email profile";
 const GRAPH = "https://graph.microsoft.com/v1.0";

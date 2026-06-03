@@ -8,7 +8,10 @@ const MS_CLIENT_ID = Deno.env.get("MS_CLIENT_ID")!;
 const MS_CLIENT_SECRET = Deno.env.get("MS_CLIENT_SECRET")!;
 // Multi-tenant + personal accounts → the token endpoint must be "common"
 // (a specific tenant GUID would reject personal Microsoft accounts).
-const MS_TENANT = Deno.env.get("MS_TENANT_ID") || "common";
+// MUST be "common" (work + personal accounts). A tenant GUID rejects personal
+// Microsoft accounts at the token step (AADSTS70000121) even though consent via
+// /common succeeded — so we hardcode it and ignore any MS_TENANT_ID secret.
+const MS_TENANT = "common";
 const TOKEN_URL = `https://login.microsoftonline.com/${MS_TENANT}/oauth2/v2.0/token`;
 // offline_access → refresh token; Calendars.Read → events; User.Read → profile.
 const SCOPE = "offline_access Calendars.Read User.Read openid email profile";

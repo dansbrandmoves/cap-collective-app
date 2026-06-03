@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   Plus, X, Check, MoreHorizontal, Pencil, Trash2, GripVertical,
   AlignLeft, MessageSquare, UserPlus, Tag, CalendarDays, CheckSquare, Square,
-  Paperclip, Link2, ExternalLink, Upload, FileText,
+  Paperclip, Link2, ExternalLink, Upload, FileText, CheckCircle2, Circle,
 } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useTaskComments } from '../../hooks/useTaskComments'
@@ -88,6 +88,7 @@ export function Board({
             onDelete={() => deleteColumn(col.id)}
             onAddTask={(title) => addTask(col.id, title)}
             onOpenTask={setOpenTaskId}
+            onToggleComplete={(taskId, completed) => updateTask(taskId, { completed, completed_at: completed ? new Date().toISOString() : null })}
           />
         ))}
         <AddColumn onAdd={addColumn} />
@@ -121,7 +122,7 @@ function Avatar({ name, size = 20 }) {
 function Column({
   column, index, tasks, drag, overCol, overIndex, isColOver,
   setDrag, setOverCol, setOverIndex, setOverColIdx, onCardDrop, onColumnDrop,
-  onRename, onDelete, onAddTask, onOpenTask,
+  onRename, onDelete, onAddTask, onOpenTask, onToggleComplete,
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -203,7 +204,7 @@ function Column({
       <div
         onDragOver={(e) => { if (cardDragActive) { e.preventDefault(); if (overCol !== column.id || overIndex !== tasks.length) { setOverCol(column.id); setOverIndex(tasks.length) } } }}
         onDrop={(e) => { if (cardDragActive) { e.preventDefault(); onCardDrop(column.id) } }}
-        className="flex-1 min-h-[12px] px-2.5 pb-1"
+        className={`flex-1 px-2.5 pb-1 ${tasks.length === 0 ? 'min-h-[64px]' : 'min-h-[12px]'}`}
       >
         {tasks.map((t, i) => (
           <div key={t.id}>
@@ -222,10 +223,21 @@ function Column({
                 if (overCol !== column.id || overIndex !== idx) { setOverCol(column.id); setOverIndex(idx) }
               }}
               onOpen={() => onOpenTask(t.id)}
+              onToggleComplete={() => onToggleComplete(t.id, !t.completed)}
             />
           </div>
         ))}
-        <DropLine show={showLineAt(tasks.length)} />
+        {/* Empty column: a roomy drop target so you can drop into a column that has
+            no cards (the old paper-thin line was nearly impossible to hit). */}
+        {tasks.length === 0 ? (
+          <div className={`rounded-lg border border-dashed h-14 flex items-center justify-center text-[11px] transition-colors ${
+            cardDragActive && overCol === column.id ? 'border-accent/50 bg-accent/[0.05] text-accent' : 'border-white/[0.08] text-zinc-600'
+          }`}>
+            {cardDragActive ? 'Drop here' : 'No cards yet'}
+          </div>
+        ) : (
+          <DropLine show={showLineAt(tasks.length)} />
+        )}
       </div>
 
       <AddTask onAdd={onAddTask} />
@@ -237,7 +249,7 @@ function DropLine({ show }) {
   return <div className={`h-0.5 rounded-full my-1 transition-colors ${show ? 'bg-accent' : 'bg-transparent'}`} />
 }
 
-function TaskCard({ task, dragging, onDragStart, onDragEnd, onDragOverCard, onOpen }) {
+function TaskCard({ task, dragging, onDragStart, onDragEnd, onDragOverCard, onOpen, onToggleComplete }) {
   const labels = task.labels || []
   const checklist = task.checklist || []
   const checkDone = checklist.filter(i => i.done).length
@@ -260,7 +272,19 @@ function TaskCard({ task, dragging, onDragStart, onDragEnd, onDragOverCard, onOp
           ))}
         </div>
       )}
-      <p className="text-[13px] leading-snug text-zinc-100 break-words">{task.title}</p>
+      {/* Title row with a hover-reveal complete toggle (always visible once complete). */}
+      <div className="flex items-start gap-2">
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleComplete() }}
+          title={task.completed ? 'Mark incomplete' : 'Mark complete'}
+          className={`mt-[1px] flex-shrink-0 transition-opacity duration-150 ${task.completed ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+        >
+          {task.completed
+            ? <CheckCircle2 size={16} strokeWidth={2} className="text-green-500" />
+            : <Circle size={16} strokeWidth={2} className="text-zinc-500 hover:text-green-500 transition-colors" />}
+        </button>
+        <p className={`flex-1 text-[13px] leading-snug break-words ${task.completed ? 'text-zinc-500 line-through' : 'text-zinc-100'}`}>{task.title}</p>
+      </div>
       <div className="flex items-center gap-2 mt-2 empty:hidden">
         {task.description && <AlignLeft size={13} strokeWidth={2} className="text-zinc-500" />}
         {due && (
@@ -366,8 +390,24 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
   function addCheckItem(text) { const t = (text || '').trim(); if (!t) return; onUpdate({ checklist: [...checklist, { id: nanoid(6), text: t, done: false }] }) }
   function toggleCheck(id) { onUpdate({ checklist: checklist.map(i => i.id === id ? { ...i, done: !i.done } : i) }) }
   function removeCheck(id) { onUpdate({ checklist: checklist.filter(i => i.id !== id) }) }
+  function toggleComplete() { onUpdate({ completed: !task.completed, completed_at: !task.completed ? new Date().toISOString() : null }) }
 
-  useEffect(() => { setTitle(task.title); setDesc(task.description || '') }, [task.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Minimal card by default: optional sections only render once they have content
+  // or you explicitly add them via the "Add to card" row.
+  const [shown, setShown] = useState(() => new Set())
+  const reveal = (k) => setShown(prev => new Set(prev).add(k))
+  const showLabels = labels.length > 0 || shown.has('labels')
+  const showDue = !!task.due_on || shown.has('due')
+  const showChecklist = checklist.length > 0 || shown.has('checklist')
+  const showAttach = attachments.length > 0 || shown.has('attachments')
+  const addable = [
+    !showLabels && { k: 'labels', icon: Tag, label: 'Labels' },
+    !showDue && { k: 'due', icon: CalendarDays, label: 'Dates' },
+    !showChecklist && { k: 'checklist', icon: CheckSquare, label: 'Checklist' },
+    !showAttach && { k: 'attachments', icon: Paperclip, label: 'Attachment' },
+  ].filter(Boolean)
+
+  useEffect(() => { setTitle(task.title); setDesc(task.description || ''); setShown(new Set()) }, [task.id]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -387,13 +427,18 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
       <div onClick={(e) => e.stopPropagation()}
         className="w-full max-w-3xl my-4 bg-surface-900 border border-white/[0.08] rounded-2xl shadow-lift animate-fadeIn">
         {/* Header */}
-        <div className="flex items-start gap-3 px-5 sm:px-6 py-4 border-b border-white/[0.06]">
+        <div className="flex items-start gap-2.5 px-5 sm:px-6 py-4 border-b border-white/[0.06]">
+          <button onClick={toggleComplete} title={task.completed ? 'Mark incomplete' : 'Mark complete'} className="mt-1 flex-shrink-0">
+            {task.completed
+              ? <CheckCircle2 size={20} strokeWidth={2} className="text-green-500" />
+              : <Circle size={20} strokeWidth={2} className="text-zinc-500 hover:text-green-500 transition-colors" />}
+          </button>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={commitTitle}
             onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-            className="flex-1 bg-transparent text-[19px] font-semibold text-zinc-50 tracking-tight focus:outline-none focus:bg-white/[0.03] rounded-md px-1 -mx-1"
+            className={`flex-1 bg-transparent text-[19px] font-semibold tracking-tight focus:outline-none focus:bg-white/[0.03] rounded-md px-1 -mx-1 ${task.completed ? 'text-zinc-500 line-through' : 'text-zinc-50'}`}
           />
           <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors flex-shrink-0">
             <X size={17} strokeWidth={1.75} />
@@ -441,6 +486,7 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
             </div>
 
             {/* Labels */}
+            {showLabels && (
             <div>
               <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Labels</p>
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -474,8 +520,10 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
                 </div>
               </div>
             </div>
+            )}
 
             {/* Due date */}
+            {showDue && (
             <div>
               <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Due date</p>
               <div className="flex items-center gap-2">
@@ -484,6 +532,7 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
                 {task.due_on && <button onClick={() => setDue(null)} className="text-[12px] text-zinc-500 hover:text-red-400 transition-colors">Clear</button>}
               </div>
             </div>
+            )}
 
             {/* Description */}
             <div>
@@ -501,6 +550,7 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
             </div>
 
             {/* Checklist */}
+            {showChecklist && (
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <CheckSquare size={14} strokeWidth={2} className="text-zinc-400" />
@@ -529,8 +579,10 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
                   className="w-full bg-surface-800/60 border border-white/[0.07] rounded-lg px-2.5 py-1.5 text-[12px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/50 transition-colors" />
               </form>
             </div>
+            )}
 
             {/* Attachments */}
+            {showAttach && (
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Paperclip size={14} strokeWidth={2} className="text-zinc-400" />
@@ -562,6 +614,22 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
                 </label>
               </div>
             </div>
+            )}
+
+            {/* Add to card — reveal optional sections on demand (keeps the card minimal) */}
+            {addable.length > 0 && (
+              <div>
+                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Add to card</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {addable.map(a => (
+                    <button key={a.k} onClick={() => reveal(a.k)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-800/60 border border-white/[0.07] text-[12px] text-zinc-300 hover:text-zinc-100 hover:border-white/20 transition-colors">
+                      <a.icon size={13} strokeWidth={2} /> {a.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <button onClick={onDelete}
               className="flex items-center gap-1.5 text-[12px] text-zinc-500 hover:text-red-400 transition-colors">

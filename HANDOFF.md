@@ -1,7 +1,18 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `07c2734` — "Microsoft Calendar phase 2b — event sync (Outlook busy times block availability)"
+**Last pushed commit:** `63b6a0f` — "coordie: de-conflate Google/Microsoft calendar naming + stop Google sync touching MS calendars"
+
+> **2026-06-03 (session 4):** De-conflation pass. `sync-calendar` (Google edge fn, now v5) was
+> iterating ALL governing calendars incl. the owner's Outlook one — firing Google API calls against
+> `ms:` ids every run. Now filters via `isGoogleCalendar()` (provider flag OR `ms:` prefix). MS is
+> handled solely by `sync-ms-calendar`; both share `owner_calendar_events` (MS rows namespaced `ms:`).
+> Provider-agnostic UI copy de-Googled (PeopleRoster tooltip, AvailabilityCalendar hints, booking
+> email CTA). `googleCalId` params renamed `calId`. **NOTE:** investigated "owner shows free at 11am
+> on 6/16 despite an overlapping Outlook event" — MS event IS in DB (11:30–16:30 UTC = 7:30am–12:30pm
+> ET, correctly overlaps 11am) and loads on mount. Could not find a code path dropping it; likely
+> stale client/deploy. Day-grid is day-level (afternoon-free → green day is expected); confirm via
+> the **slot-level day inspector** (click 6/16 → the 11am slot row should read "Busy").
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.

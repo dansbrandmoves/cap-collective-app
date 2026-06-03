@@ -337,8 +337,9 @@ export function AppProvider({ children }) {
           setGoogleTokenExpiresAt(data.expires_at)
         }
         setGoogleAuthPending(false)
-        // Navigate to settings to complete calendar setup
-        window.location.href = '/calendars?connected=1'
+        // Go straight to the account calendars tab — /calendars rewrites to
+        // /account?tab=calendars and would drop the query param.
+        window.location.href = '/account?tab=calendars&connected=1'
       }).catch(() => setGoogleAuthPending(false))
     } else if (params.get('state') === 'microsoft-calendar' && params.get('code') && user) {
       // Microsoft Graph calendar connect — exchange the code for a refresh token,

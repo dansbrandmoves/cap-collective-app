@@ -30,6 +30,10 @@ const cors = {
 const json = (d: unknown, status = 200) =>
   new Response(JSON.stringify(d), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
+async function diag(admin: any, detail: unknown) {
+  try { await admin.from("diagnostics").insert({ event: "ms_calendar_sync", detail }); } catch { /* never throw from logging */ }
+}
+
 async function getMsToken(admin: any, ownerId: string): Promise<string | null> {
   const { data: p } = await admin.from("profiles")
     .select("ms_refresh_token, ms_access_token, ms_token_expires_at")
@@ -100,7 +104,10 @@ async function syncOwner(admin: any, ownerId: string) {
   );
   if (!governing.length) return { ownerId, skipped: "no governing MS calendars" };
   const token = await getMsToken(admin, ownerId);
-  if (!token) return { ownerId, skipped: "no valid MS token" };
+  if (!token) {
+    await diag(admin, { actor: "owner", status: "skip", summary: "No valid Microsoft token — reconnect needed" });
+    return { ownerId, skipped: "no valid MS token" };
+  }
 
   const cals = [];
   for (const c of governing) {
@@ -123,6 +130,15 @@ async function syncOwner(admin: any, ownerId: string) {
       cals.push({ calId, error: String((e as Error)?.message || e) });
     }
   }
+  const total = cals.reduce((n: number, c: any) => n + (c.count || 0), 0);
+  const anyErr = cals.some((c: any) => c.error);
+  await diag(admin, {
+    actor: "owner",
+    status: anyErr ? "error" : "ok",
+    summary: anyErr ? "Microsoft sync had errors" : `Microsoft synced — ${total} events`,
+    eventCount: total,
+    calendars: cals,
+  });
   return { ownerId, calendars: cals };
 }
 

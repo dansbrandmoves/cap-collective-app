@@ -135,9 +135,11 @@ export function CalendarSettings({ embedded = false } = {}) {
   const [tzOpen, setTzOpen] = useState(false)
 
   const configured = isConfigured()
-  const [connected, setConnected] = useState(false)
+  // Optimistic initial state from already-loaded calendars, so we don't flash a
+  // false "disconnected / expired" while the async connection check resolves.
+  const [connected, setConnected] = useState(() => connectedCalendars.some(c => (c.provider || 'google') === 'google'))
   const msConfigured = isMsConfigured()
-  const [msConnected, setMsConnected] = useState(false)
+  const [msConnected, setMsConnected] = useState(() => connectedCalendars.some(c => c.provider === 'microsoft'))
   const [msSyncing, setMsSyncing] = useState(false)
 
   // Check connection status + handle post-connect calendar picker
@@ -363,7 +365,6 @@ export function CalendarSettings({ embedded = false } = {}) {
                     className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors disabled:opacity-50">
                     <RefreshCw size={14} strokeWidth={1.75} className={msSyncing ? 'animate-spin' : ''} />
                   </button>
-                  <Button variant="secondary" size="sm" onClick={openMsCalendarPicker}>Choose calendars</Button>
                   <button onClick={handleMsConnect} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Reconnect</button>
                   <Button variant="secondary" size="sm" onClick={handleMsDisconnect}>Disconnect</Button>
                 </>

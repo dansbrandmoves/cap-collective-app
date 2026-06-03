@@ -13,11 +13,13 @@ export function AppShell() {
   const ownsMobileHeader = location.pathname.startsWith('/project/') || location.pathname.startsWith('/room/')
 
   return (
-    <div className="flex min-h-dvh bg-surface-950">
+    // Lock the shell to the viewport; the content region scrolls internally so the
+    // sidebar (and any sticky headers) never scroll out of view.
+    <div className="flex h-dvh overflow-hidden bg-surface-950">
       {isOwner && (
         <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
       )}
-      <main className="flex-1 min-w-0 flex flex-col">
+      <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-y-auto">
         {isOwner && !ownsMobileHeader && (
           <div className="md:hidden flex items-center justify-between px-5 h-14 bg-surface-900/95 backdrop-blur-xl border-b border-white/[0.05] sticky top-0 z-30 safe-top">
             <div className="flex items-center gap-2">

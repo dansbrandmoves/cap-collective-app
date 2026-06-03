@@ -154,7 +154,7 @@ export function ProductionView() {
   }
 
   return (
-    <div className="flex h-dvh overflow-hidden">
+    <div className="flex h-full overflow-hidden">
       {/* Mobile backdrop */}
       {mobileShowSidebar && (
         <div

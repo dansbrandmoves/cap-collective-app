@@ -2,9 +2,35 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Plus, X, Check, MoreHorizontal, Pencil, Trash2, GripVertical,
-  AlignLeft, MessageSquare, UserPlus,
+  AlignLeft, MessageSquare, UserPlus, Tag, CalendarDays, CheckSquare, Square,
 } from 'lucide-react'
+import { nanoid } from 'nanoid'
 import { useTaskComments } from '../../hooks/useTaskComments'
+
+// Calm, Coordie-forward label palette (teal first).
+const LABEL_PALETTE = [
+  { color: '#5e9c8c', name: 'Teal' },
+  { color: '#6366f1', name: 'Indigo' },
+  { color: '#f59e0b', name: 'Amber' },
+  { color: '#ef4444', name: 'Red' },
+  { color: '#22c55e', name: 'Green' },
+  { color: '#a855f7', name: 'Purple' },
+]
+
+// Due-date urgency → chip tone.
+function dueMeta(due) {
+  if (!due) return null
+  const d = new Date(due + 'T00:00:00'); if (isNaN(d)) return null
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const days = Math.round((d - today) / 86400000)
+  const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return { label, tone: days < 0 ? 'overdue' : days <= 2 ? 'soon' : 'normal' }
+}
+const DUE_TONE = {
+  overdue: 'bg-red-500/15 text-red-400 border-red-500/25',
+  soon:    'bg-amber-500/15 text-amber-400 border-amber-500/25',
+  normal:  'bg-white/[0.06] text-zinc-300 border-white/[0.1]',
+}
 
 // A real board — Trello-style. Horizontally scrolling lists you can add, rename,
 // delete, and reorder; cards drag between and within lists with a precise drop
@@ -210,6 +236,10 @@ function DropLine({ show }) {
 }
 
 function TaskCard({ task, dragging, onDragStart, onDragEnd, onDragOverCard, onOpen }) {
+  const labels = task.labels || []
+  const checklist = task.checklist || []
+  const checkDone = checklist.filter(i => i.done).length
+  const due = dueMeta(task.due_on)
   return (
     <div
       draggable
@@ -221,9 +251,26 @@ function TaskCard({ task, dragging, onDragStart, onDragEnd, onDragOverCard, onOp
         dragging ? 'opacity-40 border-accent/40' : 'border-zinc-500/20 hover:border-zinc-500/40'
       }`}
     >
+      {labels.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-1.5">
+          {labels.map((l, i) => (
+            <span key={i} className="h-1.5 w-8 rounded-full" style={{ backgroundColor: l.color }} title={l.text || ''} />
+          ))}
+        </div>
+      )}
       <p className="text-[13px] leading-snug text-zinc-100 break-words">{task.title}</p>
       <div className="flex items-center gap-2 mt-2 empty:hidden">
         {task.description && <AlignLeft size={13} strokeWidth={2} className="text-zinc-500" />}
+        {due && (
+          <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${DUE_TONE[due.tone]}`}>
+            <CalendarDays size={10} strokeWidth={2} />{due.label}
+          </span>
+        )}
+        {checklist.length > 0 && (
+          <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${checkDone === checklist.length ? 'text-green-400' : 'text-zinc-500'}`}>
+            <CheckSquare size={11} strokeWidth={2} />{checkDone}/{checklist.length}
+          </span>
+        )}
         {task.assignee && <span className="ml-auto"><Avatar name={task.assignee} size={20} /></span>}
       </div>
     </div>
@@ -301,6 +348,20 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
   const [desc, setDesc] = useState(task.description || '')
   const [comment, setComment] = useState('')
   const [membersOpen, setMembersOpen] = useState(false)
+  const [labelOpen, setLabelOpen] = useState(false)
+  const [labelText, setLabelText] = useState('')
+  const [checkInput, setCheckInput] = useState('')
+
+  const labels = task.labels || []
+  const checklist = task.checklist || []
+  const checkDone = checklist.filter(i => i.done).length
+
+  function addLabel(color) { onUpdate({ labels: [...labels, { color, text: labelText.trim() }] }); setLabelText('') }
+  function removeLabel(idx) { onUpdate({ labels: labels.filter((_, i) => i !== idx) }) }
+  function setDue(date) { onUpdate({ due_on: date || null }) }
+  function addCheckItem(text) { const t = (text || '').trim(); if (!t) return; onUpdate({ checklist: [...checklist, { id: nanoid(6), text: t, done: false }] }) }
+  function toggleCheck(id) { onUpdate({ checklist: checklist.map(i => i.id === id ? { ...i, done: !i.done } : i) }) }
+  function removeCheck(id) { onUpdate({ checklist: checklist.filter(i => i.id !== id) }) }
 
   useEffect(() => { setTitle(task.title); setDesc(task.description || '') }, [task.id]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -375,6 +436,51 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
               </div>
             </div>
 
+            {/* Labels */}
+            <div>
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Labels</p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {labels.map((l, i) => (
+                  <span key={i} className="group/lbl inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-md text-[12px] font-medium text-white" style={{ backgroundColor: l.color }}>
+                    {l.text || '  '}
+                    <button onClick={() => removeLabel(i)} className="opacity-70 hover:opacity-100"><X size={11} strokeWidth={2.5} /></button>
+                  </span>
+                ))}
+                <div className="relative">
+                  <button onClick={() => setLabelOpen(o => !o)}
+                    className="w-7 h-7 flex items-center justify-center rounded-md border border-dashed border-white/20 text-zinc-400 hover:text-zinc-100 hover:border-white/40 transition-colors">
+                    <Tag size={13} strokeWidth={2} />
+                  </button>
+                  {labelOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setLabelOpen(false)} />
+                      <div className="absolute left-0 top-full mt-1 z-20 w-56 bg-surface-800 border border-white/[0.08] rounded-xl shadow-xl shadow-black/40 p-3 animate-fadeIn">
+                        <input value={labelText} onChange={(e) => setLabelText(e.target.value)}
+                          placeholder="Label name (optional)"
+                          className="w-full mb-2.5 bg-surface-900 border border-white/[0.1] rounded-lg px-2.5 py-1.5 text-[12px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/50" />
+                        <div className="grid grid-cols-6 gap-1.5">
+                          {LABEL_PALETTE.map(p => (
+                            <button key={p.color} onClick={() => addLabel(p.color)} title={p.name}
+                              className="h-7 rounded-md hover:ring-2 hover:ring-white/40 transition-all" style={{ backgroundColor: p.color }} />
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Due date */}
+            <div>
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.1em] mb-2">Due date</p>
+              <div className="flex items-center gap-2">
+                <input type="date" value={task.due_on || ''} onChange={(e) => setDue(e.target.value)}
+                  className="bg-surface-800/60 border border-white/[0.07] rounded-lg px-2.5 py-1.5 text-[13px] text-zinc-100 focus:outline-none focus:border-accent/50" />
+                {task.due_on && <button onClick={() => setDue(null)} className="text-[12px] text-zinc-500 hover:text-red-400 transition-colors">Clear</button>}
+              </div>
+            </div>
+
             {/* Description */}
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -388,6 +494,36 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
                 placeholder="Add a more detailed description…"
                 className="w-full min-h-[120px] bg-surface-800/60 border border-white/[0.07] rounded-xl px-3 py-2.5 text-[13px] text-zinc-100 placeholder-zinc-600 leading-relaxed resize-y focus:outline-none focus:border-accent/50 transition-colors"
               />
+            </div>
+
+            {/* Checklist */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <CheckSquare size={14} strokeWidth={2} className="text-zinc-400" />
+                <p className="text-[13px] font-semibold text-zinc-200">Checklist</p>
+                {checklist.length > 0 && <span className="text-[11px] text-zinc-500 ml-auto tabular-nums">{checkDone}/{checklist.length}</span>}
+              </div>
+              {checklist.length > 0 && (
+                <div className="h-1 rounded-full bg-white/[0.06] mb-2.5 overflow-hidden">
+                  <div className="h-full bg-accent transition-all duration-200" style={{ width: `${Math.round((100 * checkDone) / checklist.length)}%` }} />
+                </div>
+              )}
+              <div className="space-y-1">
+                {checklist.map(item => (
+                  <div key={item.id} className="group/ck flex items-center gap-2">
+                    <button onClick={() => toggleCheck(item.id)} className="flex-shrink-0 text-zinc-400 hover:text-accent transition-colors">
+                      {item.done ? <CheckSquare size={15} strokeWidth={2} className="text-accent" /> : <Square size={15} strokeWidth={2} />}
+                    </button>
+                    <span className={`flex-1 text-[13px] break-words ${item.done ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>{item.text}</span>
+                    <button onClick={() => removeCheck(item.id)} className="opacity-0 group-hover/ck:opacity-100 text-zinc-600 hover:text-red-400 transition-all flex-shrink-0"><X size={11} strokeWidth={2} /></button>
+                  </div>
+                ))}
+              </div>
+              <form onSubmit={(e) => { e.preventDefault(); addCheckItem(checkInput); setCheckInput('') }} className="mt-2">
+                <input value={checkInput} onChange={(e) => setCheckInput(e.target.value)}
+                  placeholder="Add an item…"
+                  className="w-full bg-surface-800/60 border border-white/[0.07] rounded-lg px-2.5 py-1.5 text-[12px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/50 transition-colors" />
+              </form>
             </div>
 
             <button onClick={onDelete}

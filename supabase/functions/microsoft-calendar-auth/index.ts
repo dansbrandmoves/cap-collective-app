@@ -81,6 +81,56 @@ Deno.serve(async (req: Request) => {
       return jsonRes({ access_token: tokens.access_token, expires_at: expiresAt });
     }
 
+    // Guest popup exchange — no auth user; identity is (roomId, guestName).
+    // Stores the MS refresh token in guest_calendar_tokens so the server can sync
+    // this guest's Outlook free/busy on the same cron as Google guests.
+    if (action === "guest_exchange") {
+      const { code, redirectUri, roomId, guestName, timezone } = body;
+      if (!code || !redirectUri) return jsonRes({ error: "Missing code or redirectUri" }, 400);
+      if (!roomId || !guestName) return jsonRes({ error: "Missing roomId or guestName" }, 400);
+
+      let tokens: any;
+      try {
+        tokens = await tokenRequest({ grant_type: "authorization_code", code, redirect_uri: redirectUri });
+      } catch (e) {
+        console.error("Network error reaching Microsoft (guest_exchange):", e);
+        return jsonRes({ error: "Network error reaching Microsoft. Please try again.", transient: true }, 503);
+      }
+      if (tokens.error) {
+        console.error("MS guest token exchange error:", tokens);
+        return jsonRes({ error: tokens.error_description || tokens.error }, 400);
+      }
+      const expiresAt = Date.now() + ((tokens.expires_in || 3600) * 1000);
+      const update: Record<string, unknown> = {
+        room_id: roomId,
+        guest_name: guestName,
+        ms_access_token: tokens.access_token,
+        ms_token_expires_at: expiresAt,
+        timezone: timezone || "UTC",
+        updated_at: new Date().toISOString(),
+      };
+      if (tokens.refresh_token) update.ms_refresh_token = tokens.refresh_token;
+      const { error: upErr } = await supabase
+        .from("guest_calendar_tokens")
+        .upsert(update, { onConflict: "room_id,guest_name" });
+      if (upErr) {
+        console.error("guest MS token upsert error:", upErr);
+        return jsonRes({ error: upErr.message }, 500);
+      }
+      return jsonRes({ access_token: tokens.access_token, expires_at: expiresAt, hasRefreshToken: !!tokens.refresh_token });
+    }
+
+    // Guest MS disconnect — clear only this guest's MS tokens. Their availability
+    // is rebuilt from any remaining provider (or cleared) by the next sync.
+    if (action === "guest_disconnect") {
+      const { roomId, guestName } = body;
+      if (!roomId || !guestName) return jsonRes({ error: "Missing roomId or guestName" }, 400);
+      await supabase.from("guest_calendar_tokens")
+        .update({ ms_access_token: null, ms_refresh_token: null, ms_token_expires_at: null })
+        .eq("room_id", roomId).eq("guest_name", guestName);
+      return jsonRes({ success: true });
+    }
+
     if (action === "refresh") {
       const user = await getUser(req);
       if (!user) return jsonRes({ error: "Not authenticated" }, 401);

@@ -16,6 +16,7 @@ import { projectKnownPeople } from '../utils/availability'
 import { readCache, writeCache, clearCache } from '../utils/cache'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured, connectGuestCalendarOffline, triggerGuestSync, disconnectGuestCalendar as disconnectGuestCalendarServer } from '../utils/googleCalendar'
+import { isMsConfigured, connectGuestMicrosoftOffline, disconnectGuestMicrosoft } from '../utils/microsoftCalendar'
 import { CalendarDays, CheckCircle2, Menu, X, PanelLeft, Check } from 'lucide-react'
 import { startRun, STATUS } from '../utils/diag'
 
@@ -168,28 +169,66 @@ function GuestCalendarPanel({ guestEvents, connected = false, onConnect, onDisco
     setLoading(false)
   }
 
-  if (!configured) return null
+  // Outlook/Microsoft connect (popup). Server merges its busy with any Google
+  // calendar the guest also connected — connect either or both.
+  const msConfigured = isMsConfigured()
+  async function handleConnectMicrosoft() {
+    setLoading(true)
+    setError(null)
+    try {
+      await connectGuestMicrosoftOffline({ roomId, guestName })
+      // No local overlay for MS — the server sync populates availability. Passing []
+      // marks connected and triggers the (provider-merged) server sync.
+      await onConnect([])
+    } catch (e) {
+      setError(e?.message || 'Could not connect Outlook.')
+    }
+    setLoading(false)
+  }
+
+  // Show the connect UI as long as EITHER provider is configured.
+  if (!configured && !msConfigured) return null
 
   // Connect affordance — compact (button only, for the toolbar) keeps it out of the
   // calendar's way; non-compact adds a one-line explainer. `connected` reflects
   // server truth (this guest has synced availability), so a refresh that cleared the
   // local session still shows the connected state instead of re-prompting.
   if (!connected) {
+    // One button per configured provider. With only one configured it reads
+    // "Connect calendar"; with both, "Google" / "Outlook" so it's a clear choice.
+    const onlyOne = !(configured && msConfigured)
     return (
-      <div className={compact ? 'inline-flex' : 'mb-4 flex flex-col items-start sm:flex-row sm:items-center gap-2.5'}>
-        <Button
-          onClick={handleConnect}
-          disabled={!gisReady || loading || !guestName}
-          size={compact ? 'sm' : undefined}
-          className="justify-center flex-shrink-0"
-          title="Highlights when you and the team are both free. Only free/busy is shared — never event details."
-        >
-          <CalendarDays size={15} strokeWidth={1.75} className="mr-2" />
-          {loading ? 'Connecting…' : 'Connect calendar'}
-        </Button>
+      <div className={compact ? 'inline-flex items-center gap-2' : 'mb-4 flex flex-col items-start gap-2.5'}>
+        <div className="flex items-center gap-2 flex-wrap">
+          {configured && (
+            <Button
+              onClick={handleConnect}
+              disabled={!gisReady || loading || !guestName}
+              size={compact ? 'sm' : undefined}
+              className="justify-center flex-shrink-0"
+              title="Highlights when you and the team are both free. Only free/busy is shared — never event details."
+            >
+              <CalendarDays size={15} strokeWidth={1.75} className="mr-2" />
+              {loading ? 'Connecting…' : onlyOne ? 'Connect calendar' : 'Connect Google'}
+            </Button>
+          )}
+          {msConfigured && (
+            <Button
+              onClick={handleConnectMicrosoft}
+              disabled={loading || !guestName}
+              variant={onlyOne ? undefined : 'secondary'}
+              size={compact ? 'sm' : undefined}
+              className="justify-center flex-shrink-0"
+              title="Connect your Outlook/Microsoft calendar. Only free/busy is shared — never event details."
+            >
+              <CalendarDays size={15} strokeWidth={1.75} className="mr-2" />
+              {loading ? 'Connecting…' : onlyOne ? 'Connect calendar' : 'Connect Outlook'}
+            </Button>
+          )}
+        </div>
         {!compact && (
           <p className="text-[12px] text-zinc-500 leading-relaxed max-w-sm">
-            Highlights when you and {who} are both free. Only your free/busy is shared — never event details.
+            Connect Google or Outlook so {who} can see when you&rsquo;re both free. Only your free/busy is shared — never event details.
           </p>
         )}
         {error && <p className="text-xs text-red-400">{error}</p>}
@@ -284,8 +323,10 @@ export function RoomView() {
     clearCache('coordie-gcal')
     const rid = resolved?.roomId
     if (rid && guestName) {
+      // Disconnect every provider this guest may have connected.
       const { error } = await disconnectGuestCalendarServer({ roomId: rid, guestName })
-      if (error) console.error('[coordie] guest disconnect failed:', error.message)
+      if (error) console.error('[coordie] guest Google disconnect failed:', error.message)
+      try { await disconnectGuestMicrosoft({ roomId: rid, guestName }) } catch { /* best-effort */ }
     }
   }, [resolved?.roomId, guestName])
 

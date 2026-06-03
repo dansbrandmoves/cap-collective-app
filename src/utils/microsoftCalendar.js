@@ -78,6 +78,58 @@ export async function isMicrosoftConnected() {
   return !!profile?.ms_refresh_token
 }
 
+// ── Guest connect (popup) ──
+// Guests live on a /room/:token page, so we can't do the owner's full-page
+// redirect. Instead open a popup to Microsoft, let it land back on the app origin
+// (already a registered redirect URI — no Entra change needed), where a tiny
+// boot-time shim in main.jsx postMessages the code back here and closes. We then
+// exchange it server-side (guest_exchange) keyed by (roomId, guestName).
+export function connectGuestMicrosoftOffline({ roomId, guestName }) {
+  if (!CLIENT_ID) throw new Error('Microsoft Calendar is not configured.')
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const state = `msguest-${roomId}-${Date.now()}`
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: window.location.origin,
+    response_mode: 'query',
+    scope: SCOPES,
+    state,
+    prompt: 'consent',
+  })
+  const url = `${AUTHORIZE}?${params}`
+  return new Promise((resolve, reject) => {
+    const w = 520, h = 660
+    const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2)
+    const top = window.screenY + Math.max(0, (window.outerHeight - h) / 2)
+    const popup = window.open(url, 'ms-oauth', `width=${w},height=${h},left=${left},top=${top}`)
+    if (!popup) { reject(new Error('Popup blocked — allow popups for this site and try again.')); return }
+    let settled = false
+    const cleanup = () => { settled = true; window.removeEventListener('message', onMsg); clearInterval(poll) }
+    const onMsg = async (e) => {
+      if (e.origin !== window.location.origin) return
+      if (e.data?.type !== 'ms-guest-oauth' || e.data.state !== state) return
+      cleanup()
+      if (e.data.error) { reject(new Error(e.data.error)); return }
+      try {
+        const { data, error } = await supabase.functions.invoke('microsoft-calendar-auth', {
+          body: { action: 'guest_exchange', code: e.data.code, redirectUri: window.location.origin, roomId, guestName, timezone },
+        })
+        if (error || data?.error) reject(new Error(data?.error || error?.message || 'Outlook connect failed'))
+        else resolve(data)
+      } catch (err) { reject(err) }
+    }
+    window.addEventListener('message', onMsg)
+    const poll = setInterval(() => {
+      if (popup.closed && !settled) { cleanup(); reject(new Error('Connection cancelled.')) }
+    }, 500)
+  })
+}
+
+export async function disconnectGuestMicrosoft({ roomId, guestName }) {
+  return supabase.functions.invoke('microsoft-calendar-auth', { body: { action: 'guest_disconnect', roomId, guestName } })
+}
+
 // ── Graph calendar helpers ──
 // MS calendar ids are namespaced with an "ms:" prefix in our connected-calendars
 // store so they never collide with Google calendar ids (both share the same key).

@@ -1,7 +1,25 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `63b6a0f` — "coordie: de-conflate Google/Microsoft calendar naming + stop Google sync touching MS calendars"
+**Last pushed commit:** `ce53de5` — "coordie: guests can connect Outlook too — provider-agnostic guest calendar"
+
+> **2026-06-03 (session 4, cont.):** GUEST MICROSOFT/OUTLOOK support shipped.
+> Guests were Google-only; now connect Google, Outlook, or both. `guest_calendar_tokens`
+> gained ms_* columns (same row as google_*). `microsoft-calendar-auth` (v3) +guest_exchange/
+> guest_disconnect. `sync-guest-calendars` (v4) is provider-agnostic: fetches Google + Outlook,
+> merges busy → free days; cron selects guests with EITHER token. Guest MS connect = POPUP that
+> reuses the registered app-origin redirect (NO Entra change) + a boot shim in main.jsx that
+> postMessages the code back. RoomView GuestCalendarPanel offers both (gated per-provider config).
+> **UNTESTED end-to-end** (OAuth popup can't be exercised from CI) — Daniel/Dave should connect an
+> Outlook calendar as a guest and confirm: popup → consent → closes → "Calendar connected" → busy
+> days block. Check /admin/diagnostics `guest_sync` rows for `providers: {google, microsoft}`.
+> Also: owner-busy slots now subtracted in the day scheduling panel (only available times shown,
+> no dimmed "busy"); de-conflation pass (sync-calendar no longer touches MS calendars); new
+> Availability Inspector tab in diagnostics.
+>
+> **STILL OPEN — "beyond Google-only" language sweep:** core calendar touchpoints de-Googled, but
+> marketing/onboarding copy still Google-centric (HomePage.jsx hero "Connect Google Calendar",
+> sign-in copy). Not yet swept. Privacy/Terms intentionally left provider-specific.
 
 > **2026-06-03 (session 4):** De-conflation pass. `sync-calendar` (Google edge fn, now v5) was
 > iterating ALL governing calendars incl. the owner's Outlook one — firing Google API calls against

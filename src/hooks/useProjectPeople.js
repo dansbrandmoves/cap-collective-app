@@ -10,7 +10,7 @@ export const OWNER_LABEL = 'You'
 const isActiveReq = r => r.status !== 'declined' && r.status !== 'archived'
 
 export function useProjectPeople(production, { dateRequestsByRoom = {}, sharedAvailByRoom = {}, removeLocal } = {}) {
-  const { roomMembers, addRoomMember, removePersonEverywhere, getRoomLink } = useApp()
+  const { roomMembers, addRoomMember, removePersonEverywhere, getRoomLink, sendRoomInvite } = useApp()
   const rooms = production?.rooms || []
   const primaryRoom = rooms[0] || null
 
@@ -25,17 +25,21 @@ export function useProjectPeople(production, { dateRequestsByRoom = {}, sharedAv
   // Roster: owner first, then everyone added (members) merged with anyone who
   // responded (tapped days / connected calendar), keyed by name.
   const people = useMemo(() => {
-    const map = new Map() // name -> { sources:Set, memberId, inviteToken }
+    const map = new Map() // name -> { sources:Set, memberId, inviteToken, email }
     const ensure = (name) => map.get(name) || map.set(name, { sources: new Set() }).get(name)
     for (const m of members) {
       if (!m.name) continue
       const e = ensure(m.name)
       e.memberId = m.id
       e.inviteToken = m.inviteToken || m.invite_token || null
+      e.email = e.email || m.email || null
     }
     for (const arr of Object.values(dateRequestsByRoom)) {
       for (const r of (arr || []).filter(isActiveReq)) {
-        if (r.requester_name) ensure(r.requester_name).sources.add('tapped')
+        if (!r.requester_name) continue
+        const e = ensure(r.requester_name)
+        e.sources.add('tapped')
+        e.email = e.email || r.requester_email || null
       }
     }
     for (const arr of Object.values(sharedAvailByRoom)) {
@@ -44,9 +48,9 @@ export function useProjectPeople(production, { dateRequestsByRoom = {}, sharedAv
       }
     }
     const guests = [...map.entries()]
-      .map(([name, v]) => ({ name, sources: [...v.sources], memberId: v.memberId, inviteToken: v.inviteToken }))
+      .map(([name, v]) => ({ name, sources: [...v.sources], memberId: v.memberId, inviteToken: v.inviteToken, email: v.email || null }))
       .sort((a, b) => a.name.localeCompare(b.name))
-    return [{ name: OWNER_LABEL, isOwner: true, sources: [], memberId: null, inviteToken: null }, ...guests]
+    return [{ name: OWNER_LABEL, isOwner: true, sources: [], memberId: null, inviteToken: null, email: null }, ...guests]
   }, [members, dateRequestsByRoom, sharedAvailByRoom])
 
   const includedOwner = !excluded.has(OWNER_LABEL)
@@ -80,11 +84,17 @@ export function useProjectPeople(production, { dateRequestsByRoom = {}, sharedAv
 
   const inviteLink = useCallback((token) => (token ? getRoomLink(token) : null), [getRoomLink])
 
+  // Email a person their personal invite link (needs email + invite token).
+  const sendInvite = useCallback((person) => {
+    if (!person?.email || !person?.inviteToken) return Promise.resolve(false)
+    return sendRoomInvite({ name: person.name, email: person.email, inviteToken: person.inviteToken, productionName: production?.name })
+  }, [sendRoomInvite, production])
+
   // The open "anyone can join" link for this project.
   const shareLink = primaryRoom?.openToken ? getRoomLink(primaryRoom.openToken) : null
 
   return {
     people, excluded, includedOwner, totalPeople, includedCount,
-    togglePerson, addPerson, removePerson, inviteLink, shareLink, primaryRoom,
+    togglePerson, addPerson, removePerson, inviteLink, sendInvite, shareLink, primaryRoom,
   }
 }

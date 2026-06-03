@@ -31,7 +31,7 @@ export function ProductionView() {
     createRoom, updateRoomName, deleteRoom, getRoomLink, sendRoomInvite,
     effectiveSlots, calendarEvents, connectedCalendars, availabilityRules,
     prefixRules, slotStates, canAddRoom, FREE_ROOM_LIMIT, pendingRequestCounts,
-    availabilityMode, blockDuration, businessHours, loading, user, roomMembers,
+    availabilityMode, blockDuration, businessHours, loading, user, roomMembers, avatarUrl,
   } = useApp()
 
   const ownerAuthorName = user?.user_metadata?.name || user?.settings?.displayName || (user?.email ? user.email.split('@')[0] : 'Owner')
@@ -251,10 +251,12 @@ export function ProductionView() {
               togglePerson={peopleState.togglePerson}
               removePerson={peopleState.removePerson}
               inviteLink={peopleState.inviteLink}
+              sendInvite={peopleState.sendInvite}
               canAdd={!!primaryRoom}
               onAdd={() => setShowAddPerson(true)}
               canManage={isProjectOwner}
               ownerDisplayName={ownerAuthorName}
+              ownerPhoto={avatarUrl}
             />
           </div>
         </div>

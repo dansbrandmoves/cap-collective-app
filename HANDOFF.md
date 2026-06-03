@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `14ffb62` — "drop sidebar logo + powered-by for app users; roster matches guest aesthetic"
+**Last pushed commit:** `46339b3` — "'← Projects' back-nav for shared projects + explicit member role"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -107,6 +107,15 @@ Commits: `0413bc5`, `67f8ed8`, `6622778`, `dd9c551` (all on `master`, prod).
 - **"Coordinator" is a subtitle, never a name.** Backfilled `profiles.settings.displayName` from auth
   metadata (full_name → name → email local-part) so existing owners show their real name to guests;
   the owner backfill-on-load also keeps new owners covered.
+
+**Nav + roles (`46339b3`):**
+- Shared projects (RoomView, signed-in member) now get the **"← Projects"** back-nav, matching how
+  owned projects (ProductionView) do it. Owner keeps "← Back to project"; account-less guests get none.
+- **Role model made explicit:** `room_members.role` ('member' default; 'coordinator'/'admin'
+  reserved, check-constrained). The project `owner_id` is still the implicit **Coordinator** (full
+  control). Not yet used in permission checks — those still gate on `owner_id === user.id` — but the
+  column is there so future co-owner/elevated-permission features are role-based, not owner-only.
+  When wiring it: `canManage = isOwner || role in ('coordinator','admin')`.
 
 ### 🧱 Refactor debt (Dave's note — guest & owner pages should share code)
 Dave flagged that the **guest project page (RoomView) and owner project page (ProductionView)** do

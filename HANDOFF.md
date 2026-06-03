@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `dd9c551` — "admin/member permissions + Coordinator subtitle + deselect pending"
+**Last pushed commit:** `f59225d` — "task card attachments (links + file upload)"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -72,6 +72,20 @@ Commits: `0413bc5`, `67f8ed8`, `6622778`, `dd9c551` (all on `master`, prod).
   (`coordie-gcal`), which clears on tab close → a connected guest got re-prompted after refresh. Now
   `connected = guestEvents !== null || sharedAvailability has rows for this guest` → the connected
   pill persists. (Disconnect still clears server token + availability via `disconnectGuestCalendar`.)
+
+**Tasks upgrade — Trello card power-ups (`b439cd0`, `f59225d`):**
+- **Labels** (`tasks.labels` jsonb `[{color,text}]`) — color palette + optional text; card shows
+  color bars.
+- **Due dates** (`tasks.due_on` date) — picker in modal; card chip (overdue=red, soon≤2d=amber).
+- **Checklist** (`tasks.checklist` jsonb `[{id,text,done}]`) — progress bar + items; card shows x/y.
+  All three persist via the existing `updateTask(updates)` path (no useBoard change).
+- **Attachments** — new `task_attachments` table + public `task-attachments` storage bucket (anon
+  read/write, realtime). `useTaskAttachments`: addLink (any URL; Google Drive links auto-tagged
+  `drive`), addFile (upload), removeAttachment (frees the file). Modal section: list + paste-link +
+  Upload.
+- **Follow-ups:** native **Google Drive Picker** (browse/pick, not just paste a share link) — needs
+  Drive API key + OAuth creds Daniel will set up; phase 2. Optional: attachment-count badge on the
+  card face (skipped to avoid loading all attachments for the board).
 
 ### 🧱 Refactor debt (Dave's note — guest & owner pages should share code)
 Dave flagged that the **guest project page (RoomView) and owner project page (ProductionView)** do

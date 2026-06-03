@@ -174,7 +174,17 @@ twice — but keep genuinely-different models separate (don't over-unify).
   projects + booking), replacing the old MonthlyView "barcode" `AvailabilityCalendar` there.
   `AvailabilityCalendar` still used by ProductionView (untouched).
 
-### 🟡 Microsoft Calendar — IN PROGRESS (staged build)
+### ✅ Microsoft Calendar — WORKING END-TO-END (tested on prod 2026-06-03)
+Verified live: connect Outlook (furfarodesign.com) → Choose calendars → role "governs" → sync →
+test events landed in `owner_calendar_events` (`ms:` namespaced) and block availability. Cron keeps
+it fresh every 15 min. **Gotcha fixed:** the post-connect redirect to `/calendars?ms_connected=1`
+lost the query param (router rewrites `/calendars`→`/account?tab=calendars`); now redirects straight
+to `/account?tab=calendars&ms_connected=1`, plus a manual "Choose calendars" button. Exchange errors
+log to `diagnostics` (event `ms_calendar_auth`) with the redirect_uri + AADSTS detail.
+Entra redirect URIs registered: Supabase callback + `www.coordie.com` + `coordie.com` + localhost.
+**Still optional:** primary-calendar marker + `schedulingProvider` (default for event creation).
+
+### 🟡 Microsoft Calendar — build history (staged)
 **Phase 1 DONE (`afab663`, deployed, dormant):**
 - `profiles.ms_refresh_token / ms_access_token / ms_token_expires_at`.
 - `microsoft-calendar-auth` edge fn (exchange / refresh / disconnect) — Graph v2.0 token endpoint,

@@ -848,7 +848,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                         {hasEmail ? (
                           <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{email}</p>
                         ) : (
-                          <p className="text-[11px] text-zinc-600 mt-0.5">No email &mdash; add manually in GCal</p>
+                          <p className="text-[11px] text-zinc-600 mt-0.5">No email &mdash; add manually in your calendar</p>
                         )}
                       </div>
                       {hasEmail && (
@@ -904,7 +904,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                         {hasEmail ? (
                           <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{email}</p>
                         ) : (
-                          <p className="text-[11px] text-zinc-600 mt-0.5">No email &mdash; add manually in GCal</p>
+                          <p className="text-[11px] text-zinc-600 mt-0.5">No email &mdash; add manually in your calendar</p>
                         )}
                       </div>
                       {hasEmail && (
@@ -955,7 +955,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
             {actionLabel}
           </button>
           <p className="text-[12px] text-zinc-500 text-center leading-relaxed">
-            {fmtTime(startTime)} – {fmtTime(endTime)} · opens Google Calendar prefilled{selectedEmails.length > 0 ? ` · ${selectedEmails.length} ${selectedEmails.length === 1 ? 'attendee' : 'attendees'}` : ''}
+            {fmtTime(startTime)} – {fmtTime(endTime)} · opens a prefilled calendar event{selectedEmails.length > 0 ? ` · ${selectedEmails.length} ${selectedEmails.length === 1 ? 'attendee' : 'attendees'}` : ''}
           </p>
         </div>
       </div>

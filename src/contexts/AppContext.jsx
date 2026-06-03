@@ -824,17 +824,19 @@ export function AppProvider({ children }) {
     })
   }, [])
 
-  const updateCalendarRole = useCallback((googleCalId, role) => {
-    setConnectedCalendars(prev => prev.map(c => c.googleCalendarId === googleCalId ? { ...c, role } : c))
+  // calId is the stable connected-calendar key (Google id, or "ms:<id>" for
+  // Microsoft) — provider-agnostic despite the legacy `googleCalendarId` field name.
+  const updateCalendarRole = useCallback((calId, role) => {
+    setConnectedCalendars(prev => prev.map(c => c.googleCalendarId === calId ? { ...c, role } : c))
   }, [])
 
-  const updateCalendarDefaultState = useCallback((googleCalId, defaultState) => {
-    setConnectedCalendars(prev => prev.map(c => c.googleCalendarId === googleCalId ? { ...c, defaultState } : c))
+  const updateCalendarDefaultState = useCallback((calId, defaultState) => {
+    setConnectedCalendars(prev => prev.map(c => c.googleCalendarId === calId ? { ...c, defaultState } : c))
   }, [])
 
-  const removeConnectedCalendar = useCallback((googleCalId) => {
-    setConnectedCalendars(prev => prev.filter(c => c.googleCalendarId !== googleCalId))
-    setCalendarEvents(prev => prev.filter(ev => ev.calendarId !== googleCalId))
+  const removeConnectedCalendar = useCallback((calId) => {
+    setConnectedCalendars(prev => prev.filter(c => c.googleCalendarId !== calId))
+    setCalendarEvents(prev => prev.filter(ev => ev.calendarId !== calId))
   }, [])
 
   // Sync connected calendars to Supabase for cross-device persistence

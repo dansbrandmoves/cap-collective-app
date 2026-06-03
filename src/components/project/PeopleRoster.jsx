@@ -57,7 +57,7 @@ export function PeopleRoster({
               {/* avatar + name (left) — tapping toggles include/exclude */}
               <button
                 onClick={() => togglePerson(name)}
-                title={isOwner ? 'You (Coordinator)' : (responded ? (viaCalendar ? 'Shared via Google Calendar' : 'Tapped their free days') : 'Hasn’t shared their calendar yet — include or exclude as you like')}
+                title={isOwner ? 'You (Coordinator)' : (responded ? (viaCalendar ? 'Shared their calendar' : 'Tapped their free days') : 'Hasn’t shared their calendar yet — include or exclude as you like')}
                 className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
               >
                 <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${inc ? 'bg-accent/20 text-accent' : 'bg-white/[0.05] text-zinc-500'}`}>

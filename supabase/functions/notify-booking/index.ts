@@ -187,7 +187,7 @@ function buildEmailHtml(opts: {
                 <tr>
                   <td style="padding:0 10px 0 0;">
                     <a href="${gcalLink}" class="cta-primary" style="display:inline-block;background:#8b5cf6;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;letter-spacing:-0.005em;padding:12px 20px;border-radius:12px;mso-padding-alt:0;">
-                      <!--[if mso]>&nbsp;&nbsp;&nbsp;&nbsp;<![endif]-->Add to Google Calendar<!--[if mso]>&nbsp;&nbsp;&nbsp;&nbsp;<![endif]-->
+                      <!--[if mso]>&nbsp;&nbsp;&nbsp;&nbsp;<![endif]-->Add to calendar<!--[if mso]>&nbsp;&nbsp;&nbsp;&nbsp;<![endif]-->
                     </a>
                   </td>
                   <td>

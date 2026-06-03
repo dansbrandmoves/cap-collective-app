@@ -142,10 +142,19 @@ async function syncCalendar(admin: any, ownerId: string, token: string, calId: s
   return { calId, mode: "incremental", changed: items.length, removed: cancelled.length, error: upErr };
 }
 
+// This function syncs GOOGLE calendars only. Microsoft/Outlook calendars are
+// handled by sync-ms-calendar — they share the owner_calendar_events table but
+// live under "ms:" namespaced ids. Never hand a Microsoft calendar to the Google
+// API: filter them out here (provider flag OR the "ms:" id prefix, for older rows
+// saved before provider was tracked).
+function isGoogleCalendar(c: any) {
+  return c.provider !== "microsoft" && !String(c.googleCalendarId || "").startsWith("ms:");
+}
+
 async function syncOwner(admin: any, ownerId: string) {
   const { data: p } = await admin.from("profiles").select("connected_calendars").eq("id", ownerId).single();
-  const governing = (p?.connected_calendars || []).filter((c: any) => c.role === "governs");
-  if (!governing.length) return { ownerId, skipped: "no governing calendars" };
+  const governing = (p?.connected_calendars || []).filter((c: any) => c.role === "governs" && isGoogleCalendar(c));
+  if (!governing.length) return { ownerId, skipped: "no governing Google calendars" };
   const token = await getAccessToken(admin, ownerId);
   if (!token) return { ownerId, skipped: "no valid token" };
   const cals = [];

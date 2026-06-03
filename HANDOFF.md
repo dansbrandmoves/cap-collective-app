@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-06-02 UTC (session 2 — Tasks board + Whiteboard + perf)
-**Last pushed commit:** `b288e3c` — "refresh landing + sign-in for board + whiteboard"
+**Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
+**Last pushed commit:** `dd9c551` — "admin/member permissions + Coordinator subtitle + deselect pending"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -21,7 +21,70 @@
 
 ---
 
-## ✅ Shipped 2026-06-02 (session 2 — latest) — Tasks board, Whiteboard, perf, marketing
+## ✅ Shipped 2026-06-03 (session 3 — latest) — Microsoft auth, provider groundwork, perms/UX
+
+Commits: `0413bc5`, `67f8ed8`, `6622778`, `dd9c551` (all on `master`, prod).
+
+- **Microsoft sign-in — LIVE (needs end-to-end test).** "Continue with Microsoft" button on
+  `/signin` (`signInWithOAuth({provider:'azure'})`, scopes openid/email/profile/offline_access/
+  User.Read/Calendars.Read). **Infra all set up this session** (Daniel did the portal work): Azure
+  app registration "Coordie" (any Entra + personal accounts), redirect = Supabase callback, client
+  secret, 6 Graph delegated scopes granted; Supabase Auth Azure provider enabled, tenant URL
+  `https://login.microsoftonline.com/common`. **If sign-in errors on prod:** add the Vercel prod
+  URL to Supabase → Auth → URL Configuration → Redirect URLs. **Calendar-sync secrets go in
+  Supabase Edge Function secrets (MS_CLIENT_ID/SECRET/TENANT_ID), NEVER Vercel** (Vercel only
+  exposes VITE_ vars → public).
+- **Booking/project UX fixes.** Day inspector: "ideal time slots" now respect the selected
+  time-of-day window (`windowFilter` prop on `DayInspectorPanel`, passed from `ProjectOverview`);
+  "Pick a different time" no longer repeats the top slots (dedup by slot id); availability count
+  uses the correct denominator (`totalKnown` = included people, e.g. 1/2 not 1/1).
+- **Owner logo removed from project/room views** (kept on booking pages only); `CalendarSettings`
+  branding copy updated to "Your logo appears on booking pages. Projects use the Coordie mark."
+- **Sign-in page is always light** (Arro brand) + copy fix ("Welcome to Coordie" — works for new
+  AND returning users). `/signin` added to the AppContext theme guard so app dark mode doesn't
+  stomp it (same pattern as `/book/` and the marketing landing).
+- **Sidebar project list grouped** into mine + **"Shared with me"** (Drive convention).
+- **Project owner titled "Coordinator"** — a SUBTLE subtitle that complements the owner's real
+  name, never replaces it (room sidebar shows the name as primary; "Coordinator · you" for self).
+  Internal `OWNER_LABEL='You'` left alone — it's an availability-matching key, not just display.
+- **Admin/member permissions.** Only the project **owner** gets the admin console (`ProductionView`).
+  A member who opens a shared project is **redirected to their room** (participant view); the People
+  roster's remove (✕) + "Add person" are gated behind a new `canManage` prop. (Note: the Sidebar
+  "Shared with me" links go to `/project/:id`, which then redirects members to their room.)
+- **Deselect-pending fixed.** Pending people (no calendar shared) are **toggleable again** — fixes
+  founder's "can't deselect someone who hasn't accepted." (Walks back the earlier "pending can't be
+  checked" behavior, which had locked them in a checked state — per founder feedback it was backward.)
+- **Perf — instant calendar loads.** Stale-while-revalidate caching in **sessionStorage** for room
+  schedule, owner calendar (guest view, `coordie-ownercal-<ownerId>`), and project-wide availability
+  (`useProjectAvailability`, `coordie-projavail-<roomKey>`). Refresh paints last-known overlap
+  instantly, then revalidates. Sidebar shows a **pulse-skeleton + "Loading calendars…"** before
+  showing people checked off (no more misleading auto-checked flash). sessionStorage (not local)
+  on purpose — survives refresh, clears on tab close, sidesteps the stale-data risk.
+
+### 🔜 Next big build (designed, greenlit, NOT started) — Microsoft Calendar / multi-provider
+Answers both Daniel's "primary calendar type" question AND founder feedback ("Calendars section
+only allows 1 calendar — I want busy times from Google + hotmail"). One build:
+- **Data model:** `provider` ('google'|'microsoft') on each connected calendar; user-level
+  **`schedulingProvider`** setting = where "Schedule meeting" sends them (default from sign-in
+  provider; overridable in Account). Principle: **busy-reading is many-to-many** (aggregate ALL
+  calendars, any provider); **meeting-creation is ONE destination** (schedulingProvider).
+- **Build:** `microsoftCalendar.js` (Graph read → normalize into the existing internal event shape
+  so `deriveSlotState` is unchanged); Graph sync edge fn + DB provider tagging; Account→Calendars
+  UI to connect MULTIPLE calendars across BOTH providers (badge + role each) and merge busy times;
+  guest+owner "Connect calendar" offers Google AND Microsoft; "Schedule meeting" routes Google
+  template URL vs **Outlook compose deeplink** (`outlook.live.com` personal/hotmail vs
+  `outlook.office.com` work — they differ).
+- **Identity caveat:** a user's calendar account email ≠ sign-in email (Google login + hotmail
+  calendar) — don't assume sign-in email == calendar email when matching people.
+- **Prereq:** live-test Microsoft sign-in first (Daniel + Dave).
+
+### Process note
+Notion/Asana session-close protocols are OFF (Daniel's call). **This HANDOFF.md is the record** —
+keep it updated. See `memory/feedback_skip_notion_asana.md`.
+
+---
+
+## ✅ Shipped 2026-06-02 (session 2) — Tasks board, Whiteboard, perf, marketing
 
 **The project now has three surfaces, as tabs: `Schedule · Tasks · Board`.** (Owner project
 view AND guest room — same components.) Naming: kanban = **Tasks**, infinite canvas = **Board**.

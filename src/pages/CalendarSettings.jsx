@@ -170,28 +170,34 @@ export function CalendarSettings({ embedded = false } = {}) {
     init()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fetch the owner's Microsoft calendars and open the role picker. Used both on
+  // the post-connect return and from the manual "Choose calendars" button.
+  async function openMsCalendarPicker() {
+    setAuthError(null)
+    const token = await getValidMsAccessToken()
+    if (!token) { setAuthError('Microsoft Calendar isn’t connected. Click Connect first.'); return }
+    try {
+      const cals = await fetchMsCalendarList(token)
+      const roles = {}
+      cals.forEach(cal => {
+        const existing = connectedCalendars.find(c => c.googleCalendarId === cal.googleCalendarId)
+        roles[cal.googleCalendarId] = existing?.role ?? 'governs'
+      })
+      setAssigningRoles(roles)
+      setPendingCals(cals)
+      setShowRoleModal(true)
+    } catch (err) { setAuthError(`Failed to fetch Microsoft calendars: ${err.message}`) }
+  }
+
   // Microsoft: connection status + post-connect calendar picker (reuses the role modal).
   useEffect(() => {
     if (!msConfigured) return
     isMicrosoftConnected().then(setMsConnected)
     const params = new URLSearchParams(window.location.search)
     if (params.get('ms_connected') === '1') {
-      window.history.replaceState({}, '', window.location.pathname)
-      getValidMsAccessToken().then(async (token) => {
-        if (!token) return
-        try {
-          const cals = await fetchMsCalendarList(token)
-          const roles = {}
-          cals.forEach(cal => {
-            const existing = connectedCalendars.find(c => c.googleCalendarId === cal.googleCalendarId)
-            roles[cal.googleCalendarId] = existing?.role ?? 'governs'
-          })
-          setAssigningRoles(roles)
-          setPendingCals(cals)
-          setShowRoleModal(true)
-          setMsConnected(true)
-        } catch (err) { setAuthError(`Failed to fetch Microsoft calendars: ${err.message}`) }
-      })
+      window.history.replaceState({}, '', window.location.pathname + (params.get('tab') ? `?tab=${params.get('tab')}` : ''))
+      setMsConnected(true)
+      openMsCalendarPicker()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -357,6 +363,7 @@ export function CalendarSettings({ embedded = false } = {}) {
                     className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors disabled:opacity-50">
                     <RefreshCw size={14} strokeWidth={1.75} className={msSyncing ? 'animate-spin' : ''} />
                   </button>
+                  <Button variant="secondary" size="sm" onClick={openMsCalendarPicker}>Choose calendars</Button>
                   <button onClick={handleMsConnect} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Reconnect</button>
                   <Button variant="secondary" size="sm" onClick={handleMsDisconnect}>Disconnect</Button>
                 </>

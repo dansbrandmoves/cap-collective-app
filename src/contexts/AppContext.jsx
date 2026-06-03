@@ -349,7 +349,9 @@ export function AppProvider({ children }) {
         body: { action: 'exchange', code: params.get('code'), redirectUri: window.location.origin, userId: user.id },
       }).then(() => {
         setGoogleAuthPending(false)
-        window.location.href = '/calendars?ms_connected=1'
+        // Go straight to the account calendars tab — /calendars rewrites to
+        // /account?tab=calendars and would drop a query param, so set it directly.
+        window.location.href = '/account?tab=calendars&ms_connected=1'
       }).catch(() => setGoogleAuthPending(false))
     }
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps

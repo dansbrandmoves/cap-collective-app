@@ -272,12 +272,15 @@ function TaskCard({ task, dragging, onDragStart, onDragEnd, onDragOverCard, onOp
           ))}
         </div>
       )}
-      {/* Title row with a hover-reveal complete toggle (always visible once complete). */}
-      <div className="flex items-start gap-2">
+      {/* Title is flush-left by default; on hover the check slides in and nudges the
+          title right (always open once complete). */}
+      <div className="flex items-start">
         <button
           onClick={(e) => { e.stopPropagation(); onToggleComplete() }}
           title={task.completed ? 'Mark incomplete' : 'Mark complete'}
-          className={`mt-[1px] flex-shrink-0 transition-opacity duration-150 ${task.completed ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          className={`mt-[1px] flex-shrink-0 overflow-hidden pr-1.5 transition-all duration-150 ease-out ${
+            task.completed ? 'w-[22px] opacity-100' : 'w-0 opacity-0 group-hover:w-[22px] group-hover:opacity-100'
+          }`}
         >
           {task.completed
             ? <CheckCircle2 size={16} strokeWidth={2} className="text-green-500" />

@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `458bb47` — "guest project sidebar is drag-resizable + collapsible"
+**Last pushed commit:** `5c56d90` — "extract shared WorkspaceTabs (Schedule/Tasks/Board)"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -132,6 +132,22 @@ many of the same things and should share more code to cut duplication + bug surf
   `slotStartsInWindow` (booking list). They intentionally differ — DON'T merge them.
 - ✅ **`utils/cache.js`** — `readCache`/`writeCache`/`clearCache` replace the hand-rolled
   sessionStorage try/catch across RoomView, useProjectAvailability, BookingPageView.
+
+**Refactor pass 2 (`5c56d90`) — audited owner (ProductionView) vs guest (RoomView) again:**
+- ✅ **`WorkspaceTabs`** extracted — the Schedule/Tasks/Board tab bar was byte-identical in both;
+  now one component (padding via `className`). The one genuinely clean merge.
+- ❌ **Left the rest separate on purpose** (verdict, so we don't re-litigate):
+  - *Sidebar shell* — wrapper/rail look similar but the mobile-drawer logic differs (RoomView
+    `sidebarOpen` + backdrop + footer; ProductionView `mobileShowSidebar`, no footer). Genericizing
+    = prop explosion for little gain.
+  - *People list* — owner-centric `useProjectPeople` (project-wide, "You" first, add/remove/invite)
+    vs guest room-scoped chip+knownGuests. Different identity + query scope. Restyle already gave
+    them a shared *look*; merging the data model is high-risk on the core overlap feature.
+  - *GuestCalendarPanel* (RoomView vs BookingPageView) — different connect flows (server refresh
+    token vs one-time GIS). Could share UI shell only; not worth the risk.
+  - *Availability loading* — RoomView (single room, unfiltered, for connected-detection) vs
+    `useProjectAvailability` (all rooms, is_available=true). Parameterizable but touches the core
+    feature; deferred unless it bites.
 
 **Still open (design-first; do separately from feature work):**
 - **People roster/filter — DEFERRED ON PURPOSE.** RoomView's inline list and ProductionView's

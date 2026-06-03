@@ -26,7 +26,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
 
   if (!isOpen) return null
 
-  const maxWidths = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg' }
+  const maxWidths = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-2xl', '2xl': 'max-w-5xl' }
 
   // Portal to <body> so the overlay escapes any transformed/resizable ancestor
   // (e.g. the project side panel) and always covers the full viewport.

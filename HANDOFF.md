@@ -61,6 +61,33 @@ Commits: `0413bc5`, `67f8ed8`, `6622778`, `dd9c551` (all on `master`, prod).
   showing people checked off (no more misleading auto-checked flash). sessionStorage (not local)
   on purpose — survives refresh, clears on tab close, sidesteps the stale-data risk.
 
+**Follow-ups shipped same session (`9cf6b83`):**
+- **Owner shows their real name to guests, not "Coordinator."** Root cause: the owner's
+  `settings.displayName` was never written (and the settings-sync object didn't even include it, so
+  it'd wipe). Fix: backfill `displayName` from auth metadata (Google/MS name → email prefix) when
+  empty, persist it in profile settings, include it in the sync object. "Coordinator" remains only
+  as a last-resort fallback for an owner with truly no name. (Takes effect after the owner loads the
+  app once so the backfill writes.)
+- **Guest "Connect calendar" reflects server truth.** Was tracked only in sessionStorage
+  (`coordie-gcal`), which clears on tab close → a connected guest got re-prompted after refresh. Now
+  `connected = guestEvents !== null || sharedAvailability has rows for this guest` → the connected
+  pill persists. (Disconnect still clears server token + availability via `disconnectGuestCalendar`.)
+
+### 🧱 Refactor debt (Dave's note — guest & owner pages should share code)
+Dave flagged that the **guest project page (RoomView) and owner project page (ProductionView)** do
+many of the same things and should share more code to cut duplication + bug surface. Already shared:
+`ProjectOverview`, `DayInspectorPanel`, `useProjectAvailability`, `Board`, `Whiteboard`. Still
+duplicated and worth unifying in a dedicated refactor pass (do it separately from feature work):
+- **People roster/filter:** RoomView has an inline people-checkbox list; ProductionView uses
+  `PeopleRoster` (+ `useProjectPeople`). Two renderings of the same "people with include/exclude"
+  idea → unify into one component + hook used by both.
+- **GuestCalendarPanel exists twice** (RoomView + BookingPageView) with different connect flows →
+  extract one component (or at least one connect hook).
+- **SWR cache logic** is hand-rolled in 4 places (RoomView schedule, owner-cal, useProjectAvailability,
+  useBoard/useCanvas) → a tiny `useCachedQuery(key, fetcher)` helper would DRY it.
+Principle going forward: build project features once, parameterized by `isOwner`/`canManage`, not
+twice.
+
 ### 🔜 Next big build (designed, greenlit, NOT started) — Microsoft Calendar / multi-provider
 Answers both Daniel's "primary calendar type" question AND founder feedback ("Calendars section
 only allows 1 calendar — I want busy times from Google + hotmail"). One build:

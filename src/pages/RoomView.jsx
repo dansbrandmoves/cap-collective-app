@@ -556,9 +556,13 @@ export function RoomView() {
           {room.name && room.name !== production.name && (
             <p className="text-xs text-zinc-500 mt-0.5 truncate">{room.name}</p>
           )}
-          {isOwner && (
+          {isOwner ? (
             <Link to={`/project/${productionId}`} className="inline-flex items-center gap-1 mt-2 text-[12px] text-zinc-500 hover:text-zinc-200 transition-colors">← Back to project</Link>
-          )}
+          ) : user ? (
+            /* Signed-in member of a shared project: same "← Projects" back-nav owned
+               projects get, so they can return to their dashboard. */
+            <Link to="/" className="inline-flex items-center gap-1 mt-2 text-[12px] text-zinc-500 hover:text-zinc-200 transition-colors">← Projects</Link>
+          ) : null}
         </div>
 
         {/* People filter — toggle who counts toward the overlap */}

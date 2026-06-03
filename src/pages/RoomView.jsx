@@ -10,6 +10,7 @@ import { Whiteboard } from '../components/project/Whiteboard'
 import { ProjectOverview } from '../components/project/ProjectOverview'
 import { useBoard } from '../hooks/useBoard'
 import { useCanvas } from '../hooks/useCanvas'
+import { useResizablePanel, ResizeHandle } from '../hooks/useResizablePanel'
 import { projectKnownPeople } from '../utils/availability'
 import { readCache, writeCache, clearCache } from '../utils/cache'
 import { supabase } from '../utils/supabase'
@@ -294,7 +295,8 @@ export function RoomView() {
   const [excluded, setExcluded] = useState(() => new Set())
   const [includedOwner, setIncludedOwner] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)      // mobile drawer
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false) // desktop collapse
+  // Desktop: collapsible + drag-resizable, persisted — same as the main nav + project panel.
+  const navPanel = useResizablePanel('coordie-room-nav', { defaultWidth: 288, min: 240, max: 420, side: 'right' })
 
   useEffect(() => {
     const rid = resolved?.roomId
@@ -532,25 +534,29 @@ export function RoomView() {
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-20 md:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Collapsed rail (desktop) — click to re-expand */}
-      {sidebarCollapsed && (
+      {navPanel.collapsed && (
         <div className="hidden md:flex flex-col items-center w-12 flex-shrink-0 bg-surface-900 border-r border-white/[0.06] py-4">
-          <button onClick={() => setSidebarCollapsed(false)} title="Expand panel"
+          <button onClick={() => navPanel.setCollapsed(false)} title="Expand panel"
             className="text-zinc-500 hover:text-zinc-100 transition-colors p-1.5 rounded-md hover:bg-surface-800">
             <PanelLeft size={16} strokeWidth={1.75} />
           </button>
         </div>
       )}
 
-      {/* Left sidebar: branding + name + People filter + Powered by Coordie */}
-      <aside className={`fixed inset-y-0 left-0 z-30 w-72 bg-surface-900 border-r border-white/[0.06] flex flex-col
-        md:relative md:z-auto md:translate-x-0 transition-transform duration-300 ease-ios
+      {/* Left sidebar: branding + name + People filter. Drag the right edge to resize. */}
+      <aside
+        style={{ width: navPanel.width }}
+        className={`fixed inset-y-0 left-0 z-30 max-w-[85vw] bg-surface-900 border-r border-white/[0.06] flex flex-col
+        md:relative md:z-auto md:max-w-none md:translate-x-0
+        ${navPanel.dragging ? '' : 'transition-transform duration-300 ease-ios'}
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        ${sidebarCollapsed ? 'md:hidden' : ''}`}>
+        ${navPanel.collapsed ? 'md:hidden' : ''}`}>
+        {!navPanel.collapsed && <ResizeHandle onPointerDown={navPanel.startDrag} onDoubleClick={navPanel.reset} side="right" dragging={navPanel.dragging} />}
         <div className="px-5 py-5 border-b border-white/[0.05]">
           <div className="flex items-center justify-end mb-3 gap-2 min-h-[20px]">
             {isOwner && <span className="mr-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">Owner</span>}
             <button onClick={() => setSidebarOpen(false)} className="md:hidden text-zinc-500 hover:text-zinc-200 p-1"><X size={16} /></button>
-            <button onClick={() => setSidebarCollapsed(true)} title="Collapse panel" className="hidden md:flex text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded p-1"><PanelLeft size={15} strokeWidth={1.75} /></button>
+            <button onClick={() => navPanel.setCollapsed(true)} title="Collapse panel" className="hidden md:flex text-zinc-500 hover:text-zinc-200 hover:bg-white/5 rounded p-1"><PanelLeft size={15} strokeWidth={1.75} /></button>
           </div>
           <h2 className="text-[15px] font-semibold text-zinc-50 leading-snug tracking-tight truncate">{production.name}</h2>
           {room.name && room.name !== production.name && (

@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `5c56d90` — "extract shared WorkspaceTabs (Schedule/Tasks/Board)"
+**Last pushed commit:** `be300e2` — "Account > Availability uses the new lined-grid calendar look"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -163,7 +163,23 @@ many of the same things and should share more code to cut duplication + bug surf
 Principle going forward: build project features once, parameterized by `isOwner`/`canManage`, not
 twice — but keep genuinely-different models separate (don't over-unify).
 
+**Account page polish (`18e40ee`, `be300e2`):**
+- Account header shows the user's **email** + a "notifications/booking emails sent to <email>" line.
+- Branding copy trimmed to "Your logo appears on booking pages."
+- **`resetAllSettings` audited + modernized**: now also resets timezone + booking branding
+  (brandColor/bookingTheme/logoMode) and sets `guestCalendarEnabled=true` (it was wrongly forcing
+  it OFF — guest calendar connect is on-by-default now). Leaves projects/calendars/logo/displayName
+  alone. (Was stale — predated the settings trim + guest-calendar-always-on.)
+- **Account → Availability** now uses `MyAvailabilityCalendar` (new lined-grid look matching
+  projects + booking), replacing the old MonthlyView "barcode" `AvailabilityCalendar` there.
+  `AvailabilityCalendar` still used by ProductionView (untouched).
+
 ### 🔜 Next big build (designed, greenlit, NOT started) — Microsoft Calendar / multi-provider
+**This is also the answer to "connect another calendar account" + "pick a primary calendar."**
+Today Account → Calendars connects Google only. Connecting a second account (a Microsoft/Outlook
+calendar, or another Google) and merging busy times — plus marking a **primary** calendar for
+default event creation — all require the Graph read + sync below. NOT doable piecemeal; it's this
+build. Until then: one Google account, role per calendar (governs/informational/ignored).
 Answers both Daniel's "primary calendar type" question AND founder feedback ("Calendars section
 only allows 1 calendar — I want busy times from Google + hotmail"). One build:
 - **Data model:** `provider` ('google'|'microsoft') on each connected calendar; user-level

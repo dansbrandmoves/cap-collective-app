@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `9708cd4` — "Microsoft Calendar phase 2a — connect flow + calendar picker (gated)"
+**Last pushed commit:** `07c2734` — "Microsoft Calendar phase 2b — event sync (Outlook busy times block availability)"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -195,16 +195,27 @@ ID) to `.env` AND Vercel (Production) → redeploy. Until then the whole MS UI i
 Account → Calendars → Connect (Microsoft) → consent → should land back showing your Outlook
 calendars in the role picker, then listed with an "Outlook" badge.
 
-**Phase 2b (after 2a confirmed) — event sync + coexistence (the careful part):**
-- Migration: `owner_calendar_events.provider` (default 'google') so each provider's sync only
-  manages its own rows. ⚠️ AUDIT FIRST: `sync-calendar` (Google) + client `replaceCalendarEvents`
-  (does `delete().eq('owner_id')` — wipes ALL) must be scoped to provider='google' or they'll nuke
-  MS rows. This is the main risk — get coexistence right.
-- `sync-ms-calendar` edge fn + 15-min cron: read profiles.connected_calendars (provider=microsoft,
-  role=governs) → Graph calendarView → write provider='microsoft' rows. Owner's `calendarEvents`
-  already refreshes from `owner_calendar_events` via realtime, so MS events flow in automatically.
-- Trigger immediate sync after connect; manual sync button.
-- Then: primary-calendar marker + `schedulingProvider` for default event creation.
+**Phase 2b DONE (`07c2734`) — event sync, coexistence handled:**
+- `sync-ms-calendar` edge fn (deployed) + `cron_sync_ms_calendars` 15-min cron. Reads governing MS
+  calendars from `connected_calendars`, Graph `calendarView` (windowed −31/+92d), full-replace this
+  owner's `ms:<id>` rows in `owner_calendar_events`, skips `showAs=free`.
+- **Coexistence audit result:** safe as-is. `sync-calendar` deletes/upserts scoped by `calendar_id`,
+  MS ids are namespaced `ms:`, so neither provider wipes the other. `replaceCalendarEvents` (the only
+  full `owner_id` delete) is **dead code — never called**. Did NOT patch `sync-calendar` (it errors
+  harmlessly on MS cals; re-pasting a working 199-line prod fn for a cosmetic skip wasn't worth the
+  risk — minor optimization noted: add `provider==='google'` to its governing filter someday).
+- Client `triggerMicrosoftSync`; CalendarSettings fires it ~3s post-connect + manual "sync now"
+  button. Owner's in-memory events refresh from `owner_calendar_events` via the existing realtime sub
+  → MS busy times flow into `deriveSlotState`, no engine change.
+
+**STILL TO TEST (Daniel — agent can't do live OAuth/Graph):** set `VITE_MS_CLIENT_ID` (Vercel + .env),
+redeploy, then Account→Calendars→Connect (Microsoft)→pick calendars→"sync now"→confirm Outlook busy
+days show in your availability. Watch `/admin/diagnostics` + the edge fn logs if anything's off.
+
+### 🔜 Microsoft Calendar — remaining (small, after 2b is confirmed working)
+- **Primary calendar marker + `schedulingProvider`** — when ≥2 calendars/providers, mark which is the
+  default for event creation; route "Schedule meeting" to Google template vs Outlook compose deeplink
+  (`outlook.live.com` personal vs `outlook.office.com` work). Cosmetic until native scheduling is on.
 
 ### 🔜 (folded into the above) — multi-provider / "connect another account" / primary calendar
 **This is also the answer to "connect another calendar account" + "pick a primary calendar."**

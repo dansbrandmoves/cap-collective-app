@@ -915,19 +915,22 @@ export function AppProvider({ children }) {
     }
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Live: when the server updates owner_calendar_events (push / cron / on-demand),
-  // refresh the owner's in-memory events without any polling.
+  // Owner's calendar events come from owner_calendar_events (all providers). Load
+  // them on mount/login — the localStorage snapshot can be stale (e.g. a Microsoft
+  // sync added events while this tab was closed) — then keep live via realtime.
   useEffect(() => {
     if (!user?.id) return
+    const refresh = () => {
+      const { startIso, endIso } = calendarWindow()
+      supabase.from('owner_calendar_events').select('*').eq('owner_id', user.id).gte('end_at', startIso).lte('start', endIso)
+        .then(({ data }) => { if (data) setCalendarEvents(data.map(mapOwnerEventRow)) })
+    }
+    refresh() // initial fetch — don't rely solely on the stale localStorage snapshot
     const ch = supabase
       .channel(`owner-cal-${user.id}`)
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'owner_calendar_events', filter: `owner_id=eq.${user.id}` },
-        () => {
-          const { startIso, endIso } = calendarWindow()
-          supabase.from('owner_calendar_events').select('*').eq('owner_id', user.id).gte('end_at', startIso).lte('start', endIso)
-            .then(({ data }) => { if (data) setCalendarEvents(data.map(mapOwnerEventRow)) })
-        })
+        refresh)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [user?.id])

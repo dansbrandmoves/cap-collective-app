@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `46339b3` — "'← Projects' back-nav for shared projects + explicit member role"
+**Last pushed commit:** `458bb47` — "guest project sidebar is drag-resizable + collapsible"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -116,6 +116,10 @@ Commits: `0413bc5`, `67f8ed8`, `6622778`, `dd9c551` (all on `master`, prod).
   control). Not yet used in permission checks — those still gate on `owner_id === user.id` — but the
   column is there so future co-owner/elevated-permission features are role-based, not owner-only.
   When wiring it: `canManage = isOwner || role in ('coordinator','admin')`.
+- **Guest project sidebar is now drag-resizable + collapsible** (`458bb47`) — RoomView's left
+  panel uses the shared `useResizablePanel` ('coordie-room-nav'), same as the app nav + project
+  panel (drag right edge, double-click reset, collapse to rail, width persisted). Replaced its
+  ad-hoc `sidebarCollapsed` state.
 
 ### 🧱 Refactor debt (Dave's note — guest & owner pages should share code)
 Dave flagged that the **guest project page (RoomView) and owner project page (ProductionView)** do

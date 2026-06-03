@@ -5,6 +5,7 @@ import { DailyView } from './DailyView'
 import { DateRequestModal } from './DateRequestModal'
 import { useApp } from '../../contexts/AppContext'
 import { getWeekStart, dateToStr, deriveSlotState, eventOverlapsSlot } from '../../utils/availability'
+import { slotOverlapsWindow } from '../../utils/timeWindows'
 import { OWNER_LABEL } from '../../hooks/useProjectPeople'
 import { SlotRow } from './SlotRow'
 import { Button } from '../ui/Button'
@@ -587,11 +588,10 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
 
   // Best slots: top 3 by free count (when guests exist), else top 3 slots for quick-schedule.
   // Filtered to the chosen time-of-day window when one is active.
-  const toMin = (t) => { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + m }
   const bestSlots = useMemo(() => {
     if (!slotOverlap.rows.length) return []
     const windowed = windowFilter
-      ? slotOverlap.rows.filter(({ slot }) => toMin(slot.startTime) < windowFilter.end && toMin(slot.endTime) > windowFilter.start)
+      ? slotOverlap.rows.filter(({ slot }) => slotOverlapsWindow(slot, windowFilter))
       : slotOverlap.rows
     const source = windowed.length > 0 ? windowed : slotOverlap.rows
     const sorted = [...source].sort((a, b) => b.freeCount - a.freeCount)

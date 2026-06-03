@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { getMonthGrid, trimBlankWeeks, dateToStr, eventOverlapsSlot } from '../utils/availability'
+import { WINDOWS, WINDOW_ORDER, slotStartsInWindow as slotInWindow } from '../utils/timeWindows'
+import { readCache, writeCache, clearCache } from '../utils/cache'
 import { SlotRow } from '../components/availability/SlotRow'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured } from '../utils/googleCalendar'
@@ -40,15 +42,6 @@ function generateTimeSlots(start, end, duration) {
 }
 
 // Time-of-day windows — same language as the project view. Filters the slots.
-const WINDOWS = {
-  any:       { label: 'Any time',  start: 0,        end: 24 * 60 },
-  morning:   { label: 'Morning',   start: 5 * 60,   end: 12 * 60 },
-  afternoon: { label: 'Afternoon', start: 12 * 60,  end: 17 * 60 },
-  evening:   { label: 'Evening',   start: 17 * 60,  end: 23 * 60 },
-}
-const WINDOW_ORDER = ['any', 'morning', 'afternoon', 'evening']
-const toMin = (t) => { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + m }
-const slotInWindow = (slot, w) => { const s = toMin(slot.startTime); return s >= w.start && s < w.end }
 
 function formatDate(ds) {
   return new Date(ds + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
@@ -374,17 +367,15 @@ export function BookingPageView() {
     }
     return () => document.documentElement.classList.remove('light')
   }, [mode])
-  const [guestEvents, setGuestEvents] = useState(() => {
-    try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch (e) { return null }
-  })
+  const [guestEvents, setGuestEvents] = useState(() => readCache('coordie-gcal'))
 
   function connectGuestCalendar(events) {
     setGuestEvents(events)
-    try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch (e) { /* full */ }
+    writeCache('coordie-gcal', events)
   }
   function disconnectGuestCalendar() {
     setGuestEvents(null)
-    try { sessionStorage.removeItem('coordie-gcal') } catch (e) { /* */ }
+    clearCache('coordie-gcal')
   }
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)

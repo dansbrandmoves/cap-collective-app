@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../utils/supabase'
+import { readCache, writeCache } from '../utils/cache'
 
 /**
  * Loads availability signals across ALL groups (rooms) of a project so the
@@ -32,27 +33,24 @@ export function useProjectAvailability(production) {
     // immediately, then refresh from the server. Avoids a blank/loading calendar on
     // every refresh once the data has been seen once this session.
     const cacheKey = `coordie-projavail-${roomKey}`
-    try {
-      const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null')
-      if (cached) {
-        setAllDateRequests(cached.dateRequests || [])
-        setAllSharedAvail(cached.sharedAvailability || [])
-        setLoading(false)
-      } else {
-        setLoading(true)
-      }
-    } catch { setLoading(true) }
+    const cached = readCache(cacheKey)
+    if (cached) {
+      setAllDateRequests(cached.dateRequests || [])
+      setAllSharedAvail(cached.sharedAvailability || [])
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
 
     const latest = { dateRequests: [], sharedAvailability: [] }
-    const writeCache = () => { try { sessionStorage.setItem(cacheKey, JSON.stringify(latest)) } catch { /* full */ } }
 
     function loadRequests() {
       return supabase.from('date_requests').select('*').in('room_id', roomIds)
-        .then(({ data }) => { if (!cancelled) { latest.dateRequests = data || []; setAllDateRequests(latest.dateRequests); writeCache() } })
+        .then(({ data }) => { if (!cancelled) { latest.dateRequests = data || []; setAllDateRequests(latest.dateRequests); writeCache(cacheKey, latest) } })
     }
     function loadAvail() {
       return supabase.from('shared_availability').select('*').eq('is_available', true).in('room_id', roomIds)
-        .then(({ data }) => { if (!cancelled) { latest.sharedAvailability = data || []; setAllSharedAvail(latest.sharedAvailability); writeCache() } })
+        .then(({ data }) => { if (!cancelled) { latest.sharedAvailability = data || []; setAllSharedAvail(latest.sharedAvailability); writeCache(cacheKey, latest) } })
     }
 
     Promise.all([loadRequests(), loadAvail()]).then(() => { if (!cancelled) setLoading(false) })

@@ -5,6 +5,7 @@ import {
   aggregateProjectDay, projectKnownPeople,
 } from '../../utils/availability'
 import { OWNER_LABEL } from '../../hooks/useProjectPeople'
+import { WINDOWS, WINDOW_ORDER, slotOverlapsWindow as slotInWindow } from '../../utils/timeWindows'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -14,17 +15,6 @@ const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 // One signal only: green = everyone's free. Partial/conflict/unknown days stay
 // neutral and let the count speak — no traffic-light noise.
 
-// Time-of-day windows (minutes since midnight). A slot counts toward a window
-// if it overlaps it at all. "Any time" spans the whole day.
-const WINDOWS = {
-  any:       { label: 'Any time',  start: 0,        end: 24 * 60 },
-  morning:   { label: 'Morning',   start: 5 * 60,   end: 12 * 60 },
-  afternoon: { label: 'Afternoon', start: 12 * 60,  end: 17 * 60 },
-  evening:   { label: 'Evening',   start: 17 * 60,  end: 23 * 60 },
-}
-const WINDOW_ORDER = ['any', 'morning', 'afternoon', 'evening']
-const toMin = (t) => { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + m }
-const slotInWindow = (slot, w) => toMin(slot.startTime) < w.end && toMin(slot.endTime) > w.start
 const dedupeNames = (arr) => {
   const s = new Set(arr)
   s.delete(undefined); s.delete(null); s.delete('')

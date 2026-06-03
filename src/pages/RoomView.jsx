@@ -11,6 +11,7 @@ import { ProjectOverview } from '../components/project/ProjectOverview'
 import { useBoard } from '../hooks/useBoard'
 import { useCanvas } from '../hooks/useCanvas'
 import { projectKnownPeople } from '../utils/availability'
+import { readCache, writeCache, clearCache } from '../utils/cache'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured, connectGuestCalendarOffline, triggerGuestSync, disconnectGuestCalendar as disconnectGuestCalendarServer } from '../utils/googleCalendar'
 import { CalendarDays, CheckCircle2, Menu, X, PanelLeft, Check } from 'lucide-react'
@@ -265,12 +266,10 @@ export function RoomView() {
   // Guest calendar connect lives at the RoomView level so its control can sit in the
   // tabs row (out of the calendar's way). Server owns ongoing sync; we hold events
   // only to know connected/not, and trigger an immediate first sync on connect.
-  const [guestEvents, setGuestEvents] = useState(() => {
-    try { const s = sessionStorage.getItem('coordie-gcal'); return s ? JSON.parse(s) : null } catch { return null }
-  })
+  const [guestEvents, setGuestEvents] = useState(() => readCache('coordie-gcal'))
   const connectGuestCalendar = useCallback(async (events) => {
     setGuestEvents(events)
-    try { sessionStorage.setItem('coordie-gcal', JSON.stringify(events)) } catch { /* */ }
+    writeCache('coordie-gcal', events)
     const rid = resolved?.roomId
     if (!rid || !guestName) return
     const run = startRun('guest_connect_calendar', { actor: guestName, roomId: rid })
@@ -280,7 +279,7 @@ export function RoomView() {
   }, [resolved?.roomId, guestName])
   const disconnectGuestCalendar = useCallback(async () => {
     setGuestEvents(null)
-    try { sessionStorage.removeItem('coordie-gcal') } catch { /* */ }
+    clearCache('coordie-gcal')
     const rid = resolved?.roomId
     if (rid && guestName) {
       const { error } = await disconnectGuestCalendarServer({ roomId: rid, guestName })
@@ -305,23 +304,20 @@ export function RoomView() {
     // refresh from the server in the background. A refresh no longer shows an empty
     // sidebar while the network round-trips.
     const latest = { dateRequests: [], sharedAvailability: [] }
-    try {
-      const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null')
-      if (cached) {
-        latest.dateRequests = cached.dateRequests || []
-        latest.sharedAvailability = cached.sharedAvailability || []
-        setDateRequests(latest.dateRequests)
-        setSharedAvailability(latest.sharedAvailability)
-        setSchedLoading(false)   // we have something to show immediately
-      } else {
-        setSchedLoading(true)
-      }
-    } catch { setSchedLoading(true) }
-    const writeCache = () => { try { sessionStorage.setItem(cacheKey, JSON.stringify(latest)) } catch { /* full */ } }
+    const cached = readCache(cacheKey)
+    if (cached) {
+      latest.dateRequests = cached.dateRequests || []
+      latest.sharedAvailability = cached.sharedAvailability || []
+      setDateRequests(latest.dateRequests)
+      setSharedAvailability(latest.sharedAvailability)
+      setSchedLoading(false)   // we have something to show immediately
+    } else {
+      setSchedLoading(true)
+    }
     const loadReq = () => supabase.from('date_requests').select('*').eq('room_id', rid)
-      .then(({ data }) => { latest.dateRequests = data || []; setDateRequests(latest.dateRequests); writeCache() })
+      .then(({ data }) => { latest.dateRequests = data || []; setDateRequests(latest.dateRequests); writeCache(cacheKey, latest) })
     const loadAvail = () => supabase.from('shared_availability').select('*').eq('room_id', rid)
-      .then(({ data }) => { latest.sharedAvailability = data || []; setSharedAvailability(latest.sharedAvailability); writeCache() })
+      .then(({ data }) => { latest.sharedAvailability = data || []; setSharedAvailability(latest.sharedAvailability); writeCache(cacheKey, latest) })
     Promise.all([loadReq(), loadAvail()]).finally(() => setSchedLoading(false))
     const channel = supabase
       .channel(`room-overlap-${rid}`)
@@ -390,10 +386,8 @@ export function RoomView() {
     // Stale-while-revalidate: paint the owner's last-known calendar from cache so the
     // overlap renders instantly on refresh, then revalidate against the server.
     const cacheKey = `coordie-ownercal-${ownerId}`
-    try {
-      const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null')
-      if (Array.isArray(cached)) setOwnerCalendarEvents(cached)
-    } catch { /* ignore */ }
+    const cached = readCache(cacheKey)
+    if (Array.isArray(cached)) setOwnerCalendarEvents(cached)
     // Window to the scheduling horizon so the guest view loads fast (not every row).
     const ws = new Date(); ws.setDate(ws.getDate() - 7)
     const we = new Date(); we.setDate(we.getDate() + 120)
@@ -402,7 +396,7 @@ export function RoomView() {
       .then(({ data }) => {
         const mapped = (data || []).map(mapRow)
         setOwnerCalendarEvents(mapped)
-        try { sessionStorage.setItem(cacheKey, JSON.stringify(mapped)) } catch { /* full */ }
+        writeCache(cacheKey, mapped)
       })
     load()
     // Live: when the owner's calendar changes (server sync), guests update too.

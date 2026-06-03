@@ -1,7 +1,7 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `be300e2` — "Account > Availability uses the new lined-grid calendar look"
+**Last pushed commit:** `afab663` — "Microsoft Calendar — phase 1 foundation (auth edge fn + token columns)"
 **Live at:** https://www.coordie.com (Vercel auto-deploys on push) — **THIS IS A LAUNCHED APP.**
   Don't ship anything that degrades real users (e.g. unverified OAuth scopes, broken builds).
 **Google OAuth:** ✅ verified for `calendar.readonly` only. Owner + guest both request read-only.
@@ -174,7 +174,29 @@ twice — but keep genuinely-different models separate (don't over-unify).
   projects + booking), replacing the old MonthlyView "barcode" `AvailabilityCalendar` there.
   `AvailabilityCalendar` still used by ProductionView (untouched).
 
-### 🔜 Next big build (designed, greenlit, NOT started) — Microsoft Calendar / multi-provider
+### 🟡 Microsoft Calendar — IN PROGRESS (staged build)
+**Phase 1 DONE (`afab663`, deployed, dormant):**
+- `profiles.ms_refresh_token / ms_access_token / ms_token_expires_at`.
+- `microsoft-calendar-auth` edge fn (exchange / refresh / disconnect) — Graph v2.0 token endpoint,
+  tenant `common` (work + personal). Secrets MS_CLIENT_ID/SECRET/TENANT_ID already in Supabase.
+  Mirrors `google-calendar-auth`. Nothing calls it yet → zero live impact.
+
+**Phase 2 (next) — client connect + sync + UI:**
+- Client `microsoftCalendar.js`: popup/redirect OAuth (authorize → app origin with `?code` →
+  invoke `microsoft-calendar-auth` exchange). Mirror the Google owner connect in `googleCalendar.js`.
+- `sync-ms-calendar` edge fn + 15-min cron: Graph `/me/calendarView` (windowed) → write to
+  `owner_calendar_events` (same table), tagged provider='microsoft'. Mirror `sync-calendar`.
+- Account → Calendars: "Connect Microsoft" button; connected_calendars get a `provider` field +
+  provider badge; merge MS events into `deriveSlotState` (no engine change — same internal shape).
+- Primary-calendar marker once ≥2 calendars; `schedulingProvider` for default event creation.
+
+**⚠️ NEEDS DANIEL (before Phase 2 can be tested):**
+- Entra → app → Authentication → Web → Redirect URIs: add `https://www.coordie.com` and
+  `http://localhost:5173` (app origins, for the calendar connect return). Sign-in's Supabase
+  callback is separate and stays.
+- Live OAuth/Graph testing (agent can't — no MS account in sandbox).
+
+### 🔜 (folded into the above) — multi-provider / "connect another account" / primary calendar
 **This is also the answer to "connect another calendar account" + "pick a primary calendar."**
 Today Account → Calendars connects Google only. Connecting a second account (a Microsoft/Outlook
 calendar, or another Google) and merging busy times — plus marking a **primary** calendar for

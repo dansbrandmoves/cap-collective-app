@@ -15,7 +15,7 @@ const UTILITY_NAV = [
 const RAIL = 60 // collapsed icon-rail width
 
 export function Sidebar({ mobileOpen = false, onMobileClose }) {
-  const { productions, user, signOut, theme, isAdmin } = useApp()
+  const { productions, user, signOut, theme, isAdmin, avatarUrl } = useApp()
   const panel = useResizablePanel('coordie-nav', { defaultWidth: 224, min: 200, max: 340, side: 'right' })
   const railed = panel.collapsed
 
@@ -163,8 +163,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
               }`
             }
           >
-            {user.user_metadata?.avatar_url ? (
-              <img src={user.user_metadata.avatar_url} alt="" className="w-6 h-6 rounded-full flex-shrink-0" />
+            {(avatarUrl || user.user_metadata?.avatar_url) ? (
+              <img src={avatarUrl || user.user_metadata.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
             ) : (
               <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                 {(user.user_metadata?.full_name || user.email)?.[0]?.toUpperCase() ?? '?'}

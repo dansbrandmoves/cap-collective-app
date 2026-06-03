@@ -220,6 +220,7 @@ export function AppProvider({ children }) {
   const [role, setRole] = useState('user') // 'user' | 'admin'
   const [logoUrl, setLogoUrl] = useState(null)
   const [logoIsDark, setLogoIsDark] = useState(true)
+  const [avatarUrl, setAvatarUrl] = useState(null) // owner's uploaded profile photo
 
   // Generous free tier — a founder should be able to explore real work before
   // ever seeing an upgrade prompt. Pro lifts these to unlimited.
@@ -230,12 +231,13 @@ export function AppProvider({ children }) {
   const [profileLoaded, setProfileLoaded] = useState(false)
 
   async function fetchPlan(userId) {
-    if (!userId) { setPlan('free'); setRole('user'); setLogoUrl(null); setProfileLoaded(true); return }
-    const { data } = await supabase.from('profiles').select('plan, role, logo_url, logo_is_dark, connected_calendars, google_refresh_token, settings').eq('id', userId).single()
+    if (!userId) { setPlan('free'); setRole('user'); setLogoUrl(null); setAvatarUrl(null); setProfileLoaded(true); return }
+    const { data } = await supabase.from('profiles').select('plan, role, logo_url, logo_is_dark, avatar_url, connected_calendars, google_refresh_token, settings').eq('id', userId).single()
     setPlan(data?.plan ?? 'free')
     setRole(data?.role ?? 'user')
     setLogoUrl(data?.logo_url ?? null)
     setLogoIsDark(data?.logo_is_dark ?? true)
+    setAvatarUrl(data?.avatar_url ?? null)
     // Restore settings from Supabase (cross-device sync)
     if (data?.settings && Object.keys(data.settings).length > 0) {
       const s = data.settings
@@ -289,6 +291,31 @@ export function AppProvider({ children }) {
     await supabase.storage.from('logos').remove([`${user.id}/logo.webp`])
     await supabase.from('profiles').update({ logo_url: null }).eq('id', user.id)
     setLogoUrl(null)
+  }, [user])
+
+  // Profile photo. `square` is an already-cropped square blob from the avatar
+  // cropper; resizeImage re-encodes it to a small webp (keeps it square since the
+  // source is square) so we never store a big file.
+  const uploadAvatar = useCallback(async (square) => {
+    if (!user?.id) return null
+    const { blob } = await resizeImage(square, 256, 256)
+    const path = `${user.id}/avatar.webp`
+    const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, blob, {
+      contentType: 'image/webp', upsert: true,
+    })
+    if (uploadErr) { console.error('Avatar upload failed:', uploadErr); return null }
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+    const url = urlData.publicUrl + '?t=' + Date.now()
+    await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id)
+    setAvatarUrl(url)
+    return url
+  }, [user])
+
+  const removeAvatar = useCallback(async () => {
+    if (!user?.id) return
+    await supabase.storage.from('avatars').remove([`${user.id}/avatar.webp`])
+    await supabase.from('profiles').update({ avatar_url: null }).eq('id', user.id)
+    setAvatarUrl(null)
   }, [user])
 
   useEffect(() => {
@@ -1470,6 +1497,7 @@ export function AppProvider({ children }) {
       availabilityMode, setAvailabilityMode, blockDuration, setBlockDuration,
       // Branding
       logoUrl, logoIsDark, setLogoIsDark, uploadLogo, removeLogo,
+      avatarUrl, uploadAvatar, removeAvatar,
       // Helpers
       getProduction, getRoom, getRoomByToken, getRoomLink, getMembersForRoom, resolveToken,
     }}>

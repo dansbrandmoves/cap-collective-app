@@ -1,9 +1,9 @@
 import { useApp } from '../contexts/AppContext'
 import { SlotEditor } from '../components/availability/SlotEditor'
-import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
+import { MyAvailabilityCalendar } from '../components/availability/MyAvailabilityCalendar'
 
 export function AvailabilityRules({ embedded = false } = {}) {
-  const { availabilityRules, effectiveSlots, calendarEvents, connectedCalendars, prefixRules, slotStates, availabilityMode, businessHours } = useApp()
+  const { effectiveSlots, calendarEvents, connectedCalendars, prefixRules, slotStates, availabilityMode, businessHours } = useApp()
 
   return (
     <div className={embedded ? '' : 'px-5 sm:px-8 lg:px-14 py-8 sm:py-12'}>
@@ -16,15 +16,13 @@ export function AvailabilityRules({ embedded = false } = {}) {
         </div>
       )}
 
-      {/* Calendar */}
+      {/* Calendar — same lined-grid look as projects + booking */}
       <div className={availabilityMode === 'slots' ? 'mb-10' : ''}>
-        <AvailabilityCalendar
+        <MyAvailabilityCalendar
           slots={effectiveSlots}
           calendarEvents={calendarEvents}
           connectedCalendars={connectedCalendars}
-          availabilityRules={availabilityRules}
           prefixRules={prefixRules}
-          isOwner={true}
           slotStates={slotStates}
           businessHours={businessHours}
         />

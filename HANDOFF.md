@@ -1,7 +1,28 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-06-03 UTC (session 3 — Microsoft auth + provider groundwork + perms/UX)
-**Last pushed commit:** `ce53de5` — "coordie: guests can connect Outlook too — provider-agnostic guest calendar"
+**Last session ended:** 2026-07-15 (Microsoft Entra publisher verification COMPLETE)
+**Last pushed commit:** `d04403c` — "coordie: tap a person in the roster -> detail modal"
+
+> **2026-07-15 — MICROSOFT ENTRA PUBLISHER VERIFICATION IS DONE.** Coordie's consent
+> screen now shows the blue "verified publisher" badge with "Moves and Measures LLC"
+> instead of "unverified publisher." Multi-tenant users can consent without the scary
+> interstitial. Key IDs saved to memory (`project_coordie_microsoft_verification.md`):
+> - App ID: `1dbedd4d-b064-4be2-ae5e-d25fcc49a4b3`
+> - Publisher domain: `movesandmeasures.com` (verified custom domain in BRANDMOVES.CO tenant)
+> - MPN ID: `7122339` (Moves and Measures LLC in Partner Center)
+> - Verification JSON hosted at `https://www.movesandmeasures.com/.well-known/microsoft-identity-association.json`
+>
+> **What tripped us up (for the record):** Microsoft's "Unable to connect to..." error
+> was misleading. The file WAS reachable (200 OK, Content-Type application/json, valid
+> TLS, both IPv4/IPv6). The real requirement was: (1) add movesandmeasures.com as a
+> DNS-verified custom domain in the Entra tenant (via TXT record at the DNS registrar),
+> and (2) associate an MPN ID from Microsoft Partner Center. Support engineer helped
+> after ticket #2607150040010139 pointed us to the custom-domain requirement.
+>
+> **Repo location change:** Working directory moved from Dropbox path to `D:\coordie`
+> to eliminate the Dropbox-touching-git-index bugs. Old Dropbox copy still exists at
+> `C:\Users\danie\Dropbox\Creative Cloud Files\Client Fulfillment\MM\vibe-coding\cap-collective-app`
+> and may still hold the real `.env` — pull secrets from there when running locally.
 
 > **2026-06-03 (session 4, cont.):** GUEST MICROSOFT/OUTLOOK support shipped.
 > Guests were Google-only; now connect Google, Outlook, or both. `guest_calendar_tokens`

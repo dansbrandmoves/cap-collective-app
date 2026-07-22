@@ -320,24 +320,31 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     let initialLoad = true
-    // Longer timeout if OAuth redirect is in progress (has ?code= in URL)
-    const hasAuthCode = window.location.search.includes('code=') || window.location.hash.includes('access_token')
-    const timeoutMs = hasAuthCode ? 10000 : 3000
-    const timeout = setTimeout(() => {
-      if (initialLoad) {
-        console.warn('Auth timed out — clearing stale session')
-        localStorage.removeItem('sb-xwuekcysigkujhyucugi-auth-token')
-        setUser(null)
-        setAuthLoading(false)
-        initialLoad = false
-      }
-    }, timeoutMs)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Set user FIRST, then resolve authLoading — prevents race where
-      // data fetch sees authLoading=false but user is still null
+    // Set user FIRST, then resolve authLoading — prevents race where
+    // data fetch sees authLoading=false but user is still null.
+    const settle = (session) => {
       setUser(session?.user ?? null)
       fetchPlan(session?.user?.id ?? null)
       if (initialLoad) { initialLoad = false; clearTimeout(timeout); setAuthLoading(false) }
+    }
+    // Safety timeout ONLY unblocks the UI — it must NEVER delete the stored
+    // session. (It used to remove the auth token after 3s, which signed real
+    // users out on any slow load. If the session is truly invalid, Supabase
+    // resolves it to null on its own; if it's just slow, the auth event below
+    // recovers the signed-in state after the UI unblocks.)
+    const hasAuthCode = window.location.search.includes('code=') || window.location.hash.includes('access_token')
+    const timeoutMs = hasAuthCode ? 10000 : 6000
+    const timeout = setTimeout(() => {
+      if (initialLoad) {
+        console.warn('Auth slow to resolve — unblocking UI (session left intact)')
+        initialLoad = false
+        setAuthLoading(false)
+      }
+    }, timeoutMs)
+    // Resolve deterministically from storage, plus subscribe for changes.
+    supabase.auth.getSession().then(({ data }) => settle(data?.session ?? null)).catch(() => {})
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      settle(session)
       // Welcome email disabled — edge function not deployed yet
       // TODO: re-enable once send-welcome-email is deployed and tested
     })

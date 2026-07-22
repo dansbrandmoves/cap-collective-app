@@ -410,7 +410,8 @@ export function BookingPageView() {
       .select('*')
       .eq('owner_id', page.owner_id)
       .then(({ data }) => setOwnerEvents(data || []))
-    supabase.from('profiles')
+    // public_profiles: safe projection (no OAuth tokens) — booking pages are public.
+    supabase.from('public_profiles')
       .select('logo_url, logo_is_dark, settings')
       .eq('id', page.owner_id)
       .single()

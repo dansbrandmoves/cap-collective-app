@@ -459,7 +459,9 @@ export function RoomView() {
 
   useEffect(() => {
     if (!production?.ownerId) return
-    supabase.from('profiles').select('logo_url, logo_is_dark, connected_calendars, settings').eq('id', production.ownerId).single()
+    // public_profiles: safe projection (no OAuth tokens). The base profiles table
+    // is owner-only now, so guests/members read the owner's branding + settings here.
+    supabase.from('public_profiles').select('logo_url, logo_is_dark, connected_calendars, settings').eq('id', production.ownerId).single()
       .then(({ data }) => {
         setOwnerLogo(data?.logo_url || null)
         setOwnerLogoDark(data?.logo_is_dark ?? true)

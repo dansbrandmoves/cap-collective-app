@@ -300,7 +300,7 @@ export function HomePage() {
       <section id="how-it-works" className="px-5 sm:px-8 py-20 sm:py-28 max-w-5xl mx-auto w-full">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">How it works</p>
-          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100">Create a project, share time, skip the back-and-forth.</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100">Create a project, connect calendars, skip the back-and-forth.</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">

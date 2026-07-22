@@ -6,40 +6,40 @@ const FEATURES = [
   {
     icon: Users,
     title: 'When can everyone meet?',
-    desc: 'Add everyone to a project and the days the whole group is free surface on their own. Filter by morning, afternoon, or evening.',
+    desc: 'Add everyone to a project and the days the whole group is free are marked. Filter by morning, afternoon, or evening.',
   },
   {
     icon: CalendarDays,
     title: 'Calendar-driven availability',
-    desc: 'Connect Google or Outlook and your real schedule drives your availability. Busy times drop out automatically, for you and everyone you invite.',
+    desc: 'Connect Google or Outlook and your busy times are excluded automatically, for you and everyone you invite.',
   },
   {
     icon: LayoutGrid,
     title: 'Shared tasks',
-    desc: 'A Trello-style board with lists, cards, and assignees, live for everyone on the project.',
+    desc: 'A Trello-style board with lists, cards, and assignees, shared with everyone on the project.',
   },
   {
     icon: Shapes,
     title: 'A shared whiteboard',
-    desc: 'An infinite canvas for sticky notes, shapes, images, and connecting arrows. Map a shoot, sketch a flow, pin references.',
+    desc: 'An infinite canvas with sticky notes, shapes, images, and arrows.',
   },
   {
     icon: Link2,
     title: 'Invites are links',
-    desc: 'Invite people by email or share one link. They join in a click, no account needed, and their availability flows straight in.',
+    desc: 'Invite people by email or share one link. They join without an account, and their availability is added.',
   },
   {
     icon: Inbox,
-    title: 'Schedule in a tap',
-    desc: 'Pick the day and time, and open a prefilled event on your own calendar, Google or Outlook, with the right people attached.',
+    title: 'Send the meeting',
+    desc: 'Pick a day and time to open a prefilled event in your own Google or Outlook calendar, with attendees attached.',
   },
 ]
 
 const HOW_IT_WORKS = [
-  { step: '01', title: 'Create a project', desc: 'Name your production and add the clients, vendors, and crew you need to line up.' },
-  { step: '02', title: 'Everyone shares their free time', desc: 'They connect a calendar or tap their free days. No account needed.' },
-  { step: '03', title: 'See the day that works', desc: 'The day the whole group is free turns green. Filter by time of day to narrow it down.' },
-  { step: '04', title: 'Lock it in, then plan it', desc: 'Send the meeting in a tap, then track tasks and sketch ideas together.' },
+  { step: '01', title: 'Create a project', desc: 'Name it and add the clients, vendors, and crew.' },
+  { step: '02', title: 'Everyone shares their free time', desc: 'Each person connects a calendar or taps their free days. No account needed.' },
+  { step: '03', title: 'See the day that works', desc: 'Days the whole group is free are marked. Filter by time of day.' },
+  { step: '04', title: 'Schedule and plan', desc: 'Send the meeting, then track tasks and use the whiteboard.' },
 ]
 
 // The group whose availability converges in the hero demo. Each person's free
@@ -249,8 +249,8 @@ export function HomePage() {
         </h1>
 
         <p className="text-lg sm:text-xl text-zinc-400 leading-relaxed max-w-xl mb-10">
-          Add your clients, vendors, and crew to a project. See the days everyone's free,
-          then plan the work together on a shared board and whiteboard.
+          Add your clients, vendors, and crew to a project, see the days everyone's free,
+          and plan the work on a shared board and whiteboard.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -277,11 +277,8 @@ export function HomePage() {
         <div className="text-center mb-10 sm:mb-14">
           <p className="text-xs font-semibold text-accent uppercase tracking-widest mb-3">The overlap</p>
           <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 max-w-2xl mx-auto leading-tight tracking-tight">
-            Everyone shares when they're free. The day that works for the whole group turns green.
+            Everyone shares when they're free, and the days the whole group is free are marked.
           </h2>
-          <p className="text-zinc-500 text-base mt-4 max-w-lg mx-auto">
-            As people connect their calendars or tap their free days, the overlap appears on its own.
-          </p>
         </div>
         <HeroProjectMockup />
       </section>
@@ -293,10 +290,7 @@ export function HomePage() {
       <section id="features" className="px-5 sm:px-8 py-20 sm:py-28 max-w-6xl mx-auto w-full">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Features</p>
-          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-3">Find the time, plan the work, think together</h2>
-          <p className="text-zinc-500 text-base max-w-xl mx-auto">
-            Scheduling, tasks, and a whiteboard in one workspace.
-          </p>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100">Scheduling, tasks, and a whiteboard in one workspace.</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -322,10 +316,7 @@ export function HomePage() {
       <section id="how-it-works" className="px-5 sm:px-8 py-20 sm:py-28 max-w-5xl mx-auto w-full">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">How it works</p>
-          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-3">Up and running in minutes</h2>
-          <p className="text-zinc-500 text-base max-w-xl mx-auto">
-            Create a project, connect your calendar, share a link.
-          </p>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100">Create a project, connect a calendar, share a link.</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -372,12 +363,9 @@ export function HomePage() {
 
       {/* CTA */}
       <section className="px-5 sm:px-8 py-20 sm:py-28 flex flex-col items-center text-center">
-        <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-4 max-w-lg">
-          Try it with your next project.
-        </h2>
-        <p className="text-zinc-500 text-base mb-8 max-w-sm">
+        <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-6 max-w-lg">
           Sign in with Google, Microsoft, or email.
-        </p>
+        </h2>
         <a
           href="/signin"
           className="inline-flex items-center gap-2 bg-accent hover:bg-accent-hover text-white font-semibold text-sm px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-accent/20"
@@ -385,14 +373,6 @@ export function HomePage() {
           Get started free
           <ArrowRight size={15} strokeWidth={2} />
         </a>
-        <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-sm text-zinc-600">
-          {['No credit card required', 'Room links work without an account', 'Free to use'].map(text => (
-            <span key={text} className="flex items-center gap-1.5">
-              <CheckCircle2 size={13} strokeWidth={2} className="text-zinc-600" />
-              {text}
-            </span>
-          ))}
-        </div>
       </section>
 
       {/* Footer */}

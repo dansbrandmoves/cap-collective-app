@@ -389,6 +389,86 @@ export function CalendarSettings({ embedded = false } = {}) {
         </div>
       )}
 
+      {/* ── Connected Calendars ── */}
+      {connectedCalendars.length > 0 && (
+        <div className="py-5 border-b border-surface-800">
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Connected Calendars</p>
+          <div className="space-y-2">
+            {connectedCalendars.map(cal => (
+              <div key={cal.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-1.5">
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cal.color }} />
+                  <p className="text-sm text-zinc-300 truncate">{cal.name}</p>
+                  <span className={`text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded flex-shrink-0 ${cal.provider === 'microsoft' ? 'bg-[#0078d4]/15 text-[#4aa3e0]' : 'bg-white/[0.06] text-zinc-500'}`}>
+                    {cal.provider === 'microsoft' ? 'Outlook' : 'Google'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select value={cal.role} onChange={e => updateCalendarRole(cal.googleCalendarId, e.target.value)}
+                    className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-400 focus:outline-none focus:border-accent">
+                    {ROLES.map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
+                  </select>
+                  {cal.role === 'governs' && (
+                    <select value={cal.defaultState || 'booked'} onChange={e => updateCalendarDefaultState(cal.googleCalendarId, e.target.value)}
+                      className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-400 focus:outline-none focus:border-accent">
+                      {Object.entries(slotStates).map(([key, val]) => (
+                        <option key={key} value={key}>{val.label}</option>
+                      ))}
+                    </select>
+                  )}
+                  <button onClick={() => removeConnectedCalendar(cal.googleCalendarId)}
+                    className="p-1 rounded text-zinc-600 hover:text-red-400 transition-colors flex-shrink-0">
+                    <Trash2 size={13} strokeWidth={1.75} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Working hours ── */}
+      <div className="py-5 border-b border-surface-800">
+        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Working hours</p>
+
+        {/* Business hours per day */}
+        <div className="space-y-0 mb-3">
+          {DAY_NAMES.map((name, i) => {
+            const day = schedule[i]
+            const isActive = !!day
+            return (
+              <div key={i} className="flex items-center h-10 gap-3 group/day">
+                <button onClick={() => toggleDay(i)}
+                  className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
+                    isActive ? 'bg-accent' : 'bg-surface-600'
+                  }`}>
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
+                    isActive ? 'translate-x-4' : 'translate-x-0'
+                  }`} />
+                </button>
+                <span className={`w-10 text-sm font-medium ${isActive ? 'text-zinc-100' : 'text-zinc-600'}`}>
+                  {name.slice(0, 3)}
+                </span>
+                {isActive ? (
+                  <>
+                    <TimeSelect value={day.start} onChange={v => updateDayTime(i, 'start', v)} />
+                    <span className="text-xs text-zinc-600">–</span>
+                    <TimeSelect value={day.end} onChange={v => updateDayTime(i, 'end', v)} />
+                    <button onClick={() => applyToAll(i)}
+                      className="text-[10px] text-zinc-600 hover:text-accent transition-colors opacity-0 group-hover/day:opacity-100 ml-1">
+                      Apply to all
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-xs text-zinc-600">Unavailable</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <p className="text-xs text-zinc-600">These hours define when you’re bookable. Days left off are unavailable.</p>
+      </div>
+
       {/* ── Appearance ── */}
       <div className="py-5 border-b border-surface-800">
         <div className="flex items-center justify-between">
@@ -512,86 +592,6 @@ export function CalendarSettings({ embedded = false } = {}) {
             </label>
           )}
         </div>
-      </div>
-
-      {/* ── Connected Calendars ── */}
-      {connectedCalendars.length > 0 && (
-        <div className="py-5 border-b border-surface-800">
-          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Connected Calendars</p>
-          <div className="space-y-2">
-            {connectedCalendars.map(cal => (
-              <div key={cal.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-1.5">
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cal.color }} />
-                  <p className="text-sm text-zinc-300 truncate">{cal.name}</p>
-                  <span className={`text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded flex-shrink-0 ${cal.provider === 'microsoft' ? 'bg-[#0078d4]/15 text-[#4aa3e0]' : 'bg-white/[0.06] text-zinc-500'}`}>
-                    {cal.provider === 'microsoft' ? 'Outlook' : 'Google'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <select value={cal.role} onChange={e => updateCalendarRole(cal.googleCalendarId, e.target.value)}
-                    className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-400 focus:outline-none focus:border-accent">
-                    {ROLES.map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
-                  </select>
-                  {cal.role === 'governs' && (
-                    <select value={cal.defaultState || 'booked'} onChange={e => updateCalendarDefaultState(cal.googleCalendarId, e.target.value)}
-                      className="text-xs bg-surface-800 border border-surface-700 rounded-md px-2 py-1 text-zinc-400 focus:outline-none focus:border-accent">
-                      {Object.entries(slotStates).map(([key, val]) => (
-                        <option key={key} value={key}>{val.label}</option>
-                      ))}
-                    </select>
-                  )}
-                  <button onClick={() => removeConnectedCalendar(cal.googleCalendarId)}
-                    className="p-1 rounded text-zinc-600 hover:text-red-400 transition-colors flex-shrink-0">
-                    <Trash2 size={13} strokeWidth={1.75} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Availability ── */}
-      <div className="py-5 border-b border-surface-800">
-        <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Working hours</p>
-
-        {/* Business hours per day */}
-        <div className="space-y-0 mb-3">
-          {DAY_NAMES.map((name, i) => {
-            const day = schedule[i]
-            const isActive = !!day
-            return (
-              <div key={i} className="flex items-center h-10 gap-3 group/day">
-                <button onClick={() => toggleDay(i)}
-                  className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
-                    isActive ? 'bg-accent' : 'bg-surface-600'
-                  }`}>
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-                    isActive ? 'translate-x-4' : 'translate-x-0'
-                  }`} />
-                </button>
-                <span className={`w-10 text-sm font-medium ${isActive ? 'text-zinc-100' : 'text-zinc-600'}`}>
-                  {name.slice(0, 3)}
-                </span>
-                {isActive ? (
-                  <>
-                    <TimeSelect value={day.start} onChange={v => updateDayTime(i, 'start', v)} />
-                    <span className="text-xs text-zinc-600">–</span>
-                    <TimeSelect value={day.end} onChange={v => updateDayTime(i, 'end', v)} />
-                    <button onClick={() => applyToAll(i)}
-                      className="text-[10px] text-zinc-600 hover:text-accent transition-colors opacity-0 group-hover/day:opacity-100 ml-1">
-                      Apply to all
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-xs text-zinc-600">Unavailable</span>
-                )}
-              </div>
-            )
-          })}
-        </div>
-        <p className="text-xs text-zinc-600">These hours define when you’re bookable. Days left off are unavailable.</p>
       </div>
 
       {/* ── Reset ── */}

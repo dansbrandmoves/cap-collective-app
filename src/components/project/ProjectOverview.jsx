@@ -28,7 +28,7 @@ export function ProjectOverview({
   production, slots, calendarEvents, connectedCalendars, prefixRules, businessHours,
   loading, dateRequestsByRoom = {}, sharedAvailByRoom = {}, excluded, includedOwner, totalPeople = 0,
   // When a guest views this (RoomView), the "owner" is the host, not "You".
-  ownerLabel = OWNER_LABEL, ownerEmail = undefined,
+  ownerLabel = OWNER_LABEL, ownerEmail = undefined, viewerName = null,
   // When the parent floats its tab bar over this view (project view), the calendar
   // column needs top clearance so its heading clears the floating tabs — while the
   // inspector still bleeds to the very top edge.
@@ -289,6 +289,7 @@ export function ProjectOverview({
           actionLabel="Schedule meeting"
           ownerLabel={ownerLabel}
           ownerEmail={ownerEmail}
+          viewerName={viewerName}
           windowFilter={windowKey !== 'any' ? win : null}
           totalKnown={includedKnown}
           onClose={() => setInspected(null)}

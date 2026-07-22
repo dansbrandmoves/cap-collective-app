@@ -24,12 +24,6 @@ export function PeopleRoster({
         )}
       </div>
 
-      {totalPeople > 1 && (
-        <p className="text-[11px] text-zinc-600 leading-relaxed mb-2.5">
-          Tap a person for details · use the check to include in the calendar.
-        </p>
-      )}
-
       <div className="space-y-0.5">
         {people.map((person) => {
           const { name, sources, isOwner } = person

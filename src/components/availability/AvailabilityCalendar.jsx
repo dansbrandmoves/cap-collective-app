@@ -468,7 +468,7 @@ function BestDaysStrip({ slots, calendarEvents, connectedCalendars, prefixRules,
  * Single-room by default. Pass `roomIds` (array) to inspect a whole project — the
  * caller combines every group's date-filtered requests/availability and we pull
  * member emails from all of those rooms. `actionLabel` renames the primary button. */
-export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRequests, sharedAvailability, onClose, actionLabel = 'Schedule meeting', ownerLabel = OWNER_LABEL, ownerEmail: ownerEmailProp, windowFilter = null, totalKnown = null }) {
+export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRequests, sharedAvailability, onClose, actionLabel = 'Schedule meeting', ownerLabel = OWNER_LABEL, ownerEmail: ownerEmailProp, windowFilter = null, totalKnown = null, viewerName = null }) {
   const { getMembersForRoom, timezone, user, calendarEvents, connectedCalendars, prefixRules, businessHours } = useApp()
   // Owner's email: explicit override (guest view) wins; else the signed-in owner.
   const ownerEmail = ((ownerEmailProp ?? user?.email) || '').trim() || null
@@ -874,7 +874,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                         {name?.[0]?.toUpperCase() ?? '?'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] text-zinc-100 truncate leading-tight">{name}</p>
+                        <p className="text-[14px] text-zinc-100 truncate leading-tight">{name}{viewerName && name === viewerName ? <span className="text-zinc-500"> · you</span> : null}</p>
                         {hasEmail ? (
                           <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{email}</p>
                         ) : (
@@ -930,7 +930,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                         {name?.[0]?.toUpperCase() ?? '?'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] text-zinc-200 truncate leading-tight">{name}</p>
+                        <p className="text-[14px] text-zinc-200 truncate leading-tight">{name}{viewerName && name === viewerName ? <span className="text-zinc-500"> · you</span> : null}</p>
                         {hasEmail ? (
                           <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{email}</p>
                         ) : (

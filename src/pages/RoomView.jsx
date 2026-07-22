@@ -18,7 +18,7 @@ import { readCache, writeCache, clearCache } from '../utils/cache'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured, connectGuestCalendarOffline, triggerGuestSync, disconnectGuestCalendar as disconnectGuestCalendarServer } from '../utils/googleCalendar'
 import { isMsConfigured, connectGuestMicrosoftOffline, disconnectGuestMicrosoft } from '../utils/microsoftCalendar'
-import { CalendarDays, CheckCircle2, Menu, X, PanelLeft, Check } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Menu, X, PanelLeft, Check, ChevronDown } from 'lucide-react'
 import { startRun, STATUS } from '../utils/diag'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -144,6 +144,7 @@ function GuestCalendarPanel({ guestEvents, connected = false, onConnect, onDisco
   const [gisReady, setGisReady] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const configured = isConfigured()
 
   useEffect(() => {
@@ -202,41 +203,50 @@ function GuestCalendarPanel({ guestEvents, connected = false, onConnect, onDisco
   // server truth (this guest has synced availability), so a refresh that cleared the
   // local session still shows the connected state instead of re-prompting.
   if (!connected) {
-    // One button per configured provider. With only one configured it reads
-    // "Connect calendar"; with both, "Google" / "Outlook" so it's a clear choice.
-    const onlyOne = !(configured && msConfigured)
+    // ONE primary action. When both providers are configured the choice between
+    // Google and Outlook is a detail — disclosed on click, not competing up front.
+    const both = configured && msConfigured
+    const pick = (provider) => {
+      setPickerOpen(false)
+      if (provider === 'google') handleConnect()
+      else handleConnectMicrosoft()
+    }
+    const onPrimary = () => {
+      if (both) { setPickerOpen(o => !o); return }
+      if (configured) handleConnect()
+      else handleConnectMicrosoft()
+    }
     return (
-      <div className={compact ? 'inline-flex items-center gap-2' : 'mb-4 flex flex-col items-start gap-2.5'}>
-        <div className="flex items-center gap-2 flex-wrap">
-          {configured && (
-            <Button
-              onClick={handleConnect}
-              disabled={!gisReady || loading || !guestName}
-              size={compact ? 'sm' : undefined}
-              className="justify-center flex-shrink-0"
-              title="Highlights when you and the team are both free. Only free/busy is shared — never event details."
-            >
-              <CalendarDays size={15} strokeWidth={1.75} className="mr-2" />
-              {loading ? 'Connecting…' : onlyOne ? 'Connect calendar' : 'Connect Google'}
-            </Button>
-          )}
-          {msConfigured && (
-            <Button
-              onClick={handleConnectMicrosoft}
-              disabled={loading || !guestName}
-              variant={onlyOne ? undefined : 'secondary'}
-              size={compact ? 'sm' : undefined}
-              className="justify-center flex-shrink-0"
-              title="Connect your Outlook/Microsoft calendar. Only free/busy is shared — never event details."
-            >
-              <CalendarDays size={15} strokeWidth={1.75} className="mr-2" />
-              {loading ? 'Connecting…' : onlyOne ? 'Connect calendar' : 'Connect Outlook'}
-            </Button>
-          )}
-        </div>
+      <div className={compact ? 'relative inline-flex items-center gap-2' : 'mb-4 relative flex flex-col items-start gap-2.5'}>
+        <Button
+          onClick={onPrimary}
+          disabled={loading || !guestName || (!both && configured && !gisReady)}
+          size={compact ? 'sm' : undefined}
+          className="justify-center flex-shrink-0"
+          title="Highlights when you and the team are both free. Only free/busy is shared — never event details."
+        >
+          <CalendarDays size={15} strokeWidth={1.75} className="mr-2" />
+          {loading ? 'Connecting…' : 'Connect calendar'}
+          {both && !loading && <ChevronDown size={13} strokeWidth={2} className="ml-1.5 opacity-70" />}
+        </Button>
+        {pickerOpen && !loading && (
+          <>
+            <button className="fixed inset-0 z-20 cursor-default" aria-label="Close" onClick={() => setPickerOpen(false)} tabIndex={-1} />
+            <div className="absolute top-full left-0 mt-2 z-30 min-w-[190px] bg-surface-900 border border-white/10 rounded-xl shadow-lift p-1.5 animate-fadeIn">
+              <button onClick={() => pick('google')} disabled={!gisReady}
+                className="w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium text-zinc-200 hover:bg-white/[0.06] transition-colors disabled:opacity-50">
+                Google Calendar
+              </button>
+              <button onClick={() => pick('microsoft')}
+                className="w-full text-left px-3 py-2.5 rounded-lg text-[13px] font-medium text-zinc-200 hover:bg-white/[0.06] transition-colors">
+                Outlook / Microsoft
+              </button>
+            </div>
+          </>
+        )}
         {!compact && (
           <p className="text-[12px] text-zinc-500 leading-relaxed max-w-sm">
-            Connect Google or Outlook so {who} can see when you&rsquo;re both free. Only your free/busy is shared — never event details.
+            So {who} can see when you&rsquo;re both free. Only your free/busy is shared — never event details.
           </p>
         )}
         {error && <p className="text-xs text-red-400">{error}</p>}
@@ -724,6 +734,7 @@ export function RoomView() {
             totalPeople={totalPeople}
             ownerLabel={isOwner ? undefined : ownerDisplay}
             ownerEmail={isOwner ? undefined : ownerEmail}
+            viewerName={isOwner ? null : guestName}
             floatingHeader
             headerSlot={connectSlot}
           />

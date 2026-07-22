@@ -404,8 +404,10 @@ export function AppProvider({ children }) {
 
   const canAddProject = useCallback(() => {
     if (isProPlan) return true
-    return productions.length < FREE_PROJECT_LIMIT
-  }, [isProPlan, productions])
+    // Only projects you OWN count toward the free limit — being invited to
+    // someone else's project must never eat your own quota.
+    return productions.filter(p => !p.ownerId || p.ownerId === user?.id).length < FREE_PROJECT_LIMIT
+  }, [isProPlan, productions, user?.id])
 
   const canAddRoom = useCallback((productionId) => {
     if (isProPlan) return true

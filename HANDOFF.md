@@ -1,7 +1,62 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-07-21 (UI/UX review + zen pass + deep declutter, shipped to prod)
-**Last pushed commit:** `6f61a13` — "coordie: auth timeout must never delete the session token"
+**Last pushed commit:** `ca77636` — "coordie: harden RPC surface + add /docs reference page"
+
+> **2026-07-21 (security block) — CRITICAL FIXES + DOCS PAGE.**
+> Found while gathering facts for a docs page; all DB fixes applied to prod via MCP.
+>
+> **🔴 CRITICAL (fixed): OAuth tokens were world-readable.** `profiles` held
+> `google_/ms_refresh_token` + access tokens AND had a blanket `Anon can read
+> profiles` SELECT policy (`USING true`, role `public`). RLS filters rows not
+> columns, so the PUBLIC anon key (shipped in the bundle) could read every user's
+> calendar tokens. Scope was read-only calendar (`calendar.readonly` /
+> `Calendars.Read` + `User.Read`) so blast radius = read a victim's free/busy +
+> event titles + basic profile, not write/send. Fix (migration
+> `secure_profiles_hide_oauth_tokens`): dropped the blanket anon SELECT (profiles
+> is now `auth.uid()=id` only); added `public_profiles` VIEW exposing only
+> id/logo_url/logo_is_dark/avatar_url/connected_calendars/settings (NO tokens);
+> repointed the two cross-user reads (`RoomView.jsx`, `BookingPageView.jsx`) to it.
+> Owner token-refresh unaffected (owner reads own row); edge fns use service role.
+> **CONSIDER: ask existing users to reconnect calendars once** (mints fresh tokens,
+> retires any that were exposed). Not urgent given read-only scope.
+> **NOTE:** the Privacy page's existing claim ("only you can read your own profile
+> record") is now TRUE — the fix made the world match the doc; no edit needed.
+>
+> **🟠 Also fixed: SECURITY DEFINER functions callable over public RPC**
+> (migration `lock_down_security_definer_functions_from_public`). `cron_sync_*`,
+> `prune_diagnostics`, `handle_new_user` revoked from PUBLIC/anon/authenticated
+> (only pg_cron + triggers call them, as postgres). `admin_list_users` /
+> `admin_update_user` revoked from anon, kept for authenticated (admin dashboard;
+> they already self-check `role='admin'`). The first revoke attempt didn't bite
+> because functions default to `GRANT EXECUTE TO PUBLIC` — must revoke FROM PUBLIC.
+>
+> **🟡 STILL OPEN — Daniel to run (classifier blocked the storage migration):**
+> public buckets allow file *enumeration*. The app never `.list()`s (only
+> upload/getPublicUrl/remove), so dropping these is safe and stops enumeration
+> while public-URL rendering keeps working:
+> ```sql
+> drop policy if exists "avatars public read" on storage.objects;
+> drop policy if exists "canvas_images_read" on storage.objects;
+> drop policy if exists "public_read_logos" on storage.objects;
+> drop policy if exists "task-attachments files read" on storage.objects;
+> ```
+>
+> **⚪ KNOWN / NOT fixed (documented honestly, big job): the broad `allow_all`
+> RLS** on productions/rooms/room_members/messages/shared_notes/tasks/board_columns/
+> canvas_elements/shared_availability/date_requests — anon read+write. Access is
+> gated at the app layer by unguessable room tokens, NOT by the DB. The /docs page
+> states this truthfully ("people who hold a project's link can see its content;
+> not built to hide content from link-holders") — do NOT claim per-user isolation
+> of project content anywhere. Real next hardening = token-scoped RLS; high risk on
+> a live app, design first.
+>
+> **DOCS:** new `/docs` page (`DocsPage.jsx`) — factual reference (what it is, how
+> it works, calendars, guests/links, where data lives = Vercel + Supabase Postgres
+> 17 in AWS us-east-2, TLS + AES-256-at-rest, security, deletion, FAQ). Linked from
+> landing nav+footer, a compact landing FAQ, and the sign-in footer. Tone: spec
+> sheet, not a pitch. **Sanity-check after deploy: open /admin as the signed-in
+> admin to confirm admin_list_users still works post-revoke.**
 
 > **2026-07-21 (final block) — COPY SWEEP + SIDE NAV + WEBSITE + AUTH FIX**
 > (`ae78477`, `04af2a5`, `6f61a13`, all deployed):

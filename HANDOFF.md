@@ -1,7 +1,50 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-07-15 (Microsoft Entra publisher verification COMPLETE)
-**Last pushed commit:** `d04403c` — "coordie: tap a person in the roster -> detail modal"
+**Last session ended:** 2026-07-21 (UI/UX review + zen pass, shipped to prod)
+**Last pushed commit:** `57e499d` — "coordie: zen pass — progressive disclosure + coherence"
+
+> **2026-07-21 — FULL UI/UX REVIEW SESSION (two commits, both live).**
+> `7a13867` (bug pass) + `57e499d` (zen pass). Verified on prod after deploy.
+>
+> **Fixed — the big ones:**
+> - **The "reconnecting to Google on every refresh" glitch** (Daniel's report): the
+>   Calendars page fired a visible `handleSync()` on every mount → spinning arrows for
+>   seconds. Now freshens ONCE per mount, silently; spinner/error only on manual sync.
+> - **`dateToStr()` was UTC (`toISOString`)** → after ~8pm ET "today" highlighted
+>   TOMORROW everywhere, best-day chips labeled one day but showed the next day's data,
+>   and UTC+ timezones had the whole grid shifted a day. Now formats LOCAL dates.
+>   (tests still pass — the dateToStr test only passes in UTC- zones under old code.)
+> - **Stuck "Connecting…"**: GIS code client had no `error_callback` — closing the
+>   Google popup left the guest connect button spinning forever. Cancels reset quietly.
+> - **Shared projects counted against the owner's free project limit** (banner +
+>   `canAddProject`) — being invited to 2 projects + owning 1 showed the upgrade nag.
+> - Guest inspector: host now has a real email on invites — **owner email rides in
+>   `profiles.settings.email`** (synced like displayName; populates after the owner
+>   loads the app once). Guest name prompt shows "«Host» invited you to «Project»".
+> - Booking page: **timezone label** ("Times in Eastern Daylight Time — the host's
+>   time zone" when guest tz differs) + on confirm card. Was fully unlabeled.
+> - Guest Tasks board: assignee "You" (OWNER_LABEL) now displays as the host's real
+>   name for guests (`assigneeDisplay` prop on Board — display-only, data unchanged).
+> - Landing copy de-Googled (feature card + CTA); debug console.logs DEV-gated;
+>   RoomView raw "Loading..." → PageLoader; misc polish.
+>
+> **Zen pass (57e499d):** ONE "Connect calendar" CTA for guests (provider choice is a
+> click-to-reveal menu when both Google+MS configured — progressive disclosure);
+> roster instructional caption removed; Account→Calendars regrouped (connections →
+> connected calendars → working hours → THEN appearance/timezone/branding); day
+> inspector marks the viewing guest "· you".
+>
+> **⚠️ Environment note:** the old Dropbox copy is GONE (path no longer exists) — its
+> `.env` went with it. `.env` was reconstructed in `D:\coordie` from Supabase MCP
+> (URL + anon key) and the live bundle (Google/MS client IDs — public values). If lost
+> again, same recipe. `node_modules` had to be reinstalled after the repo move.
+>
+> **Next zen arc (design-first, not started):** unify the two GuestCalendarPanel
+> copies (RoomView vs BookingPageView) behind the new single-CTA pattern; booking-page
+> guest connect is still **Google-only** (MS needs roomId-keyed server exchange —
+> booking pages have no room, so it's real plumbing); booking-page cards could show
+> the copy-link affordance directly (now hidden in ⋯); consider converting booking
+> times into the guest's timezone (currently labeled, not converted).
 
 > **2026-07-15 — MICROSOFT ENTRA PUBLISHER VERIFICATION IS DONE.** Coordie's consent
 > screen now shows the blue "verified publisher" badge with "Moves and Measures LLC"

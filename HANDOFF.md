@@ -1,7 +1,23 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-07-21 (UI/UX review + zen pass + deep declutter, shipped to prod)
-**Last pushed commit:** `390e2e4` — "coordie: docs — state per-project access is DB-enforced"
+**Last pushed commit:** `28355fb` — "coordie: landing copy — cut persuasion and filler, state what it does"
+
+> **2026-07-21 (copy) — "WHO IT'S FOR" + LANDING COPY TRIM** (`6ce6b23`, `28355fb`).
+> - **Docs `/docs`:** new "Who Coordie is for" section — access runs on the share link
+>   (owner / members / link-holders); designed for coordinating people you'd invite
+>   anyway; explicitly NOT for confidential/regulated data (no BAA/SOC2/DPA, not E2E
+>   encrypted). Landing FAQ gained one "Who can see a project?" entry saying the same.
+>   Tone: inform, don't persuade or hedge.
+> - **Honesty fix:** dropped the absolute "event titles never shown to anyone" (a
+>   scoped guest CAN read owner event titles at the data layer — that's the parked
+>   title-stripping follow-up). Copy now says titles are used only to work out busy
+>   times. See the owner-calendar-events title follow-up below.
+> - **Landing copy trimmed** to statements of what it does: killed the magic-trick /
+>   salesy lines ("the overlap appears on its own", "flows straight in", "in a tap",
+>   "think together", "Up and running in minutes", "Try it with your next project")
+>   and the redundant CTA reassurance badges. Daniel wants the marketing to only
+>   inform, never persuade, no filler — keep future copy in that register.
 
 > **2026-07-21 (THE BIG ONE) — DATABASE-ENFORCED PER-PROJECT ACCESS.**
 > Closed the last and most serious hole: project-content tables had `allow_all` RLS,

@@ -1,7 +1,19 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-07-21 (UI/UX review + zen pass + deep declutter, shipped to prod)
-**Last pushed commit:** `92b28f9` — "coordie: deep declutter — destroy micro-distractions"
+**Last pushed commit:** `6d4b442` — "coordie: Schedule meeting works with Outlook too"
+
+> **2026-07-21 (later still) — OUTLOOK SCHEDULING (`6d4b442`).** "Schedule meeting" now
+> opens the user's OWN calendar: Google template OR Outlook deeplink (live.com for
+> personal MSA domains, office.com for work). `utils/scheduling.js` resolves the
+> provider with zero setup: explicit "use X instead" choice (localStorage
+> `coordie-sched-provider`) → connect hint (`coordie-sched-provider-hint`, set when a
+> guest connects Google/Outlook) → owner's connected-calendar providers → auth provider
+> (azure→outlook) → email domain → google. Inspector footer shows the destination +
+> one-tap switch. Both URL shapes verified via window.open capture. This closes the
+> "primary calendar / schedulingProvider" item — the localStorage-per-device approach
+> replaced the planned account-level setting (simpler, zero UI). If cross-device
+> persistence is ever wanted, promote the override into profiles.settings.
 
 > **2026-07-21 (later) — DEEP DECLUTTER (`92b28f9`).** Rule: if an element explains,
 > duplicates, or counts what you can already see, it dies. Killed: "Tasks 2" tab count

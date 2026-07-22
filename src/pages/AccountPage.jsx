@@ -5,7 +5,7 @@ import { CalendarSettings } from './CalendarSettings'
 import { AvailabilityRules } from './AvailabilityRules'
 import { BillingPage } from './BillingPage'
 import { AvatarCropper } from '../components/account/AvatarCropper'
-import { CalendarDays, CalendarClock, CreditCard, Camera } from 'lucide-react'
+import { CalendarDays, CalendarClock, CreditCard, Camera, LogOut } from 'lucide-react'
 
 // Single account hub. Tabs consolidate what used to be three separate top-level
 // nav items (Calendars / Availability / Billing). Entered from the sidebar avatar.
@@ -16,7 +16,7 @@ const TABS = [
 ]
 
 export function AccountPage() {
-  const { user, authLoading, avatarUrl, uploadAvatar, removeAvatar } = useApp()
+  const { user, authLoading, avatarUrl, uploadAvatar, removeAvatar, signOut } = useApp()
   const [params, setParams] = useSearchParams()
   const fileRef = useRef(null)
   const [cropFile, setCropFile] = useState(null)
@@ -48,8 +48,15 @@ export function AccountPage() {
         />
       )}
 
-      {/* Header */}
+      {/* Header — sign out lives here (moved out of the sidebar; it's a rare
+          action and doesn't earn permanent nav space). */}
       <div className="flex items-center gap-3.5 mb-6">
+        <button
+          onClick={signOut}
+          className="order-last ml-auto flex items-center gap-1.5 self-start text-[12px] font-medium text-zinc-500 hover:text-red-400 transition-colors flex-shrink-0"
+        >
+          <LogOut size={13} strokeWidth={1.75} /> Sign out
+        </button>
         {/* Avatar — click to change */}
         <button
           onClick={() => fileRef.current?.click()}

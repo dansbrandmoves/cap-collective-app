@@ -47,6 +47,21 @@ function JoinSignInModal({ isOpen, onClose, roomId, guestName, projectName, owne
     if (error) { setError(error.message); setLoading(false) }
   }
 
+  async function handleMicrosoft() {
+    setLoading(true)
+    setError(null)
+    rememberJoin()
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'azure',
+      options: {
+        // Match the Graph permissions granted on the Azure app registration.
+        scopes: 'openid email profile offline_access User.Read Calendars.Read',
+        redirectTo: window.location.origin,
+      },
+    })
+    if (error) { setError(error.message); setLoading(false) }
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Save this project" size="sm">
       <p className="text-sm text-zinc-400 leading-relaxed mb-5">
@@ -74,10 +89,25 @@ function JoinSignInModal({ isOpen, onClose, roomId, guestName, projectName, owne
       </button>
 
       <button
-        onClick={() => { rememberJoin(); window.location.href = '/signin' }}
-        className="w-full text-center text-xs text-zinc-500 hover:text-zinc-300 transition-colors mt-4"
+        onClick={handleMicrosoft}
+        disabled={loading}
+        className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-50 text-zinc-900 font-medium text-sm rounded-xl px-4 py-3 transition-all duration-150 disabled:opacity-50 shadow-sm hover:shadow-md mt-3"
       >
-        Use email instead
+        <svg width="18" height="18" viewBox="0 0 23 23">
+          <path fill="#f25022" d="M1 1h10v10H1z"/>
+          <path fill="#7fba00" d="M12 1h10v10H12z"/>
+          <path fill="#00a4ef" d="M1 12h10v10H1z"/>
+          <path fill="#ffb900" d="M12 12h10v10H12z"/>
+        </svg>
+        {loading ? 'Redirecting…' : 'Continue with Microsoft'}
+      </button>
+
+      <button
+        onClick={() => { rememberJoin(); window.location.href = '/signin' }}
+        disabled={loading}
+        className="w-full flex items-center justify-center gap-3 bg-surface-800 hover:bg-surface-700 border border-surface-700 text-zinc-300 font-medium text-sm rounded-xl px-4 py-3 transition-colors disabled:opacity-50 mt-3"
+      >
+        Continue with Email
       </button>
     </Modal>
   )

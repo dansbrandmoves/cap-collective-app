@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
@@ -239,6 +239,15 @@ export function Dashboard() {
     if (!canAddProject()) { setShowUpgrade(true); return }
     setShowModal(true)
   }
+
+  // /?new=1 (the sidebar's + button) opens the create modal directly.
+  const [searchParams, setSearchParams] = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setSearchParams({}, { replace: true })
+      openNewProject()
+    }
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCreate(e) {
     e.preventDefault()

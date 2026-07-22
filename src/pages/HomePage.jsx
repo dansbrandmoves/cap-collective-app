@@ -6,40 +6,40 @@ const FEATURES = [
   {
     icon: Users,
     title: 'When can everyone meet?',
-    desc: 'Add everyone to a project and Coordie surfaces the days the whole group is free — ranked, with the best day highlighted. Filter by morning, afternoon, or evening.',
+    desc: 'Add everyone to a project and the days the whole group is free surface on their own. Filter by morning, afternoon, or evening.',
   },
   {
     icon: CalendarDays,
     title: 'Calendar-driven availability',
-    desc: 'Connect Google or Outlook and your real schedule drives everything — no manual updates. Busy times drop out automatically, for you and everyone you invite.',
+    desc: 'Connect Google or Outlook and your real schedule drives your availability. Busy times drop out automatically, for you and everyone you invite.',
   },
   {
     icon: LayoutGrid,
-    title: 'A shared board',
-    desc: 'Plan the work together on a fast, Trello-style board — lists, cards, and assignees that everyone on the project can see and move in real time.',
+    title: 'Shared tasks',
+    desc: 'A Trello-style board with lists, cards, and assignees, live for everyone on the project.',
   },
   {
     icon: Shapes,
-    title: 'An infinite whiteboard',
-    desc: 'Think out loud on a shared canvas: sticky notes, shapes, images, and connecting arrows. Map a shoot, sketch a flow, pin references — together, live.',
+    title: 'A shared whiteboard',
+    desc: 'An infinite canvas for sticky notes, shapes, images, and connecting arrows. Map a shoot, sketch a flow, pin references.',
   },
   {
     icon: Link2,
-    title: 'One-click invites',
-    desc: 'Invite people by email or share one link. They join in a click — no account, no app to download — and their availability flows straight in.',
+    title: 'Invites are links',
+    desc: 'Invite people by email or share one link. They join in a click, no account needed, and their availability flows straight in.',
   },
   {
     icon: Inbox,
     title: 'Schedule in a tap',
-    desc: 'Pick the best day, choose a time everyone’s open, and send the meeting — prefilled and ready, with the right people attached.',
+    desc: 'Pick the day and time, and open a prefilled event on your own calendar, Google or Outlook, with the right people attached.',
   },
 ]
 
 const HOW_IT_WORKS = [
   { step: '01', title: 'Create a project', desc: 'Name your production and add the clients, vendors, and crew you need to line up.' },
-  { step: '02', title: 'Everyone shares their free time', desc: 'They connect a calendar or tap their free days — in one click, no account needed.' },
+  { step: '02', title: 'Everyone shares their free time', desc: 'They connect a calendar or tap their free days. No account needed.' },
   { step: '03', title: 'See the day that works', desc: 'The day the whole group is free turns green. Filter by time of day to narrow it down.' },
-  { step: '04', title: 'Lock it in, then plan it', desc: 'Send the meeting in a tap — then track the work on the board and sketch ideas on the whiteboard, together.' },
+  { step: '04', title: 'Lock it in, then plan it', desc: 'Send the meeting in a tap, then track tasks and sketch ideas together.' },
 ]
 
 // The group whose availability converges in the hero demo. Each person's free
@@ -197,7 +197,7 @@ function HeroProjectMockup() {
             ) : (
               <div className="rounded-xl border border-white/[0.06] px-4 py-3.5">
                 <p className="text-[13px] text-zinc-500">
-                  {joined === 0 ? 'Add your people and share their links.' : `${joined} of 3 shared — finding the overlap…`}
+                  {joined === 0 ? 'Add your people and share their links.' : `${joined} of 3 shared. Finding the overlap…`}
                 </p>
               </div>
             )}
@@ -248,8 +248,8 @@ export function HomePage() {
         </h1>
 
         <p className="text-lg sm:text-xl text-zinc-400 leading-relaxed max-w-xl mb-10">
-          Add your clients, vendors, and crew to a project. Find the day everyone's free —
-          then plan it together on a shared board and whiteboard. No back-and-forth.
+          Add your clients, vendors, and crew to a project. See the days everyone's free,
+          then plan the work together on a shared board and whiteboard.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -274,12 +274,12 @@ export function HomePage() {
       {/* Product Preview — single hero mockup */}
       <section className="px-5 sm:px-8 py-16 sm:py-24 max-w-5xl mx-auto w-full">
         <div className="text-center mb-10 sm:mb-14">
-          <p className="text-xs font-semibold text-accent uppercase tracking-widest mb-3">The magic</p>
+          <p className="text-xs font-semibold text-accent uppercase tracking-widest mb-3">The overlap</p>
           <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 max-w-2xl mx-auto leading-tight tracking-tight">
-            Everyone shares when they're free — the day that works for the whole group turns green.
+            Everyone shares when they're free. The day that works for the whole group turns green.
           </h2>
           <p className="text-zinc-500 text-base mt-4 max-w-lg mx-auto">
-            No more "let me check and get back to you." As people connect their calendars or tap their free days, the overlap appears on its own.
+            As people connect their calendars or tap their free days, the overlap appears on its own.
           </p>
         </div>
         <HeroProjectMockup />
@@ -294,7 +294,7 @@ export function HomePage() {
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">Features</p>
           <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-3">Find the time, plan the work, think together</h2>
           <p className="text-zinc-500 text-base max-w-xl mx-auto">
-            Scheduling, a shared board, and a whiteboard in one calm workspace — designed around how creative productions actually run.
+            Scheduling, tasks, and a whiteboard in one workspace.
           </p>
         </div>
 
@@ -323,7 +323,7 @@ export function HomePage() {
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">How it works</p>
           <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-3">Up and running in minutes</h2>
           <p className="text-zinc-500 text-base max-w-xl mx-auto">
-            No onboarding, no setup calls. Create a project, connect your calendar, share a link.
+            Create a project, connect your calendar, share a link.
           </p>
         </div>
 
@@ -344,10 +344,10 @@ export function HomePage() {
       {/* CTA */}
       <section className="px-5 sm:px-8 py-20 sm:py-28 flex flex-col items-center text-center">
         <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-4 max-w-lg">
-          Ready to coordinate better?
+          Try it with your next project.
         </h2>
         <p className="text-zinc-500 text-base mb-8 max-w-sm">
-          Sign in with Google or Microsoft and have your first project set up in under five minutes.
+          Sign in with Google, Microsoft, or email.
         </p>
         <a
           href="/signin"

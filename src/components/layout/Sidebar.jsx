@@ -1,7 +1,7 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useApp } from '../../contexts/AppContext'
 import { useResizablePanel, ResizeHandle } from '../../hooks/useResizablePanel'
-import { LayoutGrid, CalendarCheck, LogOut, Shield, PanelLeft } from 'lucide-react'
+import { LayoutGrid, CalendarCheck, Shield, PanelLeft, Plus } from 'lucide-react'
 
 // Primary destinations live at the top ("what you do"); configuration/utility is
 // pinned to the bottom ("settings"). Keeps the nav uncluttered and scannable.
@@ -15,7 +15,8 @@ const UTILITY_NAV = [
 const RAIL = 60 // collapsed icon-rail width
 
 export function Sidebar({ mobileOpen = false, onMobileClose }) {
-  const { productions, user, signOut, theme, isAdmin, avatarUrl } = useApp()
+  const { productions, user, theme, isAdmin, avatarUrl } = useApp()
+  const navigate = useNavigate()
   const panel = useResizablePanel('coordie-nav', { defaultWidth: 224, min: 200, max: 340, side: 'right' })
   const railed = panel.collapsed
 
@@ -94,8 +95,20 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
 
         {/* Nav — primary at top, project list beneath, utility pinned to the bottom */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 flex flex-col">
+          {/* Projects row + a quiet "new project" affordance beside it */}
           <div className="space-y-0.5">
-            {PRIMARY_NAV.map(navItem)}
+            {railed ? PRIMARY_NAV.map(navItem) : (
+              <div className="group/nav relative">
+                {PRIMARY_NAV.map(navItem)}
+                <button
+                  onClick={() => { onMobileClose?.(); navigate('/?new=1') }}
+                  title="New project"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-md text-zinc-500 opacity-0 group-hover/nav:opacity-100 focus-visible:opacity-100 hover:text-zinc-100 hover:bg-surface-700 transition-all"
+                >
+                  <Plus size={14} strokeWidth={2} />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Projects sub-list — grouped into mine + shared. Hidden when railed. */}
@@ -120,8 +133,10 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
               {UTILITY_NAV.map(navItem)}
             </div>
 
-            <div className="pt-2 mt-2 border-t border-surface-800 space-y-0.5">
-              {isAdmin && (
+            {/* Sign out moved to the Account page — a rare action shouldn't hold
+                permanent nav space. Divider only renders when Admin exists. */}
+            {isAdmin && (
+              <div className="pt-2 mt-2 border-t border-surface-800 space-y-0.5">
                 <NavLink
                   to="/admin"
                   onClick={onMobileClose}
@@ -135,19 +150,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }) {
                   <Shield size={16} strokeWidth={1.75} className="flex-shrink-0 opacity-80" />
                   {!railed && <span>Admin</span>}
                 </NavLink>
-              )}
-
-              {user && (
-                <button
-                  onClick={signOut}
-                  title={railed ? 'Sign out' : undefined}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors ${railed ? 'justify-center' : ''}`}
-                >
-                  <LogOut size={16} strokeWidth={1.75} className="flex-shrink-0" />
-                  {!railed && 'Sign out'}
-                </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </nav>
 

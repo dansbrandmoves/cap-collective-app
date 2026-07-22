@@ -1,7 +1,29 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-07-21 (UI/UX review + zen pass + deep declutter, shipped to prod)
-**Last pushed commit:** `6d4b442` — "coordie: Schedule meeting works with Outlook too"
+**Last pushed commit:** `6f61a13` — "coordie: auth timeout must never delete the session token"
+
+> **2026-07-21 (final block) — COPY SWEEP + SIDE NAV + WEBSITE + AUTH FIX**
+> (`ae78477`, `04af2a5`, `6f61a13`, all deployed):
+> - **Copy sweep, app-wide:** functional tone, fewer words, ZERO em dashes in
+>   app/help copy (marketing landing + legal + admin diagnostics exempt... and the
+>   landing got de-dashed anyway). Rule: say what it does, not why you'll love it.
+> - **Guest signup nudge:** one quiet line ("Save this project to a free account");
+>   modal = "Save this project / Creates a free account with <project> in it." with
+>   Google + Microsoft + Email all as first-class buttons (was Google + tiny email link).
+> - **Side nav:** "Sign out" moved to the Account page header (rare action, no
+>   permanent nav space); hover the Projects row → quiet "+" opens the new-project
+>   modal via /?new=1; non-admin stray divider fixed.
+> - **Website:** accuracy pass (feature cards renamed Shared tasks / A shared
+>   whiteboard, Outlook scheduling mentioned), sales flourishes removed ("THE MAGIC"
+>   → "The overlap", "Ready to coordinate better?" → "Try it with your next project.").
+> - **⚠️ AUTH BUG FIXED (`6f61a13`):** the 3s auth safety timeout was DELETING the
+>   stored Supabase token on any slow load — silently signing real users out and
+>   destroying their refresh token (reproduced live: it nuked Daniel's session in the
+>   preview browser mid-review). Timeout now only unblocks the UI; session resolves
+>   via getSession() + listener and recovers. If users ever reported "it logged me
+>   out randomly," this was why. (Daniel: your preview-browser session was a casualty
+>   of the OLD code — sign in once more.)
 
 > **2026-07-21 (later still) — OUTLOOK SCHEDULING (`6d4b442`).** "Schedule meeting" now
 > opens the user's OWN calendar: Google template OR Outlook deeplink (live.com for

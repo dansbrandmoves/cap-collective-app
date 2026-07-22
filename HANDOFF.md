@@ -1,7 +1,30 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-07-21 (UI/UX review + zen pass + deep declutter, shipped to prod)
-**Last pushed commit:** `28355fb` — "coordie: landing copy — cut persuasion and filler, state what it does"
+**Last session ended:** 2026-07-21 (UI/UX review + zen pass + declutter + DB-enforced access + landing copy, shipped to prod)
+**Last pushed commit:** `5b9aa21` — "coordie: step titles mirror the how-it-works headline exactly"
+
+> **2026-07-21 (landing copy, final) — FEATURES 6→4, HOW-IT-WORKS 4→3 WITH A MIRRORED ARC**
+> (`c7a0784`, `22ce244`, `6e80ee6`, `f65b57c`, `5b9aa21`). All on `HomePage.jsx`, live.
+> - **Finesse first (`c7a0784`):** "board" → "tasks" everywhere it sat next to "whiteboard"
+>   (hero, sign-in, docs step — read as two boards); tightened the FAQ "Who can see a
+>   project?" answer; dropped the "Built for creative productions" hero badge (not niching).
+> - **Features cut 6 → 4 (`22ce244`):** killed "Invites are links" and "Send the meeting"
+>   (flow mechanics already told in How-it-works). Kept the four capabilities you actually
+>   get: the availability overlap, calendar-driven availability, shared tasks, whiteboard.
+>   Grid is now a balanced 2×2 (`sm:grid-cols-2 max-w-4xl`), not a 3-across with an orphan.
+> - **How-it-works 4 → 3, as a start-to-finish arc:** Create a project → Connect calendars →
+>   Skip the back-and-forth. The step TITLES mirror the headline word-for-word
+>   ("Create a project, connect calendars, skip the back-and-forth."); the step DESCRIPTIONS
+>   carry the honesty (step 2 desc keeps the no-account "or taps their free days" path).
+> - **Why "connect calendars, skip the back-and-forth":** Daniel arrived here by feel — the
+>   product IS "the scheduling negotiation disappears." Naming the mechanism (connect
+>   calendars) makes the payoff read as cause-and-effect, not a claim. Chose "connect" over
+>   "share calendars" because "share" faintly implies exposing your calendar TO the group
+>   (only free/busy is shared — the exact privacy misread to avoid). We tried a result-worded
+>   step ("See the day that works") and reverted — the action-worded arc reads better.
+> - **Register (keep future landing copy here):** inform, don't persuade; no snazz, no
+>   filler, NO em dashes. "Say what it does, then stop." Daniel is allergic to guru/salesy
+>   framing and to "magic trick" phrasing ("the overlap appears on its own" — cut).
 
 > **2026-07-21 (copy) — "WHO IT'S FOR" + LANDING COPY TRIM** (`6ce6b23`, `28355fb`).
 > - **Docs `/docs`:** new "Who Coordie is for" section — access runs on the share link

@@ -5,7 +5,7 @@ import { CalendarDays, Users, LayoutGrid, Mail, ArrowRight } from 'lucide-react'
 
 const FEATURES = [
   { icon: CalendarDays, label: 'Find the day that works', desc: 'Connect your calendar and the days everyone’s free surface on their own.' },
-  { icon: LayoutGrid, label: 'Plan it together', desc: 'A shared board and whiteboard for the whole project: tasks, ideas, references.' },
+  { icon: LayoutGrid, label: 'Plan it together', desc: 'Shared tasks and a whiteboard for the whole project.' },
   { icon: Users, label: 'Invite anyone with a link', desc: 'Clients and crew join in a click. No account, no app to download.' },
 ]
 

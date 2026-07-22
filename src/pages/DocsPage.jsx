@@ -63,7 +63,7 @@ export function DocsPage() {
             <li>Create a project and add the people you want to coordinate with.</li>
             <li>Each person connects a calendar or taps the days they are free. No account is required to join.</li>
             <li>The days the whole group is free are marked. You can filter by morning, afternoon, or evening.</li>
-            <li>Pick a day and time to open a prefilled event in your own calendar, and plan the work on the board and whiteboard.</li>
+            <li>Pick a day and time to open a prefilled event in your own calendar, and plan the work with tasks and a whiteboard.</li>
           </ol>
 
           <H id="calendars">Calendars</H>

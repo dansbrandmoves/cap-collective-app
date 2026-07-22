@@ -1,7 +1,47 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-07-21 (UI/UX review + zen pass + declutter + DB-enforced access + landing copy, shipped to prod)
-**Last pushed commit:** `5b9aa21` — "coordie: step titles mirror the how-it-works headline exactly"
+**Last session ended:** 2026-07-22 (landing visual pass — hero + vignettes are pixel-true miniatures of the app, shipped to prod)
+**Last pushed commit:** see `git log` — "coordie: landing hero + feature vignettes are pixel-true miniatures of the app"
+
+> **2026-07-22 — LANDING VISUAL PASS: SHOW THE PRODUCT, PIXEL-TRUE.** All on
+> `HomePage.jsx`; ZERO copy changes (register intact: inform, don't persuade).
+> Daniel's brief: "easy for people to see and feel how it works, true to the app."
+> - **Hero demo rebuilt as a faithful miniature of the real project Schedule view** —
+>   markup/classes copied from PeopleRoster + WorkspaceTabs + ProjectOverview +
+>   DayInspectorPanel (NOT an artist's impression; the old fake "answer card" and
+>   green-circled dates are gone — real green tint + dot, real best-day pills).
+>   Four-beat loop (~11.4s): people get CHECKED IN via the roster's real include
+>   toggles ("1 of 3" → "3 of 3", excluded rows dimmed) → overlap narrows from real
+>   free-day sets (Sarah 8 days → +Diego 9/16/23 → all three 16 & 23) → Apr 16 gets
+>   the real selected ring, work area reflows (animated margin, like the in-flow
+>   panel) → day inspector slides in: "Best times for everyone" SlotRows w/ 3/3,
+>   "Pick a different time", Schedule meeting button + the VERBATIM caption
+>   ("9:00 AM – 11:00 AM · opens in Google Calendar · 3 attendees · use Outlook").
+>   Inspector beat is md+ only (mobile just sees the ring).
+> - **Feature cards got product vignettes** rendered at REAL size from the real
+>   components' class strings, miniaturized with a uniform `transform: scale()`
+>   (`Shrink` helper): mini month grid + time-of-day filter (overlap), SlotRow
+>   tones w/ Google+Outlook chips (calendar-driven), two Board columns w/ real
+>   TaskCard classes (tasks), whiteboard elements at real defaults — sticky
+>   180×180 #fde68a paper gradient + Caveat, rect 220×130 #bfdbfe r12, connector
+>   #94a3b8 2.5px w/ real arrowhead geometry, 24px dot grid (whiteboard).
+> - **Page polish:** faint calendar-grid backdrop fading out behind the hero +
+>   soft teal glows; gradient hairline dividers; connector line through the
+>   how-it-works numbers; subtle scroll-reveal (respects prefers-reduced-motion).
+> - **⚠️ GOTCHAS learned:**
+>   - The landing is FORCED LIGHT, and `border-white/[0.07]` is NOT in index.css's
+>     light-mode remap list ([0.04]/[0.05]/[0.06]/10 are) → it renders white-on-white
+>     invisible. Landing mockups use `border-white/[0.06]` instead. If you add
+>     mockup UI, stick to remapped opacities.
+>   - Whiteboard grid dots are 1px at ANY zoom (the app scales SPACING, not the dot)
+>     — a scaled-down grid must live on the UNSCALED wrapper with
+>     `backgroundSize: 24 * scale`, else the dots vanish.
+>   - Caveat (sticky font) is injected on demand by Whiteboard.jsx; the landing
+>     injects it too (`#coordie-caveat-font` link in HomePage).
+> - **Dev-env side changes:** `vite.config.js` honors `process.env.PORT` and
+>   `.claude/launch.json` has `autoPort: true`, so two Claude sessions can run
+>   dev servers side by side (5173 was held by another session).
+> - Tests 12/12, prod build clean, verified in browser (desktop + mobile).
 
 > **2026-07-21 (landing copy, final) — FEATURES 6→4, HOW-IT-WORKS 4→3 WITH A MIRRORED ARC**
 > (`c7a0784`, `22ce244`, `6e80ee6`, `f65b57c`, `5b9aa21`). All on `HomePage.jsx`, live.

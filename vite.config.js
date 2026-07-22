@@ -10,4 +10,7 @@ const cacheDir = path.join(os.tmpdir(), 'vite-cap-collective')
 export default defineConfig({
   plugins: [react()],
   cacheDir,
+  // Honor an assigned PORT (e.g. from the Claude Code preview harness) so two
+  // sessions can run dev servers side by side; defaults to 5173.
+  server: { port: process.env.PORT ? Number(process.env.PORT) : 5173 },
 })

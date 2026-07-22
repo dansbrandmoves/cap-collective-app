@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useApp } from '../contexts/AppContext'
-import { CalendarDays, Users, Link2, CheckCircle2, ArrowRight, Inbox, LayoutGrid, Shapes, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, Users, CheckCircle2, ArrowRight, LayoutGrid, Shapes, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const FEATURES = [
   {
@@ -23,23 +23,12 @@ const FEATURES = [
     title: 'A shared whiteboard',
     desc: 'An infinite canvas with sticky notes, shapes, images, and arrows.',
   },
-  {
-    icon: Link2,
-    title: 'Invites are links',
-    desc: 'Invite people by email or share one link. They join without an account, and their availability is added.',
-  },
-  {
-    icon: Inbox,
-    title: 'Send the meeting',
-    desc: 'Pick a day and time to open a prefilled event in your own Google or Outlook calendar, with attendees attached.',
-  },
 ]
 
 const HOW_IT_WORKS = [
   { step: '01', title: 'Create a project', desc: 'Name it and add the clients, vendors, and crew.' },
-  { step: '02', title: 'Everyone shares their free time', desc: 'Each person connects a calendar or taps their free days. No account needed.' },
-  { step: '03', title: 'See the day that works', desc: 'Days the whole group is free are marked. Filter by time of day.' },
-  { step: '04', title: 'Schedule and plan', desc: 'Send the meeting, then track tasks and use the whiteboard.' },
+  { step: '02', title: 'Everyone shares their time', desc: 'Each person connects a calendar or taps their free days. No account needed.' },
+  { step: '03', title: 'Book the day and plan', desc: 'The days the whole group is free are marked. Pick one to send the meeting, then track tasks and use the whiteboard.' },
 ]
 
 // The group whose availability converges in the hero demo. Each person's free
@@ -288,7 +277,7 @@ export function HomePage() {
           <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100">Scheduling, tasks, and a whiteboard in one workspace.</h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-4xl mx-auto">
           {FEATURES.map(({ icon: Icon, title, desc }) => (
             <div
               key={title}
@@ -311,10 +300,10 @@ export function HomePage() {
       <section id="how-it-works" className="px-5 sm:px-8 py-20 sm:py-28 max-w-5xl mx-auto w-full">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">How it works</p>
-          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100">Create a project, connect a calendar, share a link.</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100">Create a project, everyone shares their time, book the day.</h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {HOW_IT_WORKS.map(({ step, title, desc }) => (
             <div key={step} className="relative">
               <p className="text-4xl font-bold text-surface-700 mb-4 leading-none select-none">{step}</p>

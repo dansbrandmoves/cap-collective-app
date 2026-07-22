@@ -5,8 +5,8 @@ import { CalendarDays, Users, LayoutGrid, Mail, ArrowRight } from 'lucide-react'
 
 const FEATURES = [
   { icon: CalendarDays, label: 'Find the day that works', desc: 'Connect your calendar and the days everyone’s free surface on their own.' },
-  { icon: LayoutGrid, label: 'Plan it together', desc: 'A shared board and whiteboard for the whole project — tasks, ideas, references.' },
-  { icon: Users, label: 'Invite anyone with a link', desc: 'Clients and crew join in a click — no account, no app to download.' },
+  { icon: LayoutGrid, label: 'Plan it together', desc: 'A shared board and whiteboard for the whole project: tasks, ideas, references.' },
+  { icon: Users, label: 'Invite anyone with a link', desc: 'Clients and crew join in a click. No account, no app to download.' },
 ]
 
 export function AuthPage() {
@@ -130,7 +130,7 @@ export function AuthPage() {
               <h1 className="text-xl font-semibold text-zinc-100 mb-2">Check your email</h1>
               <p className="text-sm text-zinc-500 mb-6">
                 We sent a sign-in link to <span className="text-zinc-300 font-medium">{email}</span>.
-                Click the link to sign in — no password needed.
+                Click the link to sign in. No password needed.
               </p>
               <button
                 onClick={() => { setEmailSent(false); setEmail('') }}
@@ -142,7 +142,7 @@ export function AuthPage() {
           ) : (
             <>
               <h1 className="text-xl font-semibold text-zinc-100 mb-1">Welcome to Coordie</h1>
-              <p className="text-sm text-zinc-500 mb-8">Sign in or create your account — it takes seconds.</p>
+              <p className="text-sm text-zinc-500 mb-8">Sign in or create your account.</p>
 
               {error && (
                 <div className="bg-red-900/30 border border-red-700/50 rounded-xl px-4 py-3 mb-5">

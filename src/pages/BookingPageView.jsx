@@ -233,7 +233,7 @@ function ConfirmForm({ page, selectedDate, selectedSlot, onConfirm, submitting, 
       </div>
       <div>
         <label className="block text-xs font-medium text-zinc-500 mb-1.5">Message {!page.required_fields?.message && <span className="text-zinc-700">(optional)</span>}</label>
-        <textarea placeholder="Anything you'd like us to know..." value={form.message}
+        <textarea placeholder="Anything you'd like to add..." value={form.message}
           onChange={e => setForm(f => ({ ...f, message: e.target.value }))} rows={2}
           className="w-full bg-surface-800 border border-surface-700 rounded-lg px-3.5 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-accent resize-none" />
       </div>
@@ -308,7 +308,7 @@ function GuestCalendarPanel({ guestEvents, onConnect, onDisconnect }) {
       <button
         onClick={() => tokenClientRef.current?.requestAccessToken()}
         disabled={!gisReady || loading}
-        title="Only your availability — free or busy — is shared."
+        title="Only your free/busy times are shared, never event details."
         className="inline-flex items-center gap-1.5 text-[12px] font-medium text-zinc-200 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-full px-3.5 py-1.5 transition-colors disabled:opacity-50"
       >
         <CalendarDays size={13} strokeWidth={1.75} className="text-zinc-400" />
@@ -618,7 +618,7 @@ export function BookingPageView() {
                   <div className="mt-6">
                     {guestEvents === null && (
                       <p className="text-[12px] text-zinc-500 mb-2 leading-relaxed max-w-xs mx-auto md:mx-0">
-                        Connect your calendar to get recommended times you&rsquo;re both free.
+                        Connect your calendar to see times you&rsquo;re both free.
                       </p>
                     )}
                     <div className="flex justify-center md:justify-start">
@@ -713,7 +713,7 @@ export function BookingPageView() {
               {ownerTimezone && (
                 <p className="mt-4 text-center text-[11px] text-zinc-500">
                   Times in {tzDisplayName(ownerTimezone)}
-                  {Intl.DateTimeFormat().resolvedOptions().timeZone !== ownerTimezone ? ' — the host’s time zone' : ''}
+                  {Intl.DateTimeFormat().resolvedOptions().timeZone !== ownerTimezone ? ' (the host’s time zone)' : ''}
                 </p>
               )}
             </motion.div>

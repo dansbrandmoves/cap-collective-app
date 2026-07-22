@@ -48,13 +48,9 @@ function JoinSignInModal({ isOpen, onClose, roomId, guestName, projectName, owne
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create your free Coordie" size="sm">
-      <p className="text-sm text-zinc-400 leading-relaxed mb-1">
-        Keep <span className="text-zinc-200 font-medium">{projectName || 'this project'}</span> in your own account
-        {ownerName ? <> — everything {ownerName.split(' ')[0]} shared comes with you.</> : '.'}
-      </p>
-      <p className="text-xs text-zinc-600 leading-relaxed mb-5">
-        Your board, whiteboard, and schedule stay exactly as they are. Free, no credit card.
+    <Modal isOpen={isOpen} onClose={onClose} title="Save this project" size="sm">
+      <p className="text-sm text-zinc-400 leading-relaxed mb-5">
+        Creates a free account with <span className="text-zinc-200 font-medium">{projectName || 'this project'}</span> in it.
       </p>
 
       {error && (
@@ -113,7 +109,7 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark, hostName, proj
             {projectName ? <> to <span className="text-zinc-300 font-medium">{projectName}</span></> : null}.
           </p>
         )}
-        <p className="text-[15px] text-zinc-400 leading-relaxed mb-7">Your name and email — so the team knows whose availability this is and can reach you about the meeting.</p>
+        <p className="text-[15px] text-zinc-400 leading-relaxed mb-7">So the team knows whose availability this is.</p>
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
             type="text"
@@ -131,7 +127,7 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark, hostName, proj
             className="w-full bg-surface-800/70 border border-white/[0.06] rounded-xl px-4 py-3 text-[15px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/60 focus:ring-1 focus:ring-accent/30 transition-all duration-200"
           />
           <Button type="submit" disabled={!canSubmit} className="w-full mt-1">Continue →</Button>
-          <p className="text-[12px] text-zinc-600 leading-relaxed">Your email is shared with the host only — used to send you the meeting invite.</p>
+          <p className="text-[12px] text-zinc-600 leading-relaxed">Your email is only shared with the host.</p>
         </form>
       </div>
     </div>
@@ -226,7 +222,7 @@ function GuestCalendarPanel({ guestEvents, connected = false, onConnect, onDisco
           disabled={loading || !guestName || (!both && configured && !gisReady)}
           size={compact ? 'sm' : undefined}
           className="justify-center flex-shrink-0"
-          title="Highlights when you and the team are both free. Only free/busy is shared — never event details."
+          title="Shows when you and the team are both free. Only free/busy is shared, never event details."
         >
           <CalendarDays size={15} strokeWidth={1.75} className="mr-2" />
           {loading ? 'Connecting…' : 'Connect calendar'}
@@ -249,7 +245,7 @@ function GuestCalendarPanel({ guestEvents, connected = false, onConnect, onDisco
         )}
         {!compact && (
           <p className="text-[12px] text-zinc-500 leading-relaxed max-w-sm">
-            So {who} can see when you&rsquo;re both free. Only your free/busy is shared — never event details.
+            Only your free/busy times are shared, never event details.
           </p>
         )}
         {error && <p className="text-xs text-red-400">{error}</p>}
@@ -689,14 +685,8 @@ export function RoomView() {
             <button
               type="button"
               onClick={() => setJoinOpen(true)}
-              className="group w-full text-left flex items-center gap-2 rounded-lg px-2.5 py-2 -mx-1 hover:bg-accent/[0.08] transition-colors">
-              <span className="w-7 h-7 rounded-lg bg-accent/15 border border-accent/25 flex items-center justify-center flex-shrink-0">
-                <img src="/coordie-logo.svg" alt="" className="h-3" style={{ filter: 'invert(1)' }} />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[12px] font-medium text-zinc-200 group-hover:text-white leading-tight">Create your free Coordie</span>
-                <span className="block text-[11px] text-zinc-500 leading-tight">Keep this project — and start your own.</span>
-              </span>
+              className="w-full text-left text-[12px] text-zinc-500 hover:text-zinc-200 rounded-lg px-2 py-1.5 -mx-1 transition-colors">
+              Save this project to a free account
             </button>
           </div>
         )}

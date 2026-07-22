@@ -10,7 +10,7 @@ function statusFor(person) {
   if (person.isOwner) return { label: 'Coordinator · you', Icon: CalendarCheck }
   if (person.sources?.includes('calendar')) return { label: 'Shared their calendar', Icon: CalendarCheck }
   if (person.sources?.includes('tapped')) return { label: 'Tapped their free days', Icon: CalendarClock }
-  return { label: 'Invited — hasn’t shared availability yet', Icon: UserPlus }
+  return { label: 'Invited · no availability yet', Icon: UserPlus }
 }
 
 export function PersonModal({
@@ -117,7 +117,7 @@ export function PersonModal({
         onConfirm={() => { setConfirmRemove(false); onClose?.(); onRemove?.(person) }}
         title="Remove person"
         body={<>Remove <span className="font-semibold text-zinc-100">{person.name}</span> from this project? Their shared availability will be deleted too.</>}
-        warning="This can't be undone — they'd need to share their availability again."
+        warning="This can't be undone. They'd need to share their availability again."
         confirmLabel="Remove"
       />
     </Modal>

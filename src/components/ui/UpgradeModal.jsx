@@ -110,7 +110,7 @@ export function UpgradeModal({ onClose, reason }) {
             className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-amber-500 disabled:opacity-60 text-white font-semibold text-sm px-5 py-3 rounded-xl transition-colors shadow-lg shadow-accent/20"
           >
             <Zap size={15} strokeWidth={2} />
-            {loading ? 'Redirecting to checkout...' : 'Upgrade to Pro — $10/mo'}
+            {loading ? 'Redirecting to checkout...' : 'Upgrade to Pro · $10/mo'}
           </button>
           <p className="text-center text-xs text-zinc-600 mt-2">Cancel anytime. Billed monthly.</p>
         </div>

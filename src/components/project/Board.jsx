@@ -614,7 +614,7 @@ function TaskDetailModal({ task, people = [], projectId, authorName, onClose, on
               <div className="flex items-center gap-2 mt-2">
                 <form onSubmit={(e) => { e.preventDefault(); addLink(attUrl, '', authorName); setAttUrl('') }} className="flex-1">
                   <input value={attUrl} onChange={(e) => setAttUrl(e.target.value)}
-                    placeholder="Paste a link — Google Drive, doc, URL…"
+                    placeholder="Paste a link…"
                     className="w-full bg-surface-800/60 border border-white/[0.07] rounded-lg px-2.5 py-1.5 text-[12px] text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accent/50 transition-colors" />
                 </form>
                 <label className="flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/[0.1] text-[12px] text-zinc-300 hover:text-zinc-100 hover:border-white/20 cursor-pointer transition-colors" title="Upload a file">

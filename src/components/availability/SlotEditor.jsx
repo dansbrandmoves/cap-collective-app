@@ -178,7 +178,7 @@ export function SlotEditor() {
       {/* Quick-add presets */}
       {slots.length === 0 && (
         <div className="mt-5 pt-5 border-t border-surface-800">
-          <p className="text-xs text-zinc-600 mb-3">Quick start — pick a pattern:</p>
+          <p className="text-xs text-zinc-600 mb-3">Quick start</p>
           <div className="flex flex-wrap gap-2">
             {PRESETS.map(p => (
               <button key={p.label} onClick={() => applyPreset(p)}

@@ -334,8 +334,8 @@ export function CalendarSettings({ embedded = false } = {}) {
               {connected
                 ? `Connected · Last synced ${formatLastSynced(lastSynced)}`
                 : connectedCalendars.length > 0
-                ? <span className="text-amber-400">Connection expired — reconnect to resume syncing.</span>
-                : 'Connect once — stays synced automatically.'}
+                ? <span className="text-amber-400">Connection expired. Reconnect to resume syncing.</span>
+                : 'Stays synced automatically.'}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -367,8 +367,8 @@ export function CalendarSettings({ embedded = false } = {}) {
               <p className="text-sm font-medium text-zinc-200">Microsoft / Outlook Calendar</p>
               <p className="text-xs text-zinc-500 mt-0.5">
                 {msConnected
-                  ? 'Connected · busy times count toward your availability.'
-                  : 'Connect to add your Outlook calendar busy times alongside Google.'}
+                  ? 'Connected'
+                  : 'Adds your Outlook busy times to your availability.'}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">

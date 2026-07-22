@@ -877,7 +877,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                         {hasEmail ? (
                           <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{email}</p>
                         ) : (
-                          <p className="text-[11px] text-zinc-600 mt-0.5">No email &mdash; add manually in your calendar</p>
+                          <p className="text-[11px] text-zinc-600 mt-0.5">No email on file</p>
                         )}
                       </div>
                       {hasEmail && (
@@ -930,7 +930,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                         {hasEmail ? (
                           <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{email}</p>
                         ) : (
-                          <p className="text-[11px] text-zinc-600 mt-0.5">No email &mdash; add manually in your calendar</p>
+                          <p className="text-[11px] text-zinc-600 mt-0.5">No email on file</p>
                         )}
                       </div>
                       {hasEmail && (
@@ -956,7 +956,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
               </div>
               <p className="text-[15px] font-medium text-zinc-200 mb-1">Nothing shared yet</p>
               <p className="text-sm text-zinc-500 leading-relaxed max-w-xs mx-auto">
-                No one&rsquo;s indicated they&rsquo;re free on this day. You can still schedule it.
+                No one has shared availability for this day.
               </p>
             </div>
           )}

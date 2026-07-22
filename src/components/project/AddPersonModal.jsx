@@ -53,7 +53,7 @@ export function AddPersonModal({ isOpen, onClose, addPerson, sendRoomInvite, sha
           <Check size={16} strokeWidth={2.5} className="text-green-400 mt-0.5 flex-shrink-0" />
           <p className="text-[13px] text-zinc-200 leading-relaxed">
             <span className="font-semibold">{done.name}</span> added
-            {done.emailed ? ' — invite emailed with their personal link.' : '. Copy their link from the roster to share.'}
+            {done.emailed ? '. Invite emailed.' : '. Copy their link from the roster to share.'}
           </p>
         </div>
       )}
@@ -71,7 +71,7 @@ export function AddPersonModal({ isOpen, onClose, addPerson, sendRoomInvite, sha
         </div>
         <div>
           <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.08em] mb-1.5">
-            Email <span className="text-zinc-600 normal-case tracking-normal font-normal">— optional, to send an invite</span>
+            Email <span className="text-zinc-600 normal-case tracking-normal font-normal">(optional)</span>
           </label>
           <input
             type="email"
@@ -119,7 +119,7 @@ export function AddPersonModal({ isOpen, onClose, addPerson, sendRoomInvite, sha
             Preview as guest
           </a>
           <p className="text-[11px] text-zinc-600 leading-relaxed mt-2.5">
-            Anyone with this link can add their availability — no email needed.
+            Anyone with this link can add their availability.
           </p>
         </div>
       )}

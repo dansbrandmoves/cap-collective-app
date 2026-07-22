@@ -207,7 +207,7 @@ export function ProjectOverview({
         <div className="mb-5 border border-dashed border-white/10 rounded-xl px-5 py-4 max-w-md">
           <p className="text-[14px] font-medium text-zinc-200 mb-0.5">No availability yet</p>
           <p className="text-[12px] text-zinc-500 leading-relaxed">
-            Add people on the left and share their links. As they connect a calendar or tap their free days, the best days appear here.
+            Add people and share their links. Best days appear as they respond.
           </p>
         </div>
       ) : null}
@@ -218,7 +218,7 @@ export function ProjectOverview({
           {MONTH_NAMES[month]} {year}
           {windowKey !== 'any' && (
             <button onClick={() => setWindowKey('any')}
-              title="Showing morning/afternoon/evening availability — tap to clear"
+              title="Filtered by time of day. Tap to clear."
               className="inline-flex items-center gap-1 text-[11px] font-medium text-accent bg-accent/10 border border-accent/20 rounded-full pl-2 pr-1.5 py-0.5 hover:bg-accent/15 transition-colors">
               {win.label}
               <span className="text-accent/70">×</span>

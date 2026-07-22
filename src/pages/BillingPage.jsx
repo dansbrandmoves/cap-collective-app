@@ -217,7 +217,7 @@ export function BillingPage({ embedded = false } = {}) {
                 className="inline-flex items-center gap-2 bg-accent hover:bg-amber-500 disabled:opacity-60 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors shadow-lg shadow-accent/20"
               >
                 <CreditCard size={15} strokeWidth={2} />
-                {loading ? 'Redirecting...' : 'Upgrade — $10/mo'}
+                {loading ? 'Redirecting...' : 'Upgrade · $10/mo'}
               </button>
               <p className="text-xs text-zinc-600 mt-2">Cancel anytime. Billed monthly via Stripe.</p>
             </div>

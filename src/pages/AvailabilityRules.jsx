@@ -11,7 +11,7 @@ export function AvailabilityRules({ embedded = false } = {}) {
         <div className="mb-10 sm:mb-12">
           <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15] mb-2">Default Availability</h1>
           <p className="text-[15px] text-zinc-400 leading-relaxed">
-            The baseline every project starts from — any project can override it in its own Settings. Adjust working hours in the Calendars tab.
+            The default for new projects. Each project can override it in its own settings.
           </p>
         </div>
       )}

@@ -11,6 +11,7 @@ const SECTIONS = [
   ['sharing', 'Guests and share links'],
   ['data', 'Where your data lives'],
   ['security', 'Security'],
+  ['fit', 'Who Coordie is for'],
   ['delete', 'Deleting your data'],
   ['faq', 'FAQ'],
   ['contact', 'Contact'],
@@ -72,9 +73,9 @@ export function DocsPage() {
             on your calendar.
           </p>
           <p>
-            Only your <span className="text-zinc-300">free/busy</span> availability is shared with the people in a project.
-            Event titles and details are used to calculate your busy times and are never shown to anyone else. Other
-            people see whether you are free, not what you have scheduled.
+            Only your <span className="text-zinc-300">free/busy</span> availability is shared with the people in a project:
+            they see whether you are free, not what you have scheduled. Your event titles and details are used only to
+            work out your busy times.
           </p>
           <p>
             "Schedule meeting" opens a new event that is prefilled with the day, time, and attendees in your own
@@ -118,10 +119,23 @@ export function DocsPage() {
             <li>You can disconnect a calendar at any time, which removes its tokens immediately.</li>
           </ul>
           <p>
-            Each project's content — the availability overlap, tasks, whiteboard, and notes — is limited to the people
+            Each project's content (the availability overlap, tasks, whiteboard, and notes) is limited to the people
             you invite: the owner, signed-in members, and anyone holding the project's share link. This is enforced by
             the database, not just the app, so a project's data is readable and writable only by those people. Share a
             project's link only with the people you want in it.
+          </p>
+
+          <H id="fit">Who Coordie is for</H>
+          <p>
+            Access to a project runs on its share link: the owner, signed-in members, and anyone holding the link can
+            see and edit that project. Coordie is designed for coordinating the people you would invite anyway
+            (clients, vendors, and crew on a production) around scheduling, tasks, and planning.
+          </p>
+          <p>
+            It is not built for confidential, regulated, or high-sensitivity data. There is no BAA, SOC 2 report, or
+            signed data-processing agreement, and project content is not end-to-end encrypted (Coordie can read it). Do
+            not use it for health, financial, legal-privileged, or similar records. Treat a project link like a key:
+            anyone who has it is in.
           </p>
 
           <H id="delete">Deleting your data</H>

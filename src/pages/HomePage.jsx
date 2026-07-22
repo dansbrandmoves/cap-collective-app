@@ -350,9 +350,10 @@ export function HomePage() {
         </div>
         <div className="space-y-6">
           {[
-            ['Can other people see my calendar events?', 'No. They see whether you are free, never your event titles or details.'],
+            ['Can other people see my calendar events?', 'They see whether you are free, not what you have scheduled. Your event titles are used only to work out your busy times.'],
             ['Does Coordie change my calendar?', 'No. Calendar access is read-only. Scheduling a meeting opens a prefilled event in your own calendar that you send yourself.'],
             ['Do the people I invite need an account?', 'No. Anyone with a project link can join with a name and email. They can create a free account later to keep the project.'],
+            ['Who can see a project?', 'Access runs on the project’s share link: the owner, members, and anyone holding the link can see and edit it, enforced by the database rather than only the app. It is made for coordinating people you would invite anyway, not for confidential or regulated data. Share a link only with people you want in the project.'],
             ['Google or Outlook?', 'Both. Connect either or both, and busy times from all connected calendars are combined.'],
           ].map(([q, a]) => (
             <div key={q} className="border-b border-surface-800 pb-6">

@@ -118,9 +118,10 @@ export function DocsPage() {
             <li>You can disconnect a calendar at any time, which removes its tokens immediately.</li>
           </ul>
           <p>
-            Coordie is a collaboration tool: people you invite to a project can see that project's shared content
-            (the availability overlap, tasks, whiteboard, and notes). It is not built to hide project content from the
-            people who hold that project's link.
+            Each project's content — the availability overlap, tasks, whiteboard, and notes — is limited to the people
+            you invite: the owner, signed-in members, and anyone holding the project's share link. This is enforced by
+            the database, not just the app, so a project's data is readable and writable only by those people. Share a
+            project's link only with the people you want in it.
           </p>
 
           <H id="delete">Deleting your data</H>

@@ -14,7 +14,10 @@ const IMG_BUCKET = 'canvas-images'
 // channel keeps every viewer in sync. Drag/resize updates local state on every
 // move but only persist on release (persistElement) to avoid write storms.
 
-export function useCanvas(projectId, ownerId) {
+export function useCanvas(projectId, ownerId, db = supabase) {
+  // Hold the live client in a ref so callbacks use the current one after a
+  // guest's client flips from the singleton to its scoped client.
+  const clientRef = useRef(db); clientRef.current = db
   const [elements, setElements] = useState([])
   const [loading, setLoading] = useState(true)
   // Skip echoing our own just-written rows back over realtime (avoids flicker).
@@ -22,10 +25,10 @@ export function useCanvas(projectId, ownerId) {
 
   const load = useCallback(async () => {
     if (!projectId) return
-    const { data } = await supabase.from('canvas_elements').select('*').eq('project_id', projectId).order('z')
+    const { data } = await clientRef.current.from('canvas_elements').select('*').eq('project_id', projectId).order('z')
     setElements(data || [])
     setLoading(false)
-  }, [projectId])
+  }, [projectId, db])
 
   useEffect(() => {
     if (!projectId) { setElements([]); setLoading(false); return }
@@ -46,7 +49,7 @@ export function useCanvas(projectId, ownerId) {
           load()
         })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => { clientRef.current.removeChannel(channel) }
   }, [projectId, load])
 
   // Keep the local cache fresh so the next open paints instantly.
@@ -68,7 +71,7 @@ export function useCanvas(projectId, ownerId) {
     }
     setElements(prev => [...prev, el])
     localWrites.current.add(el.id)
-    supabase.from('canvas_elements').insert(el).then(({ error }) => {
+    clientRef.current.from('canvas_elements').insert(el).then(({ error }) => {
       if (error) console.error('addElement:', error)
       setTimeout(() => localWrites.current.delete(el.id), 1500)
     })
@@ -84,7 +87,7 @@ export function useCanvas(projectId, ownerId) {
   const persistElement = useCallback((id, updates) => {
     setElements(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e))
     localWrites.current.add(id)
-    supabase.from('canvas_elements').update(updates).eq('id', id).then(({ error }) => {
+    clientRef.current.from('canvas_elements').update(updates).eq('id', id).then(({ error }) => {
       if (error) console.error('persistElement:', error)
       setTimeout(() => localWrites.current.delete(id), 1500)
     })
@@ -97,9 +100,9 @@ export function useCanvas(projectId, ownerId) {
     // Free the stored file too so it stops counting against the quota.
     if (el?.type === 'image' && el.src) {
       const path = el.src.split(`/${IMG_BUCKET}/`)[1]
-      if (path) supabase.storage.from(IMG_BUCKET).remove([path])
+      if (path) clientRef.current.storage.from(IMG_BUCKET).remove([path])
     }
-    supabase.from('canvas_elements').delete().eq('id', id).then(({ error }) => {
+    clientRef.current.from('canvas_elements').delete().eq('id', id).then(({ error }) => {
       if (error) console.error('deleteElement:', error)
       setTimeout(() => localWrites.current.delete(id), 1500)
     })
@@ -131,17 +134,17 @@ export function useCanvas(projectId, ownerId) {
     const bytes = opt.blob.size
 
     // Project quota
-    const { data: projRows } = await supabase.from('canvas_elements').select('bytes').eq('project_id', projectId)
+    const { data: projRows } = await clientRef.current.from('canvas_elements').select('bytes').eq('project_id', projectId)
     const projUsed = (projRows || []).reduce((s, r) => s + (r.bytes || 0), 0)
     if (projUsed + bytes > PROJECT_IMAGE_LIMIT) {
       return { error: 'This project has hit its image storage limit. Delete some images to add more.' }
     }
     // Account quota (best-effort; needs ownerId)
     if (ownerId) {
-      const { data: projIds } = await supabase.from('productions').select('id').eq('owner_id', ownerId)
+      const { data: projIds } = await clientRef.current.from('productions').select('id').eq('owner_id', ownerId)
       const ids = (projIds || []).map(p => p.id)
       if (ids.length) {
-        const { data: accRows } = await supabase.from('canvas_elements').select('bytes').in('project_id', ids)
+        const { data: accRows } = await clientRef.current.from('canvas_elements').select('bytes').in('project_id', ids)
         const accUsed = (accRows || []).reduce((s, r) => s + (r.bytes || 0), 0)
         if (accUsed + bytes > ACCOUNT_IMAGE_LIMIT) {
           return { error: 'Your account has hit its image storage limit.' }
@@ -152,9 +155,9 @@ export function useCanvas(projectId, ownerId) {
     const id = `el-${nanoid(8)}`
     const ext = opt.type === 'image/webp' ? 'webp' : 'jpg'
     const path = `${projectId}/${id}.${ext}`
-    const { error: upErr } = await supabase.storage.from(IMG_BUCKET).upload(path, opt.blob, { contentType: opt.type, upsert: true })
+    const { error: upErr } = await clientRef.current.storage.from(IMG_BUCKET).upload(path, opt.blob, { contentType: opt.type, upsert: true })
     if (upErr) return { error: 'Upload failed: ' + upErr.message }
-    const { data: pub } = supabase.storage.from(IMG_BUCKET).getPublicUrl(path)
+    const { data: pub } = clientRef.current.storage.from(IMG_BUCKET).getPublicUrl(path)
 
     const fit = 280 / Math.max(opt.width, opt.height)
     const w = Math.max(60, Math.round(opt.width * fit))
@@ -179,16 +182,16 @@ export function useCanvas(projectId, ownerId) {
     const bytes = opt.blob.size
 
     // Quota — net change (subtract the image we're replacing).
-    const { data: projRows } = await supabase.from('canvas_elements').select('bytes').eq('project_id', projectId)
+    const { data: projRows } = await clientRef.current.from('canvas_elements').select('bytes').eq('project_id', projectId)
     const projUsed = (projRows || []).reduce((s, r) => s + (r.bytes || 0), 0) - (el.bytes || 0)
     if (projUsed + bytes > PROJECT_IMAGE_LIMIT) {
       return { error: 'This project has hit its image storage limit. Delete some images to add more.' }
     }
     if (ownerId) {
-      const { data: projIds } = await supabase.from('productions').select('id').eq('owner_id', ownerId)
+      const { data: projIds } = await clientRef.current.from('productions').select('id').eq('owner_id', ownerId)
       const ids = (projIds || []).map(p => p.id)
       if (ids.length) {
-        const { data: accRows } = await supabase.from('canvas_elements').select('bytes').in('project_id', ids)
+        const { data: accRows } = await clientRef.current.from('canvas_elements').select('bytes').in('project_id', ids)
         const accUsed = (accRows || []).reduce((s, r) => s + (r.bytes || 0), 0) - (el.bytes || 0)
         if (accUsed + bytes > ACCOUNT_IMAGE_LIMIT) {
           return { error: 'Your account has hit its image storage limit.' }
@@ -199,9 +202,9 @@ export function useCanvas(projectId, ownerId) {
     // Upload to a fresh path (new name busts the browser cache + handles ext change).
     const ext = opt.type === 'image/webp' ? 'webp' : 'jpg'
     const path = `${projectId}/${id}-${nanoid(6)}.${ext}`
-    const { error: upErr } = await supabase.storage.from(IMG_BUCKET).upload(path, opt.blob, { contentType: opt.type, upsert: true })
+    const { error: upErr } = await clientRef.current.storage.from(IMG_BUCKET).upload(path, opt.blob, { contentType: opt.type, upsert: true })
     if (upErr) return { error: 'Upload failed: ' + upErr.message }
-    const { data: pub } = supabase.storage.from(IMG_BUCKET).getPublicUrl(path)
+    const { data: pub } = clientRef.current.storage.from(IMG_BUCKET).getPublicUrl(path)
 
     // Keep position + current width; re-fit height to the new aspect ratio.
     const w = el.w
@@ -210,7 +213,7 @@ export function useCanvas(projectId, ownerId) {
 
     // Free the old stored file.
     const oldPath = el.src?.split(`/${IMG_BUCKET}/`)[1]
-    if (oldPath) supabase.storage.from(IMG_BUCKET).remove([oldPath])
+    if (oldPath) clientRef.current.storage.from(IMG_BUCKET).remove([oldPath])
 
     return { ok: true }
   }, [projectId, ownerId, elements, persistElement])

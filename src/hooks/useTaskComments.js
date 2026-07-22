@@ -1,19 +1,20 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { nanoid } from 'nanoid'
 import { supabase } from '../utils/supabase'
 
 // Comments + activity for a single task card. Realtime so everyone on the
 // project sees new comments live. `kind` is 'comment' (people) or 'activity'
 // (system lines like "added this card").
-export function useTaskComments(taskId, projectId) {
+export function useTaskComments(taskId, projectId, db = supabase) {
+  const clientRef = useRef(db); clientRef.current = db
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(() => {
     if (!taskId) return
-    supabase.from('task_comments').select('*').eq('task_id', taskId).order('created_at')
+    clientRef.current.from('task_comments').select('*').eq('task_id', taskId).order('created_at')
       .then(({ data }) => { setItems(data || []); setLoading(false) })
-  }, [taskId])
+  }, [taskId, db])
 
   useEffect(() => {
     if (!taskId) { setItems([]); setLoading(false); return }
@@ -23,7 +24,7 @@ export function useTaskComments(taskId, projectId) {
       .channel(`task-comments-${taskId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_comments', filter: `task_id=eq.${taskId}` }, load)
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => { clientRef.current.removeChannel(channel) }
   }, [taskId, load])
 
   const addComment = useCallback((text, author) => {
@@ -35,12 +36,12 @@ export function useTaskComments(taskId, projectId) {
       created_at: new Date().toISOString(),
     }
     setItems(prev => [...prev, row])
-    supabase.from('task_comments').insert(row).then(({ error }) => { if (error) console.error('addComment:', error) })
+    clientRef.current.from('task_comments').insert(row).then(({ error }) => { if (error) console.error('addComment:', error) })
   }, [taskId, projectId])
 
   const deleteComment = useCallback((id) => {
     setItems(prev => prev.filter(c => c.id !== id))
-    supabase.from('task_comments').delete().eq('id', id)
+    clientRef.current.from('task_comments').delete().eq('id', id)
       .then(({ error }) => { if (error) console.error('deleteComment:', error) })
   }, [])
 

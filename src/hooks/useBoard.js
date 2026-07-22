@@ -15,7 +15,10 @@ const DEFAULT_COLUMNS = [
   { key: 'done', title: 'Done' },
 ]
 
-export function useBoard(projectId) {
+export function useBoard(projectId, db = supabase) {
+  // Hold the live client in a ref so every callback uses the current one even
+  // after a guest's client flips from the singleton to its scoped client.
+  const clientRef = useRef(db); clientRef.current = db
   const [columns, setColumns] = useState([])
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -25,8 +28,8 @@ export function useBoard(projectId) {
   const load = useCallback(async () => {
     if (!projectId) return
     const [{ data: cols }, { data: tks }] = await Promise.all([
-      supabase.from('board_columns').select('*').eq('project_id', projectId).order('position'),
-      supabase.from('tasks').select('*').eq('project_id', projectId).order('position'),
+      clientRef.current.from('board_columns').select('*').eq('project_id', projectId).order('position'),
+      clientRef.current.from('tasks').select('*').eq('project_id', projectId).order('position'),
     ])
     let nextCols = cols || []
     if (nextCols.length === 0 && !seededRef.current) {
@@ -36,14 +39,14 @@ export function useBoard(projectId) {
         position: i + 1, created_at: new Date().toISOString(),
       }))
       // Ignore conflicts so a concurrent opener doesn't error out.
-      await supabase.from('board_columns').upsert(seed, { onConflict: 'id', ignoreDuplicates: true })
-      const { data: reCols } = await supabase.from('board_columns').select('*').eq('project_id', projectId).order('position')
+      await clientRef.current.from('board_columns').upsert(seed, { onConflict: 'id', ignoreDuplicates: true })
+      const { data: reCols } = await clientRef.current.from('board_columns').select('*').eq('project_id', projectId).order('position')
       nextCols = reCols || seed
     }
     setColumns(nextCols)
     setTasks(tks || [])
     setLoading(false)
-  }, [projectId])
+  }, [projectId, db])
 
   useEffect(() => {
     if (!projectId) { setColumns([]); setTasks([]); setLoading(false); return }
@@ -61,7 +64,7 @@ export function useBoard(projectId) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'board_columns', filter: `project_id=eq.${projectId}` }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: `project_id=eq.${projectId}` }, load)
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => { clientRef.current.removeChannel(channel) }
   }, [projectId, load])
 
   // Keep the local cache fresh so the next open paints instantly.
@@ -97,14 +100,14 @@ export function useBoard(projectId) {
       position: maxPos + 1, created_at: new Date().toISOString(),
     }
     setColumns(prev => [...prev, col])
-    supabase.from('board_columns').insert(col).then(({ error }) => { if (error) console.error('addColumn:', error) })
+    clientRef.current.from('board_columns').insert(col).then(({ error }) => { if (error) console.error('addColumn:', error) })
   }, [projectId, columns])
 
   const renameColumn = useCallback((id, title) => {
     const trimmed = (title || '').trim()
     if (!trimmed) return
     setColumns(prev => prev.map(c => c.id === id ? { ...c, title: trimmed } : c))
-    supabase.from('board_columns').update({ title: trimmed }).eq('id', id)
+    clientRef.current.from('board_columns').update({ title: trimmed }).eq('id', id)
       .then(({ error }) => { if (error) console.error('renameColumn:', error) })
   }, [])
 
@@ -112,8 +115,8 @@ export function useBoard(projectId) {
     // Deleting a column removes its cards too.
     setColumns(prev => prev.filter(c => c.id !== id))
     setTasks(prev => prev.filter(t => t.column_id !== id))
-    supabase.from('tasks').delete().eq('column_id', id).then(() => {
-      supabase.from('board_columns').delete().eq('id', id)
+    clientRef.current.from('tasks').delete().eq('column_id', id).then(() => {
+      clientRef.current.from('board_columns').delete().eq('id', id)
         .then(({ error }) => { if (error) console.error('deleteColumn:', error) })
     })
   }, [])
@@ -128,7 +131,7 @@ export function useBoard(projectId) {
     const repositioned = ordered.map((c, i) => ({ ...c, position: i + 1 }))
     setColumns(repositioned)
     repositioned.forEach(c => {
-      supabase.from('board_columns').update({ position: c.position }).eq('id', c.id)
+      clientRef.current.from('board_columns').update({ position: c.position }).eq('id', c.id)
         .then(({ error }) => { if (error) console.error('moveColumn:', error) })
     })
   }, [columns])
@@ -143,12 +146,12 @@ export function useBoard(projectId) {
       assignee: assignee || null, position: maxPos + 1, created_at: new Date().toISOString(),
     }
     setTasks(prev => [...prev, task])
-    supabase.from('tasks').insert(task).then(({ error }) => { if (error) console.error('addTask:', error) })
+    clientRef.current.from('tasks').insert(task).then(({ error }) => { if (error) console.error('addTask:', error) })
   }, [projectId, tasks])
 
   const updateTask = useCallback((id, updates) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t))
-    supabase.from('tasks').update(updates).eq('id', id)
+    clientRef.current.from('tasks').update(updates).eq('id', id)
       .then(({ error }) => { if (error) console.error('updateTask:', error) })
   }, [])
 
@@ -156,7 +159,7 @@ export function useBoard(projectId) {
   const moveTask = useCallback((id, columnId) => {
     const maxPos = tasks.filter(t => t.column_id === columnId && t.id !== id).reduce((m, t) => Math.max(m, t.position), 0)
     setTasks(prev => prev.map(t => t.id === id ? { ...t, column_id: columnId, position: maxPos + 1 } : t))
-    supabase.from('tasks').update({ column_id: columnId, position: maxPos + 1 }).eq('id', id)
+    clientRef.current.from('tasks').update({ column_id: columnId, position: maxPos + 1 }).eq('id', id)
       .then(({ error }) => { if (error) console.error('moveTask:', error) })
   }, [tasks])
 
@@ -177,7 +180,7 @@ export function useBoard(projectId) {
         const newPos = repositioned.get(t.id)
         const old = prev.find(p => p.id === t.id)
         if (!old || old.position !== newPos || old.column_id !== columnId) {
-          supabase.from('tasks').update({ column_id: columnId, position: newPos }).eq('id', t.id)
+          clientRef.current.from('tasks').update({ column_id: columnId, position: newPos }).eq('id', t.id)
             .then(({ error }) => { if (error) console.error('reorderTask:', error) })
         }
       })
@@ -187,7 +190,7 @@ export function useBoard(projectId) {
 
   const deleteTask = useCallback((id) => {
     setTasks(prev => prev.filter(t => t.id !== id))
-    supabase.from('tasks').delete().eq('id', id)
+    clientRef.current.from('tasks').delete().eq('id', id)
       .then(({ error }) => { if (error) console.error('deleteTask:', error) })
   }, [])
 

@@ -45,6 +45,9 @@ export function Board({
   // Display-only mapping for assignee names. The owner assigns themselves as
   // "You" (OWNER_LABEL) — guests should see the owner's real name instead.
   assigneeDisplay = null,
+  // Active Supabase client — the guest's scoped client in RoomView, undefined
+  // (→ singleton default) for the owner. Threaded to the task-detail hooks.
+  db,
 }) {
   const [drag, setDrag] = useState(null)         // { type:'card'|'column', id }
   const [overCol, setOverCol] = useState(null)   // column id a card hovers
@@ -105,6 +108,7 @@ export function Board({
           task={mapTask(openTask)}
           people={people}
           projectId={projectId}
+          db={db}
           authorName={authorName}
           onClose={() => setOpenTaskId(null)}
           onUpdate={(updates) => updateTask(openTask.id, updates)}
@@ -377,9 +381,9 @@ function AddColumn({ onAdd }) {
 }
 
 // ── Card detail (Trello-style): title, description, members, comments/activity ──
-function TaskDetailModal({ task, people = [], projectId, authorName, onClose, onUpdate, onDelete }) {
-  const { items, addComment, deleteComment } = useTaskComments(task.id, projectId)
-  const { items: attachments, addLink, addFile, removeAttachment } = useTaskAttachments(task.id, projectId)
+function TaskDetailModal({ task, people = [], projectId, authorName, onClose, onUpdate, onDelete, db }) {
+  const { items, addComment, deleteComment } = useTaskComments(task.id, projectId, db)
+  const { items: attachments, addLink, addFile, removeAttachment } = useTaskAttachments(task.id, projectId, db)
   const [attUrl, setAttUrl] = useState('')
   const [title, setTitle] = useState(task.title)
   const [desc, setDesc] = useState(task.description || '')

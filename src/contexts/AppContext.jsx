@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { nanoid } from 'nanoid'
 import { SEED_DATA } from '../data/seed'
-import { supabase } from '../utils/supabase'
+import { supabase, makeScopedClient } from '../utils/supabase'
 import { buildSlotStates } from '../utils/availability'
 import { logEvent, STATUS } from '../utils/diag'
 
@@ -216,6 +216,14 @@ export function AppProvider({ children }) {
   // --- Auth ---
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+  // A guest (no session) gets a project-scoped client once they resolve a room
+  // token (see resolveToken → room-access edge fn). `db` is the active client:
+  // the scoped one for guests, the normal singleton for owners/members. dbRef
+  // mirrors it for use inside stable useCallbacks.
+  const [scopedClient, setScopedClient] = useState(null)
+  const dbRef = useRef(supabase)
+  useEffect(() => { dbRef.current = scopedClient ?? supabase }, [scopedClient])
+  const db = scopedClient ?? supabase
   const [plan, setPlan] = useState('free') // 'free' | 'pro'
   const [role, setRole] = useState('user') // 'user' | 'admin'
   const [logoUrl, setLogoUrl] = useState(null)
@@ -708,10 +716,16 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (authLoading) return
     const ownerId = user?.id ?? null
+    // Guest (no session): do NOT broad-load every production. A guest's single
+    // project is fetched by resolveToken (RoomView) through the room-access edge fn
+    // + scoped client; booking pages use their own slug fetch. So just clear the
+    // spinner and let those paths populate state. (This is what makes DB-enforced
+    // per-project scoping possible — guests never read the whole tables.)
+    if (!ownerId) { setLoading(false); return }
     // Spinner only when we have nothing cached to show; otherwise revalidate silently.
     if (!productions.length) setLoading(true)
 
-    if (import.meta.env.DEV) console.log('[Coordie] Loading data for:', ownerId || 'guest')
+    if (import.meta.env.DEV) console.log('[Coordie] Loading data for:', ownerId)
 
     // Safety timeout — never stay stuck on loading. Generous on mobile networks.
     const loadTimeout = setTimeout(() => {
@@ -1130,7 +1144,7 @@ export function AppProvider({ children }) {
     const token = nanoid(8)
     const finalMember = { id: `mem-${Date.now()}`, roomId, room_id: roomId, name, email: email || '', inviteToken: token, invite_token: token }
     setRoomMembers(prev => [...prev, finalMember])
-    supabase.from('room_members').insert({ id: finalMember.id, room_id: roomId, name, email: email || '', invite_token: token })
+    dbRef.current.from('room_members').insert({ id: finalMember.id, room_id: roomId, name, email: email || '', invite_token: token })
       .then(({ error }) => {
         if (error) console.error('addRoomMember:', error)
         logEvent('member_add', {
@@ -1209,8 +1223,41 @@ export function AppProvider({ children }) {
     return true
   }, [user])
 
-  // Resolve a token to { productionId, roomId, mode, memberName }
+  // Load exactly one production's subtree with a given client, and set it as the
+  // productions state. Used for guests, whose scoped client can read only this
+  // project. Explicitly scoped by the production's rooms so it's correct whether
+  // or not RLS is enforcing yet.
+  const loadScopedProduction = useCallback(async (client, productionId) => {
+    const { data: rms } = await client.from('rooms').select('*').eq('production_id', productionId)
+    const roomIds = (rms || []).map(r => r.id)
+    const [{ data: prods }, { data: notes }, { data: msgs }, { data: members }] = await Promise.all([
+      client.from('productions').select('*').eq('id', productionId),
+      roomIds.length ? client.from('shared_notes').select('*').in('room_id', roomIds) : Promise.resolve({ data: [] }),
+      roomIds.length ? client.from('messages').select('*').in('room_id', roomIds).order('timestamp') : Promise.resolve({ data: [] }),
+      roomIds.length ? client.from('room_members').select('*').in('room_id', roomIds) : Promise.resolve({ data: [] }),
+    ])
+    setProductions(buildProductions(prods || [], rms || [], notes || [], msgs || []))
+    setRoomMembers(members || [])
+  }, [])
+
+  // Resolve a token to { productionId, roomId, mode, memberName }.
+  //   Guest (no session): resolve + scope server-side via the room-access edge fn,
+  //     which returns a project-scoped JWT. We build a scoped client from it (used
+  //     for every guest read/write/realtime) and load the one production. This is
+  //     what lets RLS lock a guest to a single project.
+  //   Owner/member (signed in): keep the direct lookup — their own RLS legs
+  //     (owner_id / email) already grant access, no scoped client needed.
   const resolveToken = useCallback(async (token) => {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) {
+      const { data, error } = await supabase.functions.invoke('room-access', { body: { token } })
+      if (error || !data?.jwt || !data?.productionId) return null
+      const sc = makeScopedClient(data.jwt)
+      setScopedClient(sc)
+      dbRef.current = sc
+      try { await loadScopedProduction(sc, data.productionId) } catch (e) { console.error('loadScopedProduction:', e) }
+      return { productionId: data.productionId, roomId: data.roomId, mode: data.mode, memberName: data.memberName }
+    }
     const [{ data: roomRows }, { data: memberRows }] = await Promise.all([
       supabase.from('rooms').select('id, production_id, access_mode').eq('open_token', token).limit(1),
       supabase.from('room_members').select('id, room_id, name').eq('invite_token', token).limit(1),
@@ -1225,21 +1272,21 @@ export function AppProvider({ children }) {
       return { productionId: rm?.production_id, roomId: memberRow.room_id, mode: 'invite_only', memberName: memberRow.name }
     }
     return null
-  }, [])
+  }, [loadScopedProduction])
 
   // --- Room Content ---
   const updateSharedNotes = useCallback((productionId, roomId, notes) => {
     setProductions(prev => prev.map(p => p.id === productionId
       ? { ...p, rooms: p.rooms.map(r => r.id === roomId ? { ...r, room: { ...r.room, sharedNotes: notes } } : r) }
       : p))
-    supabase.from('shared_notes').upsert({ room_id: roomId, content: notes })
+    dbRef.current.from('shared_notes').upsert({ room_id: roomId, content: notes })
       .then(({ error }) => { if (error) console.error('updateSharedNotes:', error) })
   }, [])
 
   const refreshRoom = useCallback(async (productionId, roomId) => {
     const [{ data: msgs }, { data: note }] = await Promise.all([
-      supabase.from('messages').select('*').eq('room_id', roomId).order('timestamp'),
-      supabase.from('shared_notes').select('*').eq('room_id', roomId).single(),
+      dbRef.current.from('messages').select('*').eq('room_id', roomId).order('timestamp'),
+      dbRef.current.from('shared_notes').select('*').eq('room_id', roomId).single(),
     ])
     setProductions(prev => prev.map(p => p.id === productionId
       ? {
@@ -1389,7 +1436,7 @@ export function AppProvider({ children }) {
       status: 'pending',
       slot_map: slotMap || null,
     }
-    const { error } = await supabase.from('date_requests').insert(request)
+    const { error } = await dbRef.current.from('date_requests').insert(request)
     logEvent('guest_tap_days', {
       actor: requesterName || 'unknown guest', roomId, status: error ? STATUS.ERROR : STATUS.OK,
       summary: error ? 'Failed to submit tapped days' : `Tapped ${dates?.length ?? 0} day(s)`,
@@ -1456,6 +1503,8 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       // Auth
       user, authLoading, isOwner, signOut,
+      // Active Supabase client (scoped for guests, singleton for owners/members)
+      db,
       // Plan
       plan, isProPlan, canAddProject, canAddRoom, canAddBookingPage,
       FREE_PROJECT_LIMIT, FREE_ROOM_LIMIT, FREE_BOOKING_PAGE_LIMIT,

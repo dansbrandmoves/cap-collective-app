@@ -310,7 +310,7 @@ function PersonChip({ name, active, onClick }) {
 
 export function RoomView() {
   const { token } = useParams()
-  const { getProduction, getRoom, getMembersForRoom, addRoomMember, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions, calendarEvents, connectedCalendars, prefixRules } = useApp()
+  const { db, getProduction, getRoom, getMembersForRoom, addRoomMember, user, availabilityRules, effectiveSlots, slots: rawSlots, loading, refreshRoom, resolveToken, theme, businessHours, productions, calendarEvents, connectedCalendars, prefixRules } = useApp()
   // When a signed-in user opens a room, we're rendered inside AppShell (main nav).
   // openGlobalMenu opens that nav on mobile; null for account-less standalone guests.
   const outletCtx = useOutletContext()
@@ -340,8 +340,8 @@ export function RoomView() {
   const production = resolved ? getProduction(resolved.productionId) : null
   // Project-level board (shared by everyone on the project). Hook runs every render
   // with a possibly-null id so the hook count stays stable before the early returns.
-  const board = useBoard(resolved?.productionId)
-  const canvas = useCanvas(resolved?.productionId, production?.ownerId)
+  const board = useBoard(resolved?.productionId, db)
+  const canvas = useCanvas(resolved?.productionId, production?.ownerId, db)
   const boardPeople = useMemo(
     () => (resolved?.roomId ? getMembersForRoom(resolved.roomId) : []),
     [resolved?.roomId, getMembersForRoom]
@@ -406,18 +406,18 @@ export function RoomView() {
     } else {
       setSchedLoading(true)
     }
-    const loadReq = () => supabase.from('date_requests').select('*').eq('room_id', rid)
+    const loadReq = () => db.from('date_requests').select('*').eq('room_id', rid)
       .then(({ data }) => { latest.dateRequests = data || []; setDateRequests(latest.dateRequests); writeCache(cacheKey, latest) })
-    const loadAvail = () => supabase.from('shared_availability').select('*').eq('room_id', rid)
+    const loadAvail = () => db.from('shared_availability').select('*').eq('room_id', rid)
       .then(({ data }) => { latest.sharedAvailability = data || []; setSharedAvailability(latest.sharedAvailability); writeCache(cacheKey, latest) })
     Promise.all([loadReq(), loadAvail()]).finally(() => setSchedLoading(false))
-    const channel = supabase
+    const channel = db
       .channel(`room-overlap-${rid}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'date_requests', filter: `room_id=eq.${rid}` }, loadReq)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_availability', filter: `room_id=eq.${rid}` }, loadAvail)
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [resolved?.roomId])
+    return () => { db.removeChannel(channel) }
+  }, [resolved?.roomId, db])
 
   const schedRoomId = resolved?.roomId
   const dateReqMap = useMemo(() => ({ [schedRoomId]: dateRequests }), [schedRoomId, dateRequests])
@@ -461,7 +461,7 @@ export function RoomView() {
     if (!production?.ownerId) return
     // public_profiles: safe projection (no OAuth tokens). The base profiles table
     // is owner-only now, so guests/members read the owner's branding + settings here.
-    supabase.from('public_profiles').select('logo_url, logo_is_dark, connected_calendars, settings').eq('id', production.ownerId).single()
+    db.from('public_profiles').select('logo_url, logo_is_dark, connected_calendars, settings').eq('id', production.ownerId).single()
       .then(({ data }) => {
         setOwnerLogo(data?.logo_url || null)
         setOwnerLogoDark(data?.logo_is_dark ?? true)
@@ -472,7 +472,7 @@ export function RoomView() {
         }
         setOwnerGuestCalendarEnabled(data?.settings?.guestCalendarEnabled ?? true)
       })
-  }, [production?.ownerId, isOwner])
+  }, [production?.ownerId, isOwner, db])
 
   useEffect(() => {
     if (!production?.ownerId || isOwner) return
@@ -486,7 +486,7 @@ export function RoomView() {
     // Window to the scheduling horizon so the guest view loads fast (not every row).
     const ws = new Date(); ws.setDate(ws.getDate() - 7)
     const we = new Date(); we.setDate(we.getDate() + 120)
-    const load = () => supabase.from('owner_calendar_events').select('*').eq('owner_id', ownerId)
+    const load = () => db.from('owner_calendar_events').select('*').eq('owner_id', ownerId)
       .gte('end_at', ws.toISOString()).lte('start', we.toISOString())
       .then(({ data }) => {
         const mapped = (data || []).map(mapRow)
@@ -495,12 +495,12 @@ export function RoomView() {
       })
     load()
     // Live: when the owner's calendar changes (server sync), guests update too.
-    const ch = supabase
+    const ch = db
       .channel(`owner-cal-guest-${ownerId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'owner_calendar_events', filter: `owner_id=eq.${ownerId}` }, load)
       .subscribe()
-    return () => { supabase.removeChannel(ch) }
-  }, [production?.ownerId, isOwner])
+    return () => { db.removeChannel(ch) }
+  }, [production?.ownerId, isOwner, db])
 
   useEffect(() => {
     if (!resolved) return
@@ -522,13 +522,13 @@ export function RoomView() {
   useEffect(() => {
     if (!resolved) return
     const { productionId, roomId } = resolved
-    const channel = supabase
+    const channel = db
       .channel(`room-${roomId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_notes', filter: `room_id=eq.${roomId}` },
         () => refreshRoom(productionId, roomId))
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [resolved, refreshRoom])
+    return () => { db.removeChannel(channel) }
+  }, [resolved, refreshRoom, db])
 
   if (loading || resolving) {
     return <PageLoader full />
@@ -774,6 +774,7 @@ export function RoomView() {
               projectId={resolved?.productionId}
               authorName={isOwner ? (ownerName || 'Owner') : guestName}
               assigneeDisplay={isOwner ? null : (n => n === 'You' ? ownerDisplay : n)}
+              db={db}
               addColumn={board.addColumn}
               renameColumn={board.renameColumn}
               deleteColumn={board.deleteColumn}

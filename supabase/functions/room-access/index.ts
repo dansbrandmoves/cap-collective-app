@@ -59,9 +59,14 @@ Deno.serve(async (req: Request) => {
     }
     if (!productionId || !roomId) return json({ error: "invalid link" }, 404);
 
-    // Sign the scoped JWT with the project's HS256 secret (from app_config).
-    const { data: cfg } = await admin.from("app_config").select("value").eq("key", "jwt_secret").maybeSingle();
-    const secret = cfg?.value;
+    // Sign the scoped JWT with the project's HS256 secret. Prefer the secret the
+    // platform injects into every edge function (SUPABASE_JWT_SECRET) so nobody has
+    // to handle it by hand; fall back to app_config.jwt_secret if that's ever unset.
+    let secret = Deno.env.get("SUPABASE_JWT_SECRET") ?? "";
+    if (!secret) {
+      const { data: cfg } = await admin.from("app_config").select("value").eq("key", "jwt_secret").maybeSingle();
+      secret = cfg?.value ?? "";
+    }
     if (!secret) return json({ error: "server not configured (missing jwt_secret)" }, 500);
 
     const key = new TextEncoder().encode(secret);

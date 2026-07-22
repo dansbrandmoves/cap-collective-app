@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { nanoid } from 'nanoid'
 import { supabase } from '../utils/supabase'
 
@@ -6,15 +6,16 @@ const BUCKET = 'task-attachments'
 
 // Attachments for a single card: links (any URL incl. Google Drive share links)
 // and uploaded files (public bucket). Realtime so collaborators see them live.
-export function useTaskAttachments(taskId, projectId) {
+export function useTaskAttachments(taskId, projectId, db = supabase) {
+  const clientRef = useRef(db); clientRef.current = db
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(() => {
     if (!taskId) return
-    supabase.from('task_attachments').select('*').eq('task_id', taskId).order('created_at')
+    clientRef.current.from('task_attachments').select('*').eq('task_id', taskId).order('created_at')
       .then(({ data }) => { setItems(data || []); setLoading(false) })
-  }, [taskId])
+  }, [taskId, db])
 
   useEffect(() => {
     if (!taskId) { setItems([]); setLoading(false); return }
@@ -24,13 +25,13 @@ export function useTaskAttachments(taskId, projectId) {
       .channel(`task-attachments-${taskId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_attachments', filter: `task_id=eq.${taskId}` }, load)
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => { clientRef.current.removeChannel(channel) }
   }, [taskId, load])
 
   const insertRow = useCallback((row) => {
     const full = { id: `att-${nanoid(8)}`, task_id: taskId, project_id: projectId || null, created_at: new Date().toISOString(), ...row }
     setItems(prev => [...prev, full])
-    supabase.from('task_attachments').insert(full).then(({ error }) => { if (error) console.error('addAttachment:', error) })
+    clientRef.current.from('task_attachments').insert(full).then(({ error }) => { if (error) console.error('addAttachment:', error) })
     return full
   }, [taskId, projectId])
 
@@ -46,9 +47,9 @@ export function useTaskAttachments(taskId, projectId) {
   const addFile = useCallback(async (file, author) => {
     if (!file || !taskId) return
     const path = `${taskId}/${nanoid(8)}-${file.name}`
-    const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false })
+    const { error } = await clientRef.current.storage.from(BUCKET).upload(path, file, { upsert: false })
     if (error) { console.error('upload attachment:', error); return }
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
+    const { data } = clientRef.current.storage.from(BUCKET).getPublicUrl(path)
     insertRow({ kind: 'file', url: data.publicUrl, name: file.name, author: author || null })
   }, [taskId, insertRow])
 
@@ -58,9 +59,9 @@ export function useTaskAttachments(taskId, projectId) {
     if (att.kind === 'file' && att.url) {
       const marker = `/${BUCKET}/`
       const i = att.url.indexOf(marker)
-      if (i !== -1) supabase.storage.from(BUCKET).remove([att.url.slice(i + marker.length)]).catch(() => {})
+      if (i !== -1) clientRef.current.storage.from(BUCKET).remove([att.url.slice(i + marker.length)]).catch(() => {})
     }
-    supabase.from('task_attachments').delete().eq('id', att.id)
+    clientRef.current.from('task_attachments').delete().eq('id', att.id)
       .then(({ error }) => { if (error) console.error('removeAttachment:', error) })
   }, [])
 

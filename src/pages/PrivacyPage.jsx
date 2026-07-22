@@ -136,7 +136,7 @@ export function PrivacyPage() {
           <p>
             To delete your account and all associated data — including any stored Google user data —
             contact us at{' '}
-            <a href="mailto:privacy@movesandmeasures.com" className="text-accent underline">privacy@movesandmeasures.com</a>.
+            <a href="mailto:contact@movesandmeasures.com" className="text-accent underline">contact@movesandmeasures.com</a>.
             We will process deletion requests within 30 days.
           </p>
 
@@ -166,7 +166,7 @@ export function PrivacyPage() {
           <h2 className="text-base font-semibold text-zinc-200 mt-6">Contact</h2>
           <p>
             For privacy questions or data deletion requests, contact us at{' '}
-            <a href="mailto:privacy@movesandmeasures.com" className="text-accent underline">privacy@movesandmeasures.com</a>.
+            <a href="mailto:contact@movesandmeasures.com" className="text-accent underline">contact@movesandmeasures.com</a>.
           </p>
 
         </div>

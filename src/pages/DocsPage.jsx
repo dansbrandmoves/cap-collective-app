@@ -127,7 +127,7 @@ export function DocsPage() {
           <p>
             Disconnecting a calendar (Account → Calendars) removes its stored tokens right away. To delete your account
             and everything associated with it, email{' '}
-            <a href="mailto:privacy@movesandmeasures.com" className="text-accent underline underline-offset-2">privacy@movesandmeasures.com</a>.
+            <a href="mailto:contact@movesandmeasures.com" className="text-accent underline underline-offset-2">contact@movesandmeasures.com</a>.
             Requests are processed within 30 days. Full details are in the{' '}
             <a href="/privacy" className="text-accent underline underline-offset-2">Privacy Policy</a>.
           </p>
@@ -159,7 +159,7 @@ export function DocsPage() {
           <H id="contact">Contact</H>
           <p>
             Coordie is made by Moves and Measures, LLC. For questions, email{' '}
-            <a href="mailto:privacy@movesandmeasures.com" className="text-accent underline underline-offset-2">privacy@movesandmeasures.com</a>.
+            <a href="mailto:contact@movesandmeasures.com" className="text-accent underline underline-offset-2">contact@movesandmeasures.com</a>.
           </p>
 
         </div>

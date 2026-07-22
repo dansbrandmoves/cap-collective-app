@@ -27,7 +27,7 @@ const FEATURES = [
 
 const HOW_IT_WORKS = [
   { step: '01', title: 'Create a project', desc: 'Name it and add the clients, vendors, and crew.' },
-  { step: '02', title: 'Everyone shares their time', desc: 'Each person connects a calendar or taps their free days. No account needed.' },
+  { step: '02', title: 'Connect calendars', desc: 'Each person connects a calendar or taps their free days. No account needed.' },
   { step: '03', title: 'Skip the back-and-forth', desc: 'The days the whole group is free are marked. Pick one and send the meeting.' },
 ]
 

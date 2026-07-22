@@ -1,7 +1,61 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-07-21 (UI/UX review + zen pass + deep declutter, shipped to prod)
-**Last pushed commit:** `ecf15ae` — "coordie: contact email -> contact@movesandmeasures.com"
+**Last pushed commit:** `390e2e4` — "coordie: docs — state per-project access is DB-enforced"
+
+> **2026-07-21 (THE BIG ONE) — DATABASE-ENFORCED PER-PROJECT ACCESS.**
+> Closed the last and most serious hole: project-content tables had `allow_all` RLS,
+> so the public anon key (in every browser bundle) could read/write ANY project's
+> data — access was gated only by share-link tokens in the app, not the DB. Now the
+> database enforces per-project access for owners, members, AND guests.
+> Commits `0226da8` (helpers + edge fn), `b7fc40c` (policies + client), `390e2e4` (docs).
+>
+> **How it works (the design):**
+> - **`can_access_production(pid)` / `can_access_room(rid)`** SECURITY DEFINER helpers
+>   (`supabase/migrations/20260721_access_helpers.sql`). Three legs: owner
+>   (`owner_id = auth.uid()::text` — owner_id is TEXT), member (case-insensitive email;
+>   room_members has NO user_id), guest (`auth.jwt() ->> 'production_id'`).
+> - **`room-access` edge fn** (`supabase/functions/room-access/`): verifies a share
+>   token (service role) → mints a 1h **HS256 JWT** scoped to one production
+>   (`role: anon` + `production_id` claim). Signed with the project's **legacy JWT
+>   secret**, read from `app_config.jwt_secret` (Daniel pasted it there via SQL; the
+>   platform does NOT inject SUPABASE_JWT_SECRET into edge fns). Env fallback tried first.
+> - **Scoped policies** (`20260721_scoped_project_rls.sql`) replace every `allow_all`
+>   on productions/rooms/room_members/messages/shared_notes/date_requests/
+>   shared_availability/tasks/board_columns/canvas_elements/task_comments/
+>   task_attachments with `can_access_*`. owner_calendar_events read scoped
+>   (owner / guest-of-that-owner's-project / booking-page-owner). Booking tables stay
+>   public by design. **Verbatim revert kept:** `20260721_scoped_rls_revert.sql` —
+>   one `apply_migration` restores allow_all if needed.
+> - **Client:** `makeScopedClient(jwt)` (`utils/supabase.js`) = 2nd client sending the
+>   JWT on REST + realtime. `AppContext.resolveToken` routes guests through room-access
+>   → builds the scoped client → loads only their one production; exposes `db` via
+>   context. Guest load effect no longer broad-loads all projects. RoomView + the four
+>   hooks (useBoard/useCanvas/useTaskComments/useTaskAttachments) + Board thread `db`.
+>   **Owner/member paths keep the singleton** (their RLS legs already admit them), so
+>   only the guest path changed.
+>
+> **Verified:** bare anon key returns **0** rows (was: everything); scoped guest sees +
+> writes ONLY its project (cross-project write → 401); owner sees owned+shared (3, not
+> all 4) under enforced RLS; public booking still works; guest room schedule/tasks/
+> whiteboard load + write live on prod.
+>
+> **⚠️ GOTCHAS / future:**
+> - Depends on the **legacy HS256 JWT secret** (project uses new ECC signing keys as
+>   CURRENT, but PostgREST+Realtime still verify legacy HS256 — that's how the anon key
+>   works). If Daniel ever fully migrates off the legacy secret, guest tokens break;
+>   migrate everything together. Secret lives in `app_config.jwt_secret`.
+> - **Follow-ups (noted, not blocking):** guest canvas quota now sees only its one
+>   production (account-wide quota under-counts for guests — make it project-scoped or
+>   server-side); owner event *titles* still readable by invited guests (needed for
+>   `*`/`^` prefix derivation) — a title-stripped guest projection would fully honor
+>   "titles never shared"; `leaveProject` DB delete is case-sensitive on email (minor).
+> - The scoped guest JWT is 1h; the client re-mints on room open. No refresh-on-expiry
+>   mid-session yet — a guest sitting >1h idle then acting may need a reload (rare).
+>
+> ---
+>
+> **2026-07-21 (earlier) — contact email → contact@movesandmeasures.com** (docs + privacy).
 
 > **2026-07-21 (final):** Contact email across Docs + Privacy pages changed
 > `privacy@` → **`contact@movesandmeasures.com`** (4 occurrences). All the

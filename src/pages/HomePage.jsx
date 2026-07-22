@@ -28,7 +28,7 @@ const FEATURES = [
 const HOW_IT_WORKS = [
   { step: '01', title: 'Create a project', desc: 'Name it and add the clients, vendors, and crew.' },
   { step: '02', title: 'Everyone shares their time', desc: 'Each person connects a calendar or taps their free days. No account needed.' },
-  { step: '03', title: 'Book the day and plan', desc: 'The days the whole group is free are marked. Pick one to send the meeting, then track tasks and use the whiteboard.' },
+  { step: '03', title: 'Skip the back-and-forth', desc: 'The days the whole group is free are marked. Pick one and send the meeting.' },
 ]
 
 // The group whose availability converges in the hero demo. Each person's free
@@ -300,7 +300,7 @@ export function HomePage() {
       <section id="how-it-works" className="px-5 sm:px-8 py-20 sm:py-28 max-w-5xl mx-auto w-full">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">How it works</p>
-          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100">Create a project, everyone shares their time, book the day.</h2>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100">Create a project, share time, skip the back-and-forth.</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">

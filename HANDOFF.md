@@ -1,7 +1,16 @@
 # Coordie — Continuation Handoff
 
-**Last session ended:** 2026-07-21 (UI/UX review + zen pass, shipped to prod)
-**Last pushed commit:** `57e499d` — "coordie: zen pass — progressive disclosure + coherence"
+**Last session ended:** 2026-07-21 (UI/UX review + zen pass + deep declutter, shipped to prod)
+**Last pushed commit:** `92b28f9` — "coordie: deep declutter — destroy micro-distractions"
+
+> **2026-07-21 (later) — DEEP DECLUTTER (`92b28f9`).** Rule: if an element explains,
+> duplicates, or counts what you can already see, it dies. Killed: "Tasks 2" tab count
+> badge; "2 people · next 60 days" meta line; chip fractions when everyone's free (dot
+> carries it); Dashboard + Shared-with-me subtitles; Account duplicate email line;
+> working-hours caption; BOTH day-inspector instructional captions; slot rows saying
+> the time twice (new `formatTimeRange()` in utils/availability.js — one friendly line,
+> no raw 24h in UI; `block-` id prefix discriminates auto-generated slots).
+> **"Board" tab renamed "Whiteboard"** (Daniel's call; internal key 'board' unchanged).
 
 > **2026-07-21 — FULL UI/UX REVIEW SESSION (two commits, both live).**
 > `7a13867` (bug pass) + `57e499d` (zen pass). Verified on prod after deploy.

@@ -226,6 +226,7 @@ export function AuthPage() {
 
               <div className="mt-10 pt-8 border-t border-surface-700 flex items-center justify-center gap-4 text-xs text-zinc-600 safe-bottom-sm">
                 <a href="/" className="hover:text-zinc-400 transition-colors">Home</a>
+                <a href="/docs" className="hover:text-zinc-400 transition-colors">Docs</a>
                 <a href="/privacy" className="hover:text-zinc-400 transition-colors">Privacy Policy</a>
               </div>
             </>

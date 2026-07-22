@@ -11,6 +11,7 @@ import { AuthPage } from './pages/AuthPage'
 import { HomePage } from './pages/HomePage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
+import { DocsPage } from './pages/DocsPage'
 import { BillingPage } from './pages/BillingPage'
 import { BookingPages } from './pages/BookingPages'
 import { BookingPageView } from './pages/BookingPageView'
@@ -69,6 +70,7 @@ function AppRoutes() {
       <Route path="/home" element={<Navigate to="/" replace />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
+      <Route path="/docs" element={<DocsPage />} />
       {/* Signed-in users keep their main app nav (AppShell) while viewing a room
           they're a member of; account-less guests get the standalone room. */}
       <Route path="/room/:token" element={<RoomRoute />}>

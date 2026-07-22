@@ -226,6 +226,7 @@ export function HomePage() {
         <div className="flex items-center gap-6">
           <a href="#features" className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors hidden sm:inline">Features</a>
           <a href="#how-it-works" className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors hidden sm:inline">How it works</a>
+          <a href="/docs" className="text-sm text-zinc-500 hover:text-zinc-200 transition-colors hidden sm:inline">Docs</a>
           <a
             href="/signin"
             className="text-sm font-medium text-zinc-300 hover:text-white bg-surface-800 hover:bg-surface-700 border border-surface-600 px-4 py-1.5 rounded-lg transition-colors"
@@ -341,6 +342,33 @@ export function HomePage() {
       {/* Divider */}
       <div className="w-full border-t border-surface-800" />
 
+      {/* FAQ — a few plain answers; full detail lives in the docs */}
+      <section id="faq" className="px-5 sm:px-8 py-20 sm:py-28 max-w-2xl mx-auto w-full">
+        <div className="text-center mb-12">
+          <p className="text-xs font-semibold text-zinc-600 uppercase tracking-widest mb-3">FAQ</p>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100">Common questions</h2>
+        </div>
+        <div className="space-y-6">
+          {[
+            ['Can other people see my calendar events?', 'No. They see whether you are free, never your event titles or details.'],
+            ['Does Coordie change my calendar?', 'No. Calendar access is read-only. Scheduling a meeting opens a prefilled event in your own calendar that you send yourself.'],
+            ['Do the people I invite need an account?', 'No. Anyone with a project link can join with a name and email. They can create a free account later to keep the project.'],
+            ['Google or Outlook?', 'Both. Connect either or both, and busy times from all connected calendars are combined.'],
+          ].map(([q, a]) => (
+            <div key={q} className="border-b border-surface-800 pb-6">
+              <p className="text-sm font-semibold text-zinc-100 mb-1.5">{q}</p>
+              <p className="text-sm text-zinc-500 leading-relaxed">{a}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-center text-sm text-zinc-500 mt-10">
+          More in the <a href="/docs" className="text-accent hover:underline underline-offset-2">documentation</a>.
+        </p>
+      </section>
+
+      {/* Divider */}
+      <div className="w-full border-t border-surface-800" />
+
       {/* CTA */}
       <section className="px-5 sm:px-8 py-20 sm:py-28 flex flex-col items-center text-center">
         <h2 className="text-2xl sm:text-3xl font-semibold text-zinc-100 mb-4 max-w-lg">
@@ -374,6 +402,7 @@ export function HomePage() {
             <span className="text-xs text-zinc-600">© {new Date().getFullYear()} Coordie</span>
           </div>
           <div className="flex items-center gap-5 text-xs text-zinc-600">
+            <a href="/docs" className="hover:text-zinc-400 transition-colors">Docs</a>
             <a href="/privacy" className="hover:text-zinc-400 transition-colors">Privacy Policy</a>
             <a href="/terms" className="hover:text-zinc-400 transition-colors">Terms of Service</a>
             <a href="/signin" className="hover:text-zinc-400 transition-colors">Sign in</a>

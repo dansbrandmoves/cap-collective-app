@@ -35,16 +35,11 @@
 > they already self-check `role='admin'`). The first revoke attempt didn't bite
 > because functions default to `GRANT EXECUTE TO PUBLIC` — must revoke FROM PUBLIC.
 >
-> **🟡 STILL OPEN — Daniel to run (classifier blocked the storage migration):**
-> public buckets allow file *enumeration*. The app never `.list()`s (only
-> upload/getPublicUrl/remove), so dropping these is safe and stops enumeration
-> while public-URL rendering keeps working:
-> ```sql
-> drop policy if exists "avatars public read" on storage.objects;
-> drop policy if exists "canvas_images_read" on storage.objects;
-> drop policy if exists "public_read_logos" on storage.objects;
-> drop policy if exists "task-attachments files read" on storage.objects;
-> ```
+> **✅ DONE (was open): public-bucket file enumeration closed** (migration
+> `20260721_stop_public_bucket_file_listing`). Dropped the 4 broad SELECT policies
+> on storage.objects. Buckets are `public=true` so /object/public/ URL rendering is
+> unaffected (verified whiteboard + logo still render); only enumeration is gone.
+> All three of today's DB migrations are mirrored in `supabase/migrations/20260721_*`.
 >
 > **⚪ KNOWN / NOT fixed (documented honestly, big job): the broad `allow_all`
 > RLS** on productions/rooms/room_members/messages/shared_notes/tasks/board_columns/

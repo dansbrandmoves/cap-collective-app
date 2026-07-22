@@ -1,7 +1,11 @@
 # Coordie — Continuation Handoff
 
 **Last session ended:** 2026-07-21 (UI/UX review + zen pass + deep declutter, shipped to prod)
-**Last pushed commit:** `ca77636` — "coordie: harden RPC surface + add /docs reference page"
+**Last pushed commit:** `ecf15ae` — "coordie: contact email -> contact@movesandmeasures.com"
+
+> **2026-07-21 (final):** Contact email across Docs + Privacy pages changed
+> `privacy@` → **`contact@movesandmeasures.com`** (4 occurrences). All the
+> security work below is live and verified on prod.
 
 > **2026-07-21 (security block) — CRITICAL FIXES + DOCS PAGE.**
 > Found while gathering facts for a docs page; all DB fixes applied to prod via MCP.

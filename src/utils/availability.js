@@ -283,10 +283,13 @@ export function deriveAvailabilityMatrix(dates, slots, calendarEvents, connected
 }
 
 /**
- * Format a Date to YYYY-MM-DD string
+ * Format a Date to YYYY-MM-DD string — in LOCAL time, matching what the user
+ * sees on the calendar. (toISOString() is UTC: it rolled "today" to tomorrow
+ * every evening for US users, and shifted every local-midnight grid date back
+ * a day for UTC+ timezones.)
  */
 export function dateToStr(d) {
-  return d.toISOString().split('T')[0]
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 /**

@@ -185,8 +185,6 @@ export function ProjectOverview({
               ))}
             </div>
 
-            {bestDays.length > 0 && <span className="text-zinc-700 mx-0.5">·</span>}
-
             {/* Best days — compact inline pills */}
             {bestDays.map(({ ds, date, freeCount, knownCount }) => {
               const allFree = freeCount === knownCount

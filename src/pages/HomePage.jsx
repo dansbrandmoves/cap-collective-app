@@ -11,7 +11,7 @@ const FEATURES = [
   {
     icon: CalendarDays,
     title: 'Calendar-driven availability',
-    desc: 'Connect Google Calendar and your real schedule drives everything — no manual updates. Busy times drop out automatically, for you and everyone you invite.',
+    desc: 'Connect Google or Outlook and your real schedule drives everything — no manual updates. Busy times drop out automatically, for you and everyone you invite.',
   },
   {
     icon: LayoutGrid,
@@ -347,7 +347,7 @@ export function HomePage() {
           Ready to coordinate better?
         </h2>
         <p className="text-zinc-500 text-base mb-8 max-w-sm">
-          Sign in with Google and have your first project set up in under five minutes.
+          Sign in with Google or Microsoft and have your first project set up in under five minutes.
         </p>
         <a
           href="/signin"

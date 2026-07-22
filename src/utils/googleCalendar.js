@@ -230,6 +230,13 @@ export async function connectGuestCalendarOffline({ roomId, guestName }) {
         if (resp.error || !resp.code) reject(new Error(resp.error || 'No authorization code'))
         else resolve(resp.code)
       },
+      // Without this, closing the popup mid-consent leaves the promise pending
+      // forever — the connect button reads "Connecting…" until a page refresh.
+      error_callback: (err) => {
+        if (err?.type === 'popup_closed') reject(new Error('Connection cancelled.'))
+        else if (err?.type === 'popup_failed_to_open') reject(new Error('Popup blocked — allow popups for this site and try again.'))
+        else reject(new Error(err?.message || 'Could not connect your calendar.'))
+      },
     })
     codeClient.requestCode()
   })

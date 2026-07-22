@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Modal } from '../components/ui/Modal'
+import { PageLoader } from '../components/ui/PageLoader'
 import { AvailabilityCalendar } from '../components/availability/AvailabilityCalendar'
 import { Board } from '../components/project/Board'
 import { Whiteboard } from '../components/project/Whiteboard'
@@ -85,7 +86,7 @@ function JoinSignInModal({ isOpen, onClose, roomId, guestName, projectName, owne
   )
 }
 
-function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
+function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark, hostName, projectName }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const { theme } = useApp()
@@ -105,6 +106,12 @@ function NamePrompt({ token, onConfirm, ownerLogo, ownerLogoDark }) {
           <img src="/coordie-logo.svg" alt="Coordie" className="h-6" style={{ filter: 'invert(1)' }} />
         </div>
         <h2 className="text-[24px] font-semibold text-zinc-50 tracking-tight leading-tight mb-2">Let’s find a day that works</h2>
+        {(hostName || projectName) && (
+          <p className="text-[13px] text-zinc-500 leading-relaxed mb-2">
+            {hostName ? <>{hostName.split(' ')[0]} invited you</> : 'You’ve been invited'}
+            {projectName ? <> to <span className="text-zinc-300 font-medium">{projectName}</span></> : null}.
+          </p>
+        )}
         <p className="text-[15px] text-zinc-400 leading-relaxed mb-7">Your name and email — so the team knows whose availability this is and can reach you about the meeting.</p>
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
@@ -164,7 +171,8 @@ function GuestCalendarPanel({ guestEvents, connected = false, onConnect, onDisco
       } catch { /* overlay is best-effort; sync still runs server-side */ }
       await onConnect(events)
     } catch (e) {
-      setError(e?.message || 'Could not connect your calendar.')
+      // A deliberate popup close isn't an error — just reset the button.
+      if (e?.message !== 'Connection cancelled.') setError(e?.message || 'Could not connect your calendar.')
     }
     setLoading(false)
   }
@@ -181,7 +189,7 @@ function GuestCalendarPanel({ guestEvents, connected = false, onConnect, onDisco
       // marks connected and triggers the (provider-merged) server sync.
       await onConnect([])
     } catch (e) {
-      setError(e?.message || 'Could not connect Outlook.')
+      if (e?.message !== 'Connection cancelled.') setError(e?.message || 'Could not connect Outlook.')
     }
     setLoading(false)
   }
@@ -277,6 +285,7 @@ export function RoomView() {
   const [ownerLogo, setOwnerLogo] = useState(null)
   const [ownerLogoDark, setOwnerLogoDark] = useState(true)
   const [ownerName, setOwnerName] = useState(null)
+  const [ownerEmail, setOwnerEmail] = useState(null)
   const [ownerCalendarEvents, setOwnerCalendarEvents] = useState([])
   const [ownerConnectedCalendars, setOwnerConnectedCalendars] = useState([])
   const [ownerGuestCalendarEnabled, setOwnerGuestCalendarEnabled] = useState(true)
@@ -416,6 +425,7 @@ export function RoomView() {
         setOwnerLogo(data?.logo_url || null)
         setOwnerLogoDark(data?.logo_is_dark ?? true)
         setOwnerName(data?.settings?.displayName || null)
+        setOwnerEmail(data?.settings?.email || null)
         if (!isOwner && data?.connected_calendars?.length) {
           setOwnerConnectedCalendars(data.connected_calendars)
         }
@@ -480,7 +490,7 @@ export function RoomView() {
   }, [resolved, refreshRoom])
 
   if (loading || resolving) {
-    return <div className="flex items-center justify-center h-dvh text-zinc-500">Loading...</div>
+    return <PageLoader full />
   }
 
   if (!resolved) {
@@ -501,7 +511,7 @@ export function RoomView() {
     // a moment later once the query resolves. Previously this race caused valid rooms to flash
     // "unavailable" on slow mobile networks.
     if (productions.length === 0) {
-      return <div className="flex items-center justify-center h-dvh text-zinc-500">Loading...</div>
+      return <PageLoader full />
     }
     return (
       <div className="flex items-center justify-center h-dvh bg-surface-950 px-5">
@@ -529,7 +539,8 @@ export function RoomView() {
         try { addRoomMember(resolved.roomId, { name, email }) } catch (e) { /* best-effort */ }
       }
     }
-    return <NamePrompt token={token} onConfirm={handleGuestJoin} ownerLogo={ownerLogo} ownerLogoDark={ownerLogoDark} />
+    return <NamePrompt token={token} onConfirm={handleGuestJoin} ownerLogo={ownerLogo} ownerLogoDark={ownerLogoDark}
+      hostName={ownerName} projectName={production?.name} />
   }
 
   const effectiveCalendarEvents = isOwner ? calendarEvents : ownerCalendarEvents
@@ -712,7 +723,7 @@ export function RoomView() {
             includedOwner={includedOwner}
             totalPeople={totalPeople}
             ownerLabel={isOwner ? undefined : ownerDisplay}
-            ownerEmail={isOwner ? undefined : null}
+            ownerEmail={isOwner ? undefined : ownerEmail}
             floatingHeader
             headerSlot={connectSlot}
           />
@@ -725,6 +736,7 @@ export function RoomView() {
               people={boardPeople}
               projectId={resolved?.productionId}
               authorName={isOwner ? (ownerName || 'Owner') : guestName}
+              assigneeDisplay={isOwner ? null : (n => n === 'You' ? ownerDisplay : n)}
               addColumn={board.addColumn}
               renameColumn={board.renameColumn}
               deleteColumn={board.deleteColumn}

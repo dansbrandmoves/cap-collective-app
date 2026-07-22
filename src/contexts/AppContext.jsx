@@ -146,7 +146,7 @@ async function seedSupabase(ownerId) {
 }
 
 async function fetchAll(ownerId, userEmail) {
-  console.log('[Coordie] fetchAll for owner:', ownerId)
+  if (import.meta.env.DEV) console.log('[Coordie] fetchAll for owner:', ownerId)
   const prodQuery = ownerId
     ? supabase.from('productions').select('*').eq('owner_id', ownerId).order('created_at')
     : supabase.from('productions').select('*').order('created_at')
@@ -702,7 +702,7 @@ export function AppProvider({ children }) {
     // Spinner only when we have nothing cached to show; otherwise revalidate silently.
     if (!productions.length) setLoading(true)
 
-    console.log('[Coordie] Loading data for:', ownerId || 'guest')
+    if (import.meta.env.DEV) console.log('[Coordie] Loading data for:', ownerId || 'guest')
 
     // Safety timeout — never stay stuck on loading. Generous on mobile networks.
     const loadTimeout = setTimeout(() => {
@@ -721,7 +721,7 @@ export function AppProvider({ children }) {
       .then(async ([{ prods, rms, notes, msgs, members, memberProds }, { data: bPages }]) => {
         const owned = prods || []
         const shared = memberProds || []
-        console.log('[Coordie] Fetched:', { owned: owned.length, shared: shared.length, rooms: rms?.length || 0, bookingPages: bPages?.length || 0 })
+        if (import.meta.env.DEV) console.log('[Coordie] Fetched:', { owned: owned.length, shared: shared.length, rooms: rms?.length || 0, bookingPages: bPages?.length || 0 })
         setBookingPages(bPages || [])
         // Seed only a brand-new user with nothing of their own and nothing shared.
         if (!owned.length && !shared.length && ownerId) {
@@ -888,7 +888,9 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!user?.id || !profileLoaded) return
     supabase.from('profiles').update({
-      settings: { guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules, brandColor, bookingTheme, logoMode, displayName }
+      // `email` rides along so guest rooms can put the host on meeting invites
+      // (auth.users isn't readable by guests; settings is).
+      settings: { guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules, brandColor, bookingTheme, logoMode, displayName, email: user.email || null }
     }).eq('id', user.id)
       .then(({ error }) => { if (error) console.error('Sync settings:', error) })
   }, [guestCalendarEnabled, timezone, theme, slotStateCustomizations, prefixRules, brandColor, bookingTheme, logoMode, displayName, user?.id, profileLoaded]) // eslint-disable-line react-hooks/exhaustive-deps

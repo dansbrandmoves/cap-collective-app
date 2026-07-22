@@ -179,8 +179,18 @@ function TimeSlotPicker({ slots, takenSlots, ownerEvents, guestEvents, selectedD
   )
 }
 
+/* ── Timezone label ── */
+// The offered times are the host's working hours, i.e. the host's time zone.
+// Guests booking from another zone need to know that — every booking tool labels it.
+function tzDisplayName(tz, style = 'long') {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: style }).formatToParts(new Date())
+    return parts.find(p => p.type === 'timeZoneName')?.value || tz
+  } catch { return tz }
+}
+
 /* ── Confirm Form ── */
-function ConfirmForm({ page, selectedDate, selectedSlot, onConfirm, submitting }) {
+function ConfirmForm({ page, selectedDate, selectedSlot, onConfirm, submitting, timezone }) {
   const [form, setForm] = useState({ name: '', email: '', message: '' })
 
   const rf = page.required_fields || { name: true, email: true, message: false }
@@ -205,7 +215,7 @@ function ConfirmForm({ page, selectedDate, selectedSlot, onConfirm, submitting }
         </div>
         <div>
           <p className="text-sm font-medium text-zinc-200">{formatDateShort(selectedDate)}</p>
-          <p className="text-xs text-zinc-500">{selectedSlot.label} – {formatTime(selectedSlot.endTime)} ({page.duration_minutes} min)</p>
+          <p className="text-xs text-zinc-500">{selectedSlot.label} – {formatTime(selectedSlot.endTime)} ({page.duration_minutes} min){timezone ? ` · ${tzDisplayName(timezone, 'short')}` : ''}</p>
         </div>
       </div>
 
@@ -345,6 +355,7 @@ export function BookingPageView() {
   const [ownerGuestCalendarEnabled, setOwnerGuestCalendarEnabled] = useState(true)
   const [bookingTheme, setBookingTheme] = useState(null) // owner's booking-page default: 'light' | 'dark' | 'auto'
   const [brandColor, setBrandColor] = useState(null) // owner's brand color (#hex) or null = neutral
+  const [ownerTimezone, setOwnerTimezone] = useState(null) // IANA tz the offered times are in
   const [windowKey, setWindowKey] = useState('any')   // time-of-day slot filter
 
   // Booking pages have their OWN theme, independent of the owner's app theme.
@@ -410,6 +421,7 @@ export function BookingPageView() {
         // Dedicated booking-page theme; default light (not the owner's app theme).
         setBookingTheme(data?.settings?.bookingTheme || 'light')
         setBrandColor(data?.settings?.brandColor || null)
+        setOwnerTimezone(data?.settings?.timezone || null)
       })
   }, [page])
 
@@ -697,6 +709,13 @@ export function BookingPageView() {
                 takenSlots={takenSlots} ownerEvents={ownerEvents} guestEvents={guestEvents}
                 selectedDate={selectedDate} selectedSlot={selectedSlot} onSelect={handleTimeSelect}
               />
+
+              {ownerTimezone && (
+                <p className="mt-4 text-center text-[11px] text-zinc-500">
+                  Times in {tzDisplayName(ownerTimezone)}
+                  {Intl.DateTimeFormat().resolvedOptions().timeZone !== ownerTimezone ? ' — the host’s time zone' : ''}
+                </p>
+              )}
             </motion.div>
           )}
 
@@ -712,7 +731,7 @@ export function BookingPageView() {
                 <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em]">Your details</p>
               </div>
               <ConfirmForm page={page} selectedDate={selectedDate} selectedSlot={lastSlotRef.current}
-                onConfirm={handleConfirm} submitting={submitting} />
+                onConfirm={handleConfirm} submitting={submitting} timezone={ownerTimezone} />
             </motion.div>
           )}
         </AnimatePresence>

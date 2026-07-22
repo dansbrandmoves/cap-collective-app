@@ -42,6 +42,9 @@ export function Board({
   columns = [], tasksByColumn = {}, people = [], projectId, authorName,
   addColumn, renameColumn, deleteColumn, moveColumn,
   addTask, updateTask, moveTask, reorderTask, deleteTask,
+  // Display-only mapping for assignee names. The owner assigns themselves as
+  // "You" (OWNER_LABEL) — guests should see the owner's real name instead.
+  assigneeDisplay = null,
 }) {
   const [drag, setDrag] = useState(null)         // { type:'card'|'column', id }
   const [overCol, setOverCol] = useState(null)   // column id a card hovers
@@ -61,6 +64,9 @@ export function Board({
     setDrag(null); setOverColIdx(null)
   }
 
+  const mapTask = (t) =>
+    assigneeDisplay && t.assignee ? { ...t, assignee: assigneeDisplay(t.assignee) } : t
+
   const openTask = openTaskId
     ? Object.values(tasksByColumn).flat().find(t => t.id === openTaskId)
     : null
@@ -73,7 +79,7 @@ export function Board({
             key={col.id}
             column={col}
             index={idx}
-            tasks={tasksByColumn[col.id] || []}
+            tasks={(tasksByColumn[col.id] || []).map(mapTask)}
             drag={drag}
             overCol={overCol}
             overIndex={overIndex}
@@ -96,7 +102,7 @@ export function Board({
 
       {openTask && (
         <TaskDetailModal
-          task={openTask}
+          task={mapTask(openTask)}
           people={people}
           projectId={projectId}
           authorName={authorName}

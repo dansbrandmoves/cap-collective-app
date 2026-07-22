@@ -141,6 +141,11 @@ export function CalendarSettings({ embedded = false } = {}) {
   const msConfigured = isMsConfigured()
   const [msConnected, setMsConnected] = useState(() => connectedCalendars.some(c => c.provider === 'microsoft'))
   const [msSyncing, setMsSyncing] = useState(false)
+  // Spinner state for the MANUAL sync button only. The freshen-on-open sync runs
+  // silently — spinning the arrows on every page load read as "reconnecting to
+  // Google" and felt like a glitch, when the connection was fine the whole time.
+  const [manualSyncing, setManualSyncing] = useState(false)
+  const freshenedRef = useRef(false)
 
   // Check connection status + handle post-connect calendar picker
   useEffect(() => {
@@ -206,10 +211,11 @@ export function CalendarSettings({ embedded = false } = {}) {
   function handleMsConnect() { setAuthError(null); startMicrosoftAuth() }
   async function handleMsDisconnect() { await disconnectMicrosoft(); setMsConnected(false) }
 
-  // Freshen on open. The server cron + realtime handle ongoing updates, so no
-  // client-side polling interval is needed here anymore.
+  // Freshen on open — ONCE, silently. The server cron + realtime handle ongoing
+  // updates; this just makes "right now" fresh without any visible spinner.
   useEffect(() => {
-    if (!connected || connectedCalendars.length === 0) return
+    if (freshenedRef.current || !connected || connectedCalendars.length === 0) return
+    freshenedRef.current = true
     handleSync()
   }, [connected, connectedCalendars.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -252,10 +258,17 @@ export function CalendarSettings({ embedded = false } = {}) {
     handleSync()
   }, [connectedCalendars]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleSync() {
+  async function handleSync(manual = false) {
     setAuthError(null)
-    const ok = await syncNow()
-    if (!ok) setAuthError('Sync failed. If Google was disconnected, reconnect to resume.')
+    if (manual) setManualSyncing(true)
+    try {
+      const ok = await syncNow()
+      // Background freshens fail silently (already logged to diagnostics) — an
+      // unprompted error banner on page load reads as a broken connection.
+      if (!ok && manual) setAuthError('Sync failed. If Google was disconnected, reconnect to resume.')
+    } finally {
+      if (manual) setManualSyncing(false)
+    }
   }
 
   const schedule = businessHours.schedule || {}
@@ -328,9 +341,9 @@ export function CalendarSettings({ embedded = false } = {}) {
           <div className="flex items-center gap-2 flex-shrink-0">
             {connected ? (
               <>
-                <button onClick={handleSync} disabled={calendarSyncing}
+                <button onClick={() => handleSync(true)} disabled={manualSyncing} title="Sync now"
                   className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-surface-800 transition-colors disabled:opacity-50">
-                  <RefreshCw size={14} strokeWidth={1.75} className={calendarSyncing ? 'animate-spin' : ''} />
+                  <RefreshCw size={14} strokeWidth={1.75} className={manualSyncing ? 'animate-spin' : ''} />
                 </button>
                 <button onClick={handleConnect} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
                   Reconnect

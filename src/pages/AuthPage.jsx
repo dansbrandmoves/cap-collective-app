@@ -105,7 +105,6 @@ export function AuthPage() {
           </div>
         </div>
 
-        <p className="text-xs text-zinc-600">Room links work without an account.</p>
       </div>
 
       {/* Right panel — sign in */}

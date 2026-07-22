@@ -4,7 +4,7 @@ import { WeeklyView } from './WeeklyView'
 import { DailyView } from './DailyView'
 import { DateRequestModal } from './DateRequestModal'
 import { useApp } from '../../contexts/AppContext'
-import { getWeekStart, dateToStr, deriveSlotState, eventOverlapsSlot } from '../../utils/availability'
+import { getWeekStart, dateToStr, deriveSlotState, eventOverlapsSlot, formatTimeRange } from '../../utils/availability'
 import { slotOverlapsWindow } from '../../utils/timeWindows'
 import { OWNER_LABEL } from '../../hooks/useProjectPeople'
 import { SlotRow } from './SlotRow'
@@ -762,8 +762,8 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                       key={slot.id}
                       state={isSelected ? 'selected' : 'available'}
                       barColor={slot.color || '#5e9c8c'}
-                      name={slot.name}
-                      time={`${slot.startTime} – ${slot.endTime}`}
+                      name={String(slot.id).startsWith('block-') ? formatTimeRange(slot.startTime, slot.endTime) : slot.name}
+                      time={String(slot.id).startsWith('block-') ? null : formatTimeRange(slot.startTime, slot.endTime)}
                       onClick={() => selectSlot(slot)}
                       hint={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
                       trailing={
@@ -813,8 +813,8 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                             key={slot.id}
                             state={isSelected ? 'selected' : 'available'}
                             barColor={slot.color || '#5e9c8c'}
-                            name={slot.name}
-                            time={`${slot.startTime} – ${slot.endTime}`}
+                            name={String(slot.id).startsWith('block-') ? formatTimeRange(slot.startTime, slot.endTime) : slot.name}
+                            time={String(slot.id).startsWith('block-') ? null : formatTimeRange(slot.startTime, slot.endTime)}
                             onClick={() => selectSlot(slot)}
                             hint={freeNames.length > 0 ? `Free: ${freeNames.join(', ')}` : undefined}
                             trailing={total > 0 ? (
@@ -843,12 +843,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
                   {guestData.length === 1 ? 'person is free' : 'people are free'}
                 </p>
               </div>
-              {guestData.some(g => g.email) && (
-                <p className="text-[12px] text-zinc-500 mb-3 leading-relaxed">
-                  Tap anyone to include or exclude from the invite.
-                </p>
-              )}
-              <div className="space-y-1.5 mb-6">
+              <div className="space-y-1.5 mb-6 mt-3">
                 {guestData.map(({ name, email }) => {
                   const selected = selectedNames.has(name)
                   const hasEmail = !!email
@@ -900,10 +895,7 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
           {/* Also invite: group members who haven't said they're free. */}
           {otherMembers.length > 0 && (
             <div className="mb-6">
-              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-1.5">Also invite</p>
-              <p className="text-[12px] text-zinc-500 mb-3 leading-relaxed">
-                Group members who haven&rsquo;t confirmed — still worth inviting if this works.
-              </p>
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.12em] mb-3">Also invite</p>
               <div className="space-y-1.5">
                 {otherMembers.map(({ name, email }) => {
                   const selected = selectedNames.has(name)

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { getMonthGrid, trimBlankWeeks, dateToStr, deriveSlotState } from '../../utils/availability'
+import { getMonthGrid, trimBlankWeeks, dateToStr, deriveSlotState, formatTimeRange } from '../../utils/availability'
 import { SlotRow } from './SlotRow'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 
@@ -151,8 +151,8 @@ export function MyAvailabilityCalendar({
                       key={slot.id}
                       state={state === 'available' ? 'available' : 'busy'}
                       barColor={slot.color || '#5e9c8c'}
-                      name={slot.name}
-                      time={`${slot.startTime} – ${slot.endTime}`}
+                      name={String(slot.id).startsWith('block-') ? formatTimeRange(slot.startTime, slot.endTime) : slot.name}
+                      time={String(slot.id).startsWith('block-') ? null : formatTimeRange(slot.startTime, slot.endTime)}
                       trailing={
                         <span className={`text-[11px] font-medium flex-shrink-0 ${STATE_TONE[state] || 'text-zinc-500'}`}>
                           {slotStates[state]?.label || state}

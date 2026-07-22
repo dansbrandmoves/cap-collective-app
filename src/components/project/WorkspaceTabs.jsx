@@ -2,8 +2,10 @@
 // (ProductionView) and the guest/member room view (RoomView) so they never drift.
 // Floats over the content on lg (so the calendar + canvas bleed to the top edge);
 // in flow on smaller screens. Outer padding differs per host → pass via `className`.
-const TABS = [['schedule', 'Schedule'], ['tasks', 'Tasks'], ['board', 'Board']]
+const TABS = [['schedule', 'Schedule'], ['tasks', 'Tasks'], ['board', 'Whiteboard']]
 
+// taskCount is accepted (call sites pass it) but no longer rendered — a
+// permanent count badge on a tab is noise, not signal (it isn't "unread").
 export function WorkspaceTabs({ active, onChange, taskCount = 0, className = '' }) {
   return (
     <div className={`relative z-20 lg:absolute lg:inset-x-0 lg:top-0 lg:pointer-events-none flex-shrink-0 ${className}`}>
@@ -14,9 +16,6 @@ export function WorkspaceTabs({ active, onChange, taskCount = 0, className = '' 
               active === key ? 'bg-surface-700 text-zinc-100 shadow-ring-sm' : 'text-zinc-400 hover:text-zinc-100'
             }`}>
             {label}
-            {key === 'tasks' && taskCount > 0 && (
-              <span className="ml-1.5 text-[11px] text-zinc-500 tabular-nums">{taskCount}</span>
-            )}
           </button>
         ))}
       </div>

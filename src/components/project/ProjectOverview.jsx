@@ -165,11 +165,10 @@ export function ProjectOverview({
       {includedKnown > 0 ? (
         <div className="mb-5">
           {/* Thin work area: the question, time-of-day filter, and the best days inline */}
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-3">
+          <div className="mb-3">
             <h2 className="text-[17px] font-semibold text-zinc-100 tracking-tight">
               When can everyone meet{windowKey !== 'any' ? <> in the <span className="text-accent">{win.label.toLowerCase()}</span></> : ''}?
             </h2>
-            <span className="text-[12px] text-zinc-500">{includedKnown} {includedKnown === 1 ? 'person' : 'people'} · next 60 days</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -197,7 +196,8 @@ export function ProjectOverview({
                   }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${allFree ? 'bg-green-400' : 'bg-zinc-500'}`} />
                   {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                  <span className="opacity-60 tabular-nums">{freeCount}/{knownCount}</span>
+                  {/* The green dot already means "everyone" — only a partial count is information. */}
+                  {!allFree && <span className="opacity-60 tabular-nums">{freeCount}/{knownCount}</span>}
                 </button>
               )
             })}

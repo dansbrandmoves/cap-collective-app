@@ -256,7 +256,6 @@ export function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-10 sm:mb-12">
         <div className="min-w-0">
           <h1 className="text-[28px] sm:text-[34px] font-semibold text-zinc-50 tracking-tight leading-[1.15]">Projects</h1>
-          <p className="text-[15px] text-zinc-400 mt-2 leading-relaxed">Your active projects, all in one place.</p>
         </div>
         <Button onClick={openNewProject} className="flex-shrink-0 self-start">
           <Plus size={14} strokeWidth={2} className="mr-1.5" />
@@ -306,8 +305,7 @@ export function Dashboard() {
       {/* Shared with me — projects I was invited to */}
       {shared.length > 0 && (
         <div className="mt-12">
-          <h2 className="text-[15px] font-semibold text-zinc-300 tracking-tight mb-1">Shared with me</h2>
-          <p className="text-[13px] text-zinc-500 mb-5">Projects you’ve been invited to join.</p>
+          <h2 className="text-[15px] font-semibold text-zinc-300 tracking-tight mb-5">Shared with me</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {shared.map(p => (
               <ProjectCard

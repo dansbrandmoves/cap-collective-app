@@ -83,10 +83,6 @@ export function AccountPage() {
         </div>
       </div>
 
-      <p className="text-[12px] text-zinc-600 mb-6 -mt-2">
-        Notifications and booking emails are sent to <span className="text-zinc-400">{user.email}</span>.
-      </p>
-
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-surface-800 mb-8 -mx-1 px-1 overflow-x-auto">
         {TABS.map(({ key, label, icon: Icon }) => (

@@ -283,6 +283,19 @@ export function deriveAvailabilityMatrix(dates, slots, calendarEvents, connected
 }
 
 /**
+ * Format a "HH:MM"–"HH:MM" pair as a friendly range, e.g. "11:00 – 11:30 AM"
+ * or "11:30 AM – 12:00 PM". One line, no 24h leakage into the UI.
+ */
+export function formatTimeRange(start, end) {
+  const fmt = (t) => {
+    const [h, m] = t.split(':').map(Number)
+    return { s: `${h % 12 || 12}:${String(m).padStart(2, '0')}`, period: h >= 12 ? 'PM' : 'AM' }
+  }
+  const a = fmt(start), b = fmt(end)
+  return a.period === b.period ? `${a.s} – ${b.s} ${b.period}` : `${a.s} ${a.period} – ${b.s} ${b.period}`
+}
+
+/**
  * Format a Date to YYYY-MM-DD string — in LOCAL time, matching what the user
  * sees on the calendar. (toISOString() is UTC: it rolled "today" to tomorrow
  * every evening for US users, and shifted every local-midnight grid date back

@@ -466,7 +466,6 @@ export function CalendarSettings({ embedded = false } = {}) {
             )
           })}
         </div>
-        <p className="text-xs text-zinc-600">These hours define when you’re bookable. Days left off are unavailable.</p>
       </div>
 
       {/* ── Appearance ── */}

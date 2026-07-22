@@ -5,6 +5,7 @@ import { DailyView } from './DailyView'
 import { DateRequestModal } from './DateRequestModal'
 import { useApp } from '../../contexts/AppContext'
 import { getWeekStart, dateToStr, deriveSlotState, eventOverlapsSlot, formatTimeRange } from '../../utils/availability'
+import { resolveSchedulingProvider, setSchedulingOverride, openCalendarTemplate } from '../../utils/scheduling'
 import { slotOverlapsWindow } from '../../utils/timeWindows'
 import { OWNER_LABEL } from '../../hooks/useProjectPeople'
 import { SlotRow } from './SlotRow'
@@ -468,7 +469,7 @@ function BestDaysStrip({ slots, calendarEvents, connectedCalendars, prefixRules,
  * Single-room by default. Pass `roomIds` (array) to inspect a whole project — the
  * caller combines every group's date-filtered requests/availability and we pull
  * member emails from all of those rooms. `actionLabel` renames the primary button. */
-export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRequests, sharedAvailability, onClose, actionLabel = 'Schedule meeting', ownerLabel = OWNER_LABEL, ownerEmail: ownerEmailProp, windowFilter = null, totalKnown = null, viewerName = null }) {
+export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRequests, sharedAvailability, onClose, actionLabel = 'Schedule meeting', ownerLabel = OWNER_LABEL, ownerEmail: ownerEmailProp, windowFilter = null, totalKnown = null, viewerName = null, viewerEmail = null }) {
   const { getMembersForRoom, timezone, user, calendarEvents, connectedCalendars, prefixRules, businessHours } = useApp()
   // Owner's email: explicit override (guest view) wins; else the signed-in owner.
   const ownerEmail = ((ownerEmailProp ?? user?.email) || '').trim() || null
@@ -672,29 +673,32 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
     return detailsLines.join('\n')
   }
 
+  // Which calendar "Schedule meeting" opens — inferred with zero setup (see
+  // utils/scheduling.js), overridable via the "use X instead" link below the
+  // button (remembered). Guests: their AppContext connectedCalendars is seed
+  // data, so that signal only counts for the signed-in owner.
+  const [schedProvider, setSchedProvider] = useState(() => resolveSchedulingProvider({
+    connectedCalendars: user ? connectedCalendars : [],
+    authProvider: user?.app_metadata?.provider || null,
+    email: user?.email || viewerEmail || null,
+  }))
+  function switchProvider(p) { setSchedulingOverride(p); setSchedProvider(p) }
+
   // Native in-app creation (createCalendarEvent + create_event edge action) is
   // parked until Google re-verification of the calendar.events scope. For now
-  // "Schedule meeting" opens a prefilled Google Calendar tab (no write scope).
-  // To re-enable native: call createCalendarEvent(...) here + flip startGoogleAuth
-  // to OWNER_SCOPES (see googleCalendar.js).
+  // "Schedule meeting" opens a prefilled new-event tab on the user's own
+  // calendar (Google template or Outlook deeplink — no write scope either way).
   function handleCreate(slotOverride = null) {
-    openGCalTemplate(slotOverride)
-  }
-
-  // Open a prefilled Google Calendar template in a new tab (no write scope).
-  function openGCalTemplate(slot = null) {
-    const datePart = dateStr.replace(/-/g, '')
-    const st = (slot ? slot.startTime : startTime).replace(':', '')
-    const en = (slot ? slot.endTime : endTime).replace(':', '')
-    const dates = `${datePart}T${st}00/${datePart}T${en}00`
-    const params = new URLSearchParams({
-      action: 'TEMPLATE',
-      text: title.trim() || 'Meeting',
-      dates,
+    const slot = slotOverride
+    openCalendarTemplate(schedProvider, {
+      title: title.trim() || 'Meeting',
+      dateStr,
+      startTime: slot ? slot.startTime : startTime,
+      endTime: slot ? slot.endTime : endTime,
       details: buildDescription(),
+      attendees: selectedEmails,
+      email: user?.email || viewerEmail || null,
     })
-    if (selectedEmails.length > 0) params.set('add', selectedEmails.join(','))
-    window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -977,7 +981,14 @@ export function DayInspectorPanel({ dateStr, roomId, roomIds, slots = [], dateRe
             {actionLabel}
           </button>
           <p className="text-[12px] text-zinc-500 text-center leading-relaxed">
-            {fmtTime(startTime)} – {fmtTime(endTime)} · opens a prefilled calendar event{selectedEmails.length > 0 ? ` · ${selectedEmails.length} ${selectedEmails.length === 1 ? 'attendee' : 'attendees'}` : ''}
+            {fmtTime(startTime)} – {fmtTime(endTime)} · opens in {schedProvider === 'outlook' ? 'Outlook' : 'Google Calendar'}{selectedEmails.length > 0 ? ` · ${selectedEmails.length} ${selectedEmails.length === 1 ? 'attendee' : 'attendees'}` : ''}
+            {' · '}
+            <button
+              onClick={() => switchProvider(schedProvider === 'outlook' ? 'google' : 'outlook')}
+              className="text-zinc-400 hover:text-zinc-200 underline decoration-zinc-600 underline-offset-2 transition-colors"
+            >
+              use {schedProvider === 'outlook' ? 'Google' : 'Outlook'}
+            </button>
           </p>
         </div>
       </div>

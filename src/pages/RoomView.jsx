@@ -18,6 +18,7 @@ import { readCache, writeCache, clearCache } from '../utils/cache'
 import { supabase } from '../utils/supabase'
 import { loadGoogleIdentityServices, fetchCalendarEvents, isConfigured, connectGuestCalendarOffline, triggerGuestSync, disconnectGuestCalendar as disconnectGuestCalendarServer } from '../utils/googleCalendar'
 import { isMsConfigured, connectGuestMicrosoftOffline, disconnectGuestMicrosoft } from '../utils/microsoftCalendar'
+import { setSchedulingHint } from '../utils/scheduling'
 import { CalendarDays, CheckCircle2, Menu, X, PanelLeft, Check, ChevronDown } from 'lucide-react'
 import { startRun, STATUS } from '../utils/diag'
 
@@ -170,6 +171,7 @@ function GuestCalendarPanel({ guestEvents, connected = false, onConnect, onDisco
         timeMax.setDate(timeMax.getDate() + 60)
         events = await fetchCalendarEvents(access_token, 'primary', timeMin, timeMax)
       } catch { /* overlay is best-effort; sync still runs server-side */ }
+      setSchedulingHint('google')
       await onConnect(events)
     } catch (e) {
       // A deliberate popup close isn't an error — just reset the button.
@@ -186,6 +188,7 @@ function GuestCalendarPanel({ guestEvents, connected = false, onConnect, onDisco
     setError(null)
     try {
       await connectGuestMicrosoftOffline({ roomId, guestName })
+      setSchedulingHint('outlook')
       // No local overlay for MS — the server sync populates availability. Passing []
       // marks connected and triggers the (provider-merged) server sync.
       await onConnect([])
@@ -735,6 +738,7 @@ export function RoomView() {
             ownerLabel={isOwner ? undefined : ownerDisplay}
             ownerEmail={isOwner ? undefined : ownerEmail}
             viewerName={isOwner ? null : guestName}
+            viewerEmail={isOwner ? null : (() => { try { return localStorage.getItem(`room-email-${token}`) } catch { return null } })()}
             floatingHeader
             headerSlot={connectSlot}
           />
